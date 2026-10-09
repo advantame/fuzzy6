@@ -1,0 +1,163 @@
+/* LLM deck — ink frame around a paper stage. The two inner edges of the L are lit in
+   vermilion as they fill: the bottom edge with time in the clip, the left edge with the
+   position in the deck (spec §2). */
+
+.mx {
+  --mx-bg: #121110;
+  --mx-stage-bg: #f4f1e9;
+  --mx-ink: #f4f1e9;
+  --mx-muted: #958f84;
+  --mx-rule: #3b3732;
+  --mx-accent: #ff5a1f;
+  --mx-on-accent: #121110;
+  --mx-font: 'IBM Plex Sans JP', 'IBM Plex Sans', system-ui, sans-serif;
+  --mx-font-mono: 'IBM Plex Mono', 'IBM Plex Sans JP', ui-monospace, monospace;
+  --mx-font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans JP', sans-serif;
+}
+
+/* ——— rail ——————————————————————————————————————————————————————— */
+
+.mx-rail { padding: 46px 40px 0 44px; }
+
+.mx-crumbs { font-size: 17px; }
+.mx-crumb[data-level='deck'] {
+  font: 600 17px/1 var(--mx-font-mono);
+  letter-spacing: 0.14em;
+  color: var(--mx-ink);
+}
+.mx-crumb + .mx-crumb::before { content: '/'; margin: 0 12px; color: var(--mx-rule); }
+.mx-crumb[data-level='chapter'] { color: var(--mx-muted); }
+.mx-crumb:hover { color: var(--mx-accent); }
+.mx-crumb-no { color: var(--mx-accent); }
+
+.mx-heading { margin-top: 84px; height: 460px; }
+.mx-no {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin: 0 0 26px;
+  font: 600 22px/1 var(--mx-font-mono);
+  letter-spacing: 0.04em;
+  color: var(--mx-muted);
+}
+.mx-no-chapter { color: var(--mx-muted); }
+.mx-no-sep { margin: 0 3px; opacity: 1; color: var(--mx-rule); }
+.mx-no-clip {
+  font: 700 76px/0.8 var(--mx-font-cond);
+  letter-spacing: -0.01em;
+  color: var(--mx-accent);
+}
+.mx-title {
+  font-size: 42px;
+  line-height: 1.26;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.mx-kicker {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 2px solid var(--mx-rule);
+  font-size: 18px;
+  color: var(--mx-muted);
+  letter-spacing: 0.02em;
+}
+
+/* deck axis: the rail's right edge, which is also the stage's left edge */
+.mx-axis { top: 0; bottom: 0; width: 34px; }
+.mx-tick > button::before {
+  width: 10px;
+  height: 2px;
+  background: var(--mx-rule);
+}
+.mx-tick[data-chapter-start] > button::before { width: 20px; background: var(--mx-muted); }
+.mx-tick[data-state='past'] > button::before { background: var(--mx-accent); }
+.mx-tick[data-state='current'] > button::before {
+  width: 34px;
+  height: 4px;
+  margin-top: -2px;
+  background: var(--mx-accent);
+}
+/* the lit edge: past ticks fill their whole slot, the current one fills down to its middle */
+.mx-tick::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--mx-accent);
+  transform-origin: top;
+  transform: scaleY(0);
+  transition: transform 0.6s var(--mx-ease);
+  pointer-events: none;
+}
+.mx-tick[data-state='past']::after { transform: scaleY(1); }
+.mx-tick[data-state='current']::after { transform: scaleY(0.5); }
+.mx-tick > button:hover::after {
+  right: 46px;
+  padding: 8px 12px;
+  font: 500 15px/1 var(--mx-font);
+}
+
+/* ——— bar ——————————————————————————————————————————————————————— */
+
+.mx-seek-track { background: transparent; }
+.mx-seek-fill { top: 15px; height: 4px; margin-top: -1px; }
+.mx-seek-head {
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  box-shadow: 0 0 0 4px var(--mx-bg);
+}
+.mx-seek-mark { top: 16px; }
+.mx-seek-mark::before { top: 0; height: 12px; background: #5c5750; }
+.mx-seek-hover {
+  background: var(--mx-stage-bg);
+  color: #151412;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+.mx-seek-hover-time { color: var(--mx-accent); }
+
+.mx-time { top: 34px; right: 44px; font-size: 16px; }
+
+.mx-subs { left: 120px; right: 120px; top: 48px; bottom: 18px; }
+.mx-cue {
+  font-size: 37px;
+  line-height: 1.42;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.mx-cue strong { color: var(--mx-accent); font-weight: 700; }
+
+/* ——— corner ——————————————————————————————————————————————————— */
+
+.mx-corner {
+  grid-template-columns: 56px 1fr 56px;
+  grid-template-rows: 1fr 46px;
+  padding: 24px 40px 22px 44px;
+}
+.mx-prev,
+.mx-next {
+  width: 56px;
+  height: 56px;
+  border-color: var(--mx-rule) !important;
+}
+.mx-count { font-size: 20px; }
+.mx-count-now { font: 700 46px/1 var(--mx-font-cond); color: var(--mx-ink); }
+.mx-count-sep { margin: 0 0.25em; }
+.mx-count-all { font: 600 20px/1 var(--mx-font-mono); }
+.mx-play { margin-left: -10px; }
+.mx-auto-label { font-size: 16px; }
+
+/* ——— index: a printed contents page on the stage ——————————————————— */
+
+.mx-index { background: var(--mx-stage-bg); color: #151412; padding: 64px 80px; }
+.mx-index-deck { color: var(--mx-accent); }
+.mx-index-title { font-size: 36px; color: #151412; }
+.mx-index-chapter-title { border-bottom-color: #151412; color: #151412; }
+.mx-index-no { color: #7d776c; }
+.mx-index-name { color: #151412; }
+.mx-index-thumb { background: #e2dccf; box-shadow: inset 0 0 0 1px #d5cec0; }
+.mx-index-clip:hover,
+.mx-index-clip:focus-visible { background: #ebe6da; }
+.mx-index-clip[aria-current='true'] { background: #ffdccd; }

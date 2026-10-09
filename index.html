@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Motion Explorer</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div class="home">
+      <aside class="home-rail">
+        <h1 class="home-mark"><span>Motion</span> <span>Explorer</span></h1>
+        <p class="home-lede">短いモーションを束ねて、← と → で行き来しながら見ていくための入れ物です。</p>
+
+        <figure class="home-frame">
+          <svg viewBox="0 0 192 108" role="img" aria-label="画面の割り付け。左の列と下の帯が L 字の枠で、残りがステージ">
+            <rect class="f-stage" x="32" y="0" width="160" height="90" />
+            <rect class="f-ink" x="6" y="8" width="12" height="2" />
+            <rect class="f-ink" x="6" y="18" width="20" height="4" />
+            <rect class="f-ink" x="6" y="25" width="14" height="4" />
+            <rect class="f-ink" x="40" y="99" width="64" height="2.5" />
+            <rect class="f-ink" x="52" y="103" width="40" height="2.5" />
+            <path class="f-axis" d="M32 0 V90 H192" />
+            <rect class="f-line" x="0.5" y="0.5" width="191" height="107" />
+          </svg>
+          <figcaption>
+            <span><b>左の列</b>パンくず、題名、デッキの中の位置</span>
+            <span><b>下の帯</b>シークバーと字幕</span>
+            <span><b>残り</b>ステージ（16:9）</span>
+          </figcaption>
+        </figure>
+      </aside>
+
+      <main class="home-stage">
+        <p class="home-label">デッキ</p>
+        <ul class="home-decks" id="decks"></ul>
+      </main>
+
+      <footer class="home-bar">
+        <p class="home-bar-label" id="keys-label">デッキの中での操作</p>
+        <ul class="home-keys" aria-labelledby="keys-label">
+          <li><kbd>←</kbd><kbd>→</kbd>前後のクリップ</li>
+          <li><kbd>Space</kbd>再生と一時停止</li>
+          <li><kbd>↑</kbd>目次</li>
+          <li><kbd>A</kbd>自動で次へ</li>
+          <li><kbd>F</kbd>全画面</li>
+        </ul>
+      </footer>
+    </div>
+    <script type="module" src="/src/home/main.js"></script>
+  </body>
+</html>

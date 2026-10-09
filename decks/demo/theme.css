@@ -1,0 +1,3 @@
+/* Clip content uses logical stage coordinates; chrome uses the default theme. */
+.demo-label { margin: 0; position: absolute; left: 100px; top: 360px; font-size: 72px; }
+.demo-marker { position: absolute; left: 80px; top: 400px; width: 100px; height: 100px; background: var(--mx-accent); transform: translateX(calc(var(--mx-t, 0) * 120px)); }

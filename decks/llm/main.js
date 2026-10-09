@@ -1,0 +1,18 @@
+import '@fontsource/ibm-plex-sans-jp/400.css';
+import '@fontsource/ibm-plex-sans-jp/500.css';
+import '@fontsource/ibm-plex-sans-jp/700.css';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/500.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-sans-condensed/500.css';
+import '@fontsource/ibm-plex-sans-condensed/600.css';
+import '@fontsource/ibm-plex-sans-condensed/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '../../src/explorer/explorer.css';
+import './theme.css';
+import { createExplorer } from '../../src/explorer/index.js';
+import deck from './deck.js';
+
+createExplorer(document.getElementById('app'), deck);

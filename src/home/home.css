@@ -1,0 +1,275 @@
+/* The deck list. It borrows the explorer's L: a left column and a bottom band, lit along
+   their inner edges, around a stage that holds the decks. Colors follow the default skin. */
+
+:root {
+  --bg: #0f0f0e;
+  --panel: #1b1a18;
+  --ink: #f3f1ea;
+  --muted: #8f8b82;
+  --rule: #3a3833;
+  --accent: #ff6a3d;
+  --font: 'IBM Plex Sans JP', 'IBM Plex Sans', system-ui, sans-serif;
+  --cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans JP', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.6 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.home {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 100vh;
+}
+
+/* ——— the left column ——————————————————————————————————————————— */
+
+.home-rail {
+  display: flex;
+  flex-direction: column;
+  padding: 52px 40px 40px 44px;
+  border-right: 2px solid var(--accent);
+}
+
+.home-mark {
+  margin: 0;
+  font: 700 58px/0.92 var(--cond);
+  letter-spacing: -0.01em;
+}
+.home-mark span { display: block; }
+.home-mark span + span { color: var(--accent); }
+
+.home-lede {
+  margin: 28px 0 0;
+  padding-top: 18px;
+  border-top: 2px solid var(--rule);
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+.home-frame { margin: auto 0 0; padding-top: 40px; }
+.home-frame svg { display: block; width: 100%; height: auto; }
+.f-stage { fill: var(--panel); }
+.f-ink { fill: var(--muted); }
+.f-axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.f-line { fill: none; stroke: var(--rule); stroke-width: 1; }
+.home-frame figcaption {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.home-frame b {
+  display: inline-block;
+  min-width: 4.2em;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ——— the stage: decks ————————————————————————————————————————— */
+
+.home-stage { padding: 52px 72px 64px; }
+
+.home-label {
+  margin: 0 0 28px;
+  font: 500 13px/1 var(--mono);
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.home-decks {
+  display: grid;
+  gap: 48px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deck {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr);
+  gap: 44px;
+  align-items: end;
+}
+.deck[data-size='small'] {
+  grid-template-columns: minmax(0, 360px) minmax(300px, 1fr);
+  align-items: center;
+  padding-top: 40px;
+  border-top: 1px solid var(--rule);
+}
+
+.deck-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--panel);
+  outline: 1px solid var(--rule);
+  transition: outline-color 0.3s;
+}
+.deck-cover iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+}
+/* how far the preview has played, along the cover's bottom edge */
+.deck-scrub {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+.deck-title { margin: 0; font: 700 88px/0.9 var(--cond); letter-spacing: -0.01em; }
+.deck[data-size='small'] .deck-title { font-size: 48px; }
+.deck-title a { color: inherit; text-decoration: none; outline: none; }
+/* the title's link covers the whole card */
+.deck-title a::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+
+.deck-sub { margin: 14px 0 0; font-size: 22px; font-weight: 500; line-height: 1.45; }
+.deck[data-size='small'] .deck-sub { font-size: 17px; }
+.deck-note { margin: 6px 0 0; font-size: 15px; color: var(--muted); }
+.deck-meta {
+  margin: 18px 0 0;
+  font: 500 14px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.deck-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.deck-chapters li {
+  /* as long as its share of the clips, but never shorter than its name */
+  flex: var(--n) 0 auto;
+  padding-top: 10px;
+  border-top: 3px solid var(--rule);
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: border-color 0.25s var(--ease);
+}
+.deck-chapters b {
+  margin-right: 0.4em;
+  font: 500 13px/1 var(--mono);
+  color: var(--accent);
+}
+
+.deck-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 30px;
+  font: 600 15px/1 var(--cond);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.deck-open::after {
+  content: '';
+  width: 28px;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.3s var(--ease);
+}
+
+/* pointed at or focused: the cover lights, the ruler fills chapter by chapter */
+.deck:hover .deck-cover,
+.deck:has(:focus-visible) .deck-cover { outline: 2px solid var(--accent); }
+.deck:hover .deck-chapters li,
+.deck:has(:focus-visible) .deck-chapters li {
+  border-color: var(--accent);
+  transition-delay: calc(var(--i) * 70ms);
+}
+.deck:hover .deck-open::after,
+.deck:has(:focus-visible) .deck-open::after { width: 48px; }
+
+/* ——— the bottom band: keys ———————————————————————————————————— */
+
+.home-bar {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  align-items: center;
+  min-height: 96px;
+  border-top: 2px solid var(--accent);
+}
+.home-bar-label {
+  margin: 0;
+  padding: 0 40px 0 44px;
+  font: 500 13px/1.5 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.home-bar .home-keys { padding: 20px 72px; }
+.home-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 36px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--muted);
+}
+.home-keys li { display: flex; align-items: center; gap: 6px; }
+kbd {
+  min-width: 30px;
+  padding: 3px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  font: 500 13px/1.3 var(--mono);
+  text-align: center;
+  color: var(--ink);
+}
+kbd:last-of-type { margin-right: 4px; }
+
+/* ——— narrow screens: the L unfolds into a column ———————————————— */
+
+@media (max-width: 1100px) {
+  .deck,
+  .deck[data-size='small'] { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}
+@media (max-width: 760px) {
+  .home { grid-template-columns: minmax(0, 1fr); }
+  .home-rail { padding: 36px 20px 28px; border-right: 0; border-bottom: 2px solid var(--accent); }
+  .home-mark { font-size: 46px; }
+  .home-frame { display: none; }
+  .home-stage { padding: 36px 20px 48px; }
+  .deck-title { font-size: 64px; }
+  .home-bar { grid-template-columns: minmax(0, 1fr); padding: 20px; }
+  .home-bar-label { padding: 0 0 12px; }
+  .home-bar .home-keys { padding: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-chapters li,
+  .deck-open::after,
+  .deck-cover { transition: none; }
+}
