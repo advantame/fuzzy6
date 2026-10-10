@@ -1,4 +1,4 @@
-// MCP: wiring every application to every tool takes apps × tools connections; one shared
+// MCP, why: wiring every application to every tool takes apps × tools connections; one shared
 // protocol in the middle takes apps + tools. App and tool names are generic examples.
 
 import { clip } from '../lib/clip.js';
@@ -21,9 +21,9 @@ export default clip({
   kicker: 'MCP（2024）',
   duration: 16.5,
   cues: [
-    { at: 0.4, to: 5.6, text: 'アプリと道具を一つずつつなぐと、\n組み合わせの数だけ、つなぐ作業が要る。' },
-    { at: 5.8, to: 10.9, text: '2024 年 11 月、Anthropic は道具をつなぐ共通の規格 **MCP** を公開した。' },
-    { at: 11.1, to: 18, text: '道具の側を一度 MCP に合わせれば、\n対応するどのアプリからも使える。' },
+    { at: 0.4, to: 5.6, text: 'アプリとツールを一つずつつなぐと、\n組み合わせの数だけ、つなぐ作業が要る。' },
+    { at: 5.8, to: 10.9, text: '2024 年 11 月、Anthropic はツールをつなぐ共通の規格 **MCP** を公開した。' },
+    { at: 11.1, to: 18, text: 'ツールの側を一度 MCP に合わせれば、\n対応するどのアプリからも使える。' },
   ],
 
   draw(ctx, t) {
@@ -89,7 +89,7 @@ export default clip({
       ctx.restore();
       text(ctx, name, TOOL_X + TOOL.w / 2, toolMid(j) + 2, { font: F.jp(700, 26), color: C.ink, align: 'center', base: 'middle', alpha: Math.min(1, a) });
     });
-    text(ctx, '道具・データ', TOOL_X, TOOL.ys[0] - 30, { font: F.jp(700, 22), color: C.ink2, alpha: tw(t, 0.6, 0.5) });
+    text(ctx, 'ツール・データ', TOOL_X, TOOL.ys[0] - 30, { font: F.jp(700, 22), color: C.ink2, alpha: tw(t, 0.6, 0.5) });
 
     // the count
     const c1 = tw(t, 3.0, 0.5) * (1 - swap);

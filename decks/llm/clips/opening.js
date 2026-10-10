@@ -1,5 +1,5 @@
 // Opening: the abbreviation unfolds into its words, the deck's subtitle is written one token
-// at a time (the real o200k_base split), and the four chapters appear as a route.
+// at a time (the real o200k_base split), and the six chapters appear as a route.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
@@ -14,7 +14,9 @@ const ROUTE = [
   ['1', '歴史', '1948 年から'],
   ['2', '基本概念', 'トークン、予測、注意'],
   ['3', 'チャットボット', '会話のしくみ'],
-  ['4', 'エージェント', '道具を使って動く'],
+  ['4', 'ツール', '書いて、動かす'],
+  ['5', 'つなぐ先', 'RAG、シェル、画面'],
+  ['6', 'ハーネス', 'MCP、セッション'],
 ];
 
 const BIG = 330; // "LLM" before it unfolds
@@ -34,7 +36,7 @@ export default clip({
   cues: [
     { at: 0.5, to: 4.5, text: 'LLM は Large Language Model、**大規模言語モデル**の略。' },
     { at: 4.7, to: 8.0, text: 'LLM がしていることは、文章の**次の一語**を予測すること。' },
-    { at: 8.2, to: 12, text: 'この束は四章。歴史から、基本概念、チャットボット、エージェントへ進む。' },
+    { at: 8.2, to: 12, text: 'この束は六章。歴史と基本概念から、ツールを使うエージェントまで進む。' },
   ],
 
   prepare(ctx) {
@@ -120,15 +122,15 @@ export default clip({
       ctx.fillRect(cx, subY - 38, 4, 48);
     }
 
-    // ——— the route through the four chapters
+    // ——— the route through the chapters
     const draw = tw(t, ROUTE_AT, 1.6, inOutCubic);
     ctx.strokeStyle = C.ink;
     ctx.lineWidth = 3;
     line(ctx, M.l, ROUTE_Y, W - M.r, ROUTE_Y, draw);
     const span = W - M.l - M.r;
     ROUTE.forEach(([n, name, note], i) => {
-      const x = M.l + i * (span / 4);
-      const at = ROUTE_AT + 1.6 * inverseInOut(i / 4) + 0.05;
+      const x = M.l + i * (span / ROUTE.length);
+      const at = ROUTE_AT + 1.6 * inverseInOut(i / ROUTE.length) + 0.05;
       const pop = tw(t, at, 0.5, (p) => outBack(p, 2.2));
       if (pop <= 0) return;
       const here = i === 0;
@@ -148,9 +150,9 @@ export default clip({
       }
       const a = tw(t, at + 0.1, 0.6);
       const dy = (1 - a) * 14;
-      const lw = text(ctx, n, x, ROUTE_Y + 66 + dy, { font: F.cond(700, 34), color: C.accent, alpha: a });
-      text(ctx, name, x + lw + 10, ROUTE_Y + 66 + dy, { font: F.jp(700, 32), color: C.ink, alpha: a });
-      text(ctx, note, x, ROUTE_Y + 106 + dy, { font: F.jp(400, 21), color: C.muted, alpha: a });
+      const lw = text(ctx, n, x, ROUTE_Y + 64 + dy, { font: F.cond(700, 30), color: C.accent, alpha: a });
+      text(ctx, name, x + lw + 8, ROUTE_Y + 64 + dy, { font: F.jp(700, 26), color: C.ink, alpha: a });
+      text(ctx, note, x, ROUTE_Y + 100 + dy, { font: F.jp(400, 19), color: C.muted, alpha: a });
     });
     // arrowhead at the far end
     if (draw > 0.98) {

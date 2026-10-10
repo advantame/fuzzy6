@@ -106,7 +106,7 @@ export default clip({
 
     // ——— tool calls
     const la = tw(t, 0.8, 0.5);
-    text(ctx, '道具の呼び出し', LIST_X, 140, { font: F.jp(700, 24), color: C.ink2, alpha: la });
+    text(ctx, 'ツールの呼び出し', LIST_X, 140, { font: F.jp(700, 24), color: C.ink2, alpha: la });
     CALLS.forEach(([at, verb, obj, result, tone], i) => {
       const a = tw(t, at, 0.4);
       if (a <= 0) return;
