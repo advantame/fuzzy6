@@ -1,4 +1,5 @@
-// The LLM deck: history → concepts → chatbots → tools → what tools connect to → harnesses
+// The LLM deck: history → concepts → chatbots → tools → what tools connect to → harnesses →
+// growing knowledge → compute and price → improving and measuring harnesses → open harnesses
 // (README.md has the plan and sources).
 
 import { FONTS } from './lib/theme.js';
@@ -42,6 +43,45 @@ import mcp from './clips/mcp.js';
 import horizon from './clips/horizon.js';
 import safety from './clips/safety.js';
 import nest from './clips/nest.js';
+import lostmiddle from './clips/lostmiddle.js';
+import noremain from './clips/noremain.js';
+import knowledgeplaces from './clips/knowledgeplaces.js';
+import llmwiki from './clips/llmwiki.js';
+import ingest from './clips/ingest.js';
+import query from './clips/query.js';
+import lint from './clips/lint.js';
+import compile from './clips/compile.js';
+import ideafile from './clips/ideafile.js';
+import drift from './clips/drift.js';
+import wikimemory from './clips/wikimemory.js';
+import kvcache from './clips/kvcache.js';
+import kvsize from './clips/kvsize.js';
+import kvshrink from './clips/kvshrink.js';
+import promptcache from './clips/promptcache.js';
+import prefix from './clips/prefix.js';
+import moe from './clips/moe.js';
+import reasoning from './clips/reasoning.js';
+import sessioncost from './clips/sessioncost.js';
+import harnesseng from './clips/harnesseng.js';
+import nohands from './clips/nohands.js';
+import maplessons from './clips/maplessons.js';
+import samemodel from './clips/samemodel.js';
+import metaharness from './clips/metaharness.js';
+import selfharness from './clips/selfharness.js';
+import saturate from './clips/saturate.js';
+import readscore from './clips/readscore.js';
+import dsh from './clips/dsh.js';
+import cordis from './clips/cordis.js';
+import eventlog from './clips/eventlog.js';
+import minimal from './clips/minimal.js';
+import defaults from './clips/defaults.js';
+import ptc from './clips/ptc.js';
+import platform from './clips/platform.js';
+import appserver from './clips/appserver.js';
+import approve from './clips/approve.js';
+import threads from './clips/threads.js';
+import acp from './clips/acp.js';
+import outlook from './clips/outlook.js';
 
 export default {
   id: 'llm',
@@ -55,5 +95,9 @@ export default {
     { id: 'tools', title: 'ツール', clips: [tools, toolspec, toolcall, toolresult, toolloop] },
     { id: 'connect', title: 'つなぐ先', clips: [rag, search, shell, agent, coding, gui] },
     { id: 'harness', title: 'ハーネス', clips: [harness, scaffold, mcp, mcpflow, session, compact, subagent, safety, horizon, nest] },
+    { id: 'wiki', title: '知識を育てる', clips: [lostmiddle, noremain, knowledgeplaces, llmwiki, ingest, query, lint, compile, ideafile, drift, wikimemory] },
+    { id: 'cost', title: '計算と値段', clips: [kvcache, kvsize, kvshrink, promptcache, prefix, moe, reasoning, sessioncost] },
+    { id: 'tune', title: '鍛えて測る', clips: [harnesseng, nohands, maplessons, samemodel, metaharness, selfharness, saturate, readscore] },
+    { id: 'open', title: '開いたハーネス', clips: [dsh, cordis, eventlog, minimal, defaults, ptc, platform, appserver, approve, threads, acp, outlook] },
   ],
 };

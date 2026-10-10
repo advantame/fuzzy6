@@ -18,7 +18,7 @@ npm run dev        # http://127.0.0.1:5175/
 
 | デッキ | 中身 |
 |---|---|
-| [LLM — 次の一語から、エージェントまで](decks/llm/README.md) | LLM の歴史、基本概念、チャットボット、ツール、つなぐ先、ハーネス（6 章 40 本、2026-10-10） |
+| [LLM — 次の一語から、エージェントまで](decks/llm/README.md) | LLM の歴史、基本概念、チャットボット、ツール、つなぐ先、ハーネス。続けて 2026 年までの話題として、知識を育てる（LLM Wiki）、計算と値段（KV キャッシュ、MoE）、ハーネスを鍛えて測る、開いたハーネス（DeepSeek Harness、Codex の app-server、ACP）（10 章 79 本、2026-10-10） |
 | [demo](decks/demo/README.md) | engine の契約の見本（テストにも使う） |
 
 作り方、確かめ方、決まりごとは [AGENTS.md](AGENTS.md) にあります。

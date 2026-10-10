@@ -1,8 +1,8 @@
 # LLM — 次の一語から、エージェントまで
 
-LLM を、歴史、基本概念、チャットボット、ツール、つなぐ先、ハーネスの順に見ていくデッキです（2026-10-10 着手）。説明を語るより、事実を見やすく並べることを優先します。いまは 6 章 40 本、通して約 11 分です。
+LLM を、歴史、基本概念、チャットボット、ツール、つなぐ先、ハーネスの順に見ていき、そのあと 2026 年までの話題（知識を育てる、計算と値段、ハーネスを鍛えて測る、開いたハーネス）に進むデッキです（2026-10-10 着手）。説明を語るより、事実を見やすく並べることを優先します。いまは 10 章 79 本、通して約 22 分です。
 
-4 章から先は、一枚の「ツールの図」を軸にします（下の「ツールの図」）。4 章はツールを抽象的な箱のまま置き、文章の生成とツールがどう噛み合うかを具体的に追います。5 章と 6 章では、同じ図のツールの位置に具体的なものを入れていきます。
+4 章から先は、一枚の「ツールの図」を軸にします（下の「ツールの図」）。4 章はツールを抽象的な箱のまま置き、文章の生成とツールがどう噛み合うかを具体的に追います。5 章と 6 章では、同じ図のツールの位置に具体的なものを入れていきます。7 章では、ツールの位置に LLM Wiki のフォルダが入ります。
 
 `npm run dev` のあと http://127.0.0.1:5175/decks/llm/ で開きます。操作は ← → で前後のクリップ、Space で再生と一時停止、↑ で目次です（全体は `docs/spec.md` §4）。
 
@@ -17,7 +17,7 @@ LLM を、歴史、基本概念、チャットボット、ツール、つなぐ�
 
 | 章 | 番号 | id | 題名 | 中身 | 秒 |
 |---|---|---|---|---|---|
-| 1 歴史 | 扉 | opening | LLM | 略語が Large Language Model にほどけ、副題がトークン単位で書かれ、六章の路線図が出る | 12 |
+| 1 歴史 | 扉 | opening | LLM | 略語が Large Language Model にほどけ、副題がトークン単位で書かれ、十章の路線図が三つのまとまりに括られて出る | 12 |
 | | 1-1 | timeline | 言語モデルの年表 | 1948〜2025 を実寸の軸で並べると出来事が最後の 10 年に集まる。2017〜2025 へ拡大して読む | 15.5 |
 | | 1-2 | shannon | 次の文字を当てる | シャノン（1948）の近似文 5 段。直前の何文字を見て次を選ぶかを、カーソルの後ろの帯で見せる | 17 |
 | | 1-3 | turing | 機械は考えるか | 1950 年の問いと、模倣ゲームの図（壁ごしに紙片が行き来する） | 16 |
@@ -57,6 +57,45 @@ LLM を、歴史、基本概念、チャットボット、ツール、つなぐ�
 | | 6-8 | safety | 任せる範囲 | 読むのは許可、消す・送るは人の承認、実行はサンドボックスの中 | 16.5 |
 | | 6-9 | horizon | 任せられる長さ | 1 つのモデルの成功率が半分になる課題の長さを軸に落とし、軸を立てて年ごとの図にする。7 か月ごとに 2 倍、改訂版の課題集では約 12 時間 | 17 |
 | | 6-10 | nest | 次の一語の上に | エージェント⊃チャットボット⊃LLM の入れ子。開幕の「次の一語」で閉じる | 16 |
+| 7 知識を育てる | 7-1 | lostmiddle | 真ん中を見落とす | 答えの文書の位置で正答率が変わる（先頭 75.8%、中央 53.8%）。Chroma の 0.89 と 0.38 | 17 |
+| | 7-2 | noremain | 答えが残らない | 検索して答えるだけなら、同じ問いのたびに探し直す。答えを頁に書き戻すと次に使える | 17 |
+| | 7-3 | knowledgeplaces | 知識の置き場 | 1940〜2030 年の実寸の軸に、Memex、ツェッテルカステン、ハイパーテキスト、Web、wiki、Obsidian、LLM Wiki | 17 |
+| | 7-4 | llmwiki | LLM が編む | ツールの位置に raw/ と wiki/ と CLAUDE.md。三層と、人と LLM の分担 | 17 |
+| | 7-5 | ingest | 取り込む | 新しい資料を読み、5 頁を書き足して、目録と記録を直す | 17 |
+| | 7-6 | query | 目録から引く | index.md を先に読み、要る 2 頁だけを開いて答え、答えを頁に戻す | 17 |
+| | 7-7 | lint | 点検する | 食い違い、孤立した頁、欠けた頁を見つけ、資料を読み直して直す。直したあとも人が確かめる | 17 |
+| | 7-8 | compile | 先に編む | その場で組み立てるか、前もって編むか。Karpathy のたとえ。GraphRAG と DeepWiki | 17 |
+| | 7-9 | ideafile | 考えを配る | コードを配ると同じものが届く。75 行の idea file から、三人のエージェントが違う形を作る | 17 |
+| | 7-10 | drift | 崩れ方 | 言い換えの言い換えで落ちる細部。回答がそろう割合 1.98% → 77.23%。対策 | 17 |
+| | 7-11 | wikimemory | wiki と記憶 | エージェント wiki の製品と、記憶の機能の年表。どちらも窓の外に書いて読み戻す | 17 |
+| 8 計算と値段 | 8-1 | kvcache | 覚えておく | 1 語ごとに前を全部計算し直すか、キーとバリューを取っておくか。3 語の例で 18 回が 7 回 | 17 |
+| | 8-2 | kvsize | 覚える量 | Llama 3.1 70B は 1 トークン約 0.33 MB。約 13 万トークンで 43 GB、重みは 141 GB | 17 |
+| | 8-3 | kvshrink | 小さく覚える | 64 本のクエリがキーとバリューを分け合う（GQA、MQA）。MLA は圧縮して覚える。2.6 MB、0.33 MB、0.07 MB | 17 |
+| | 8-4 | promptcache | 前の続きから | 4 回のリクエストで、同じ頭はキャッシュから読む。Claude Sonnet 5.5 なら入力の 20 分の 1 | 17 |
+| | 8-5 | prefix | 頭を変えない | 時刻を頭に置くと毎回外れ、末尾に置くと頭が当たる。前を書き換えずに追記する | 17 |
+| | 8-6 | moe | 一部だけ使う | ルーターが 8 つのエキスパートから 2 つを選ぶ。Mixtral、DeepSeek-V3、V4-Pro の総量と使う量 | 17 |
+| | 8-7 | reasoning | 考えてから答える | 同じ問いを、考える量 少・中・多 で（o200k_base で数えたトークン）。o1、R1、V4 | 17 |
+| | 8-8 | sessioncost | 仕事の値段 | 30 回のリクエストで読ませた量の累計は回数の 2 乗に近く増える。キャッシュなし $3.21、あり $0.39 | 17 |
+| 9 鍛えて測る | 9-1 | harnesseng | 周りを直す | 同じ誤りを、その場で 3 回直すか、ハーネスに 1 行と確かめるプログラムを足すか。ハーネス工学 | 17 |
+| | 9-2 | nohands | 書かずに作る | OpenAI の社内の製品。PR 約 1,500 件を 1 マス 1 件で、約 100 万行、人が書いた行 0 | 17 |
+| | 9-3 | maplessons | 地図を渡す | 教訓三つ：AGENTS.md は約 100 行の地図、エラーの文に直し方、足りない能力を足す | 17 |
+| | 9-4 | samemodel | 点を上げる | GPT-5.2-Codex のまま、ハーネスだけを直して 52.8% → 66.5%。考える量の配分の比較 | 17 |
+| | 9-5 | metaharness | 探して直す | 提案役が過去の候補のコード、点、記録を読み、次のハーネスを書く。Haiku 4.5 で 37.6% | 17 |
+| | 9-6 | selfharness | 自分で直す | 同じモデルが失敗を調べ、提案し、確かめて書き換える。三つの公開モデルの before と after | 17 |
+| | 9-7 | saturate | 満点に近い | SWE-bench Verified の上位は 96〜97%。よく失敗する 138 題の 59.4% に重い問題 | 17 |
+| | 9-8 | readscore | 点の読み方 | 点＝モデル×ハーネス×課題集と版×設定×測った人。同じモデルで 87.9 と 54.68。版で 58.0 → 70.1 | 18 |
+| 10 開いたハーネス | 10-1 | dsh | すべてが部品 | 一つの箱だったハーネスが部品に分かれ、Cordis につながる。モデルの接続を差し替える。プリセット | 17 |
+| | 10-2 | cordis | 外すと消える | 部品 A を外すと A の登録だけが消える。要るもの（データベース）がそろうと動き、外すと止まる | 17 |
+| | 10-3 | eventlog | 記録が正本 | 追記だけの記録から、モデルに読ませる文書を毎回組み立てる。要約しても記録は短くならない | 17 |
+| | 10-4 | minimal | 最小の構成 | Standard の 12 のツールが、bash と str_replace_editor の 2 つになる。指示は 1 行。前例 | 17 |
+| | 10-5 | defaults | 既定で変わる | dsh ＋ Claude Sonnet 5 の 5 条件。考える量を選ぶだけで −74.7%、三つとも −82.2%、どれも 15/15 | 17 |
+| | 10-6 | ptc | コードで呼ぶ | 一つずつ呼ぶと結果が文書に積もる（約 4 万トークン）。コードで呼ぶと最後の結果だけ（約 300） | 17 |
+| | 10-7 | platform | ループを貸す | Codex のハーネスへの入口三つ（exec、SDK、app-server）。Apache-2.0 で公開した部分と、していない部分 | 17 |
+| | 10-8 | appserver | 外から動かす | クライアントと app-server の 11 通の JSON。thread、turn、item | 17 |
+| | 10-9 | approve | 許可を聞く | サーバーからの番号付きの要求に、アプリの画面で答える。答えの四種類 | 17 |
+| | 10-10 | threads | 束ねて動かす | 一つのクライアントが 5 本の thread を動かす。steer、interrupt、fork、resume | 17 |
+| | 10-11 | acp | エディタとつなぐ | エディタ —ACP→ エージェント —MCP→ ツール。Gemini CLI、Claude Code、Codex、DeepSeek Harness | 17 |
+| | 10-12 | outlook | この先へ | 6-10 の三重の輪の外に、束ねる仕組みの輪と、破線の onorca.dev の輪（展望、枠だけ） | 17 |
 
 ## 見た目の文法
 
@@ -81,7 +120,7 @@ LLM を、歴史、基本概念、チャットボット、ツール、つなぐ�
 
 ## 事実と出典
 
-事実の裏取りは codex（GPT-6 Astra）の research に頼んだ。1〜4 章の初版の分は [research/llm-facts/](../../research/llm-facts/)、4〜6 章の作り直しの分は [research/agent-facts/](../../research/agent-facts/) にあり、どちらも `log.md`（単元ごと）と `report.md`（最終報告）からなる。下の表は、クリップに出している事実と、それを支える出典である。
+事実の裏取りは codex（GPT-6 Astra）の research に頼んだ。1〜4 章の初版の分は [research/llm-facts/](../../research/llm-facts/)、4〜6 章の作り直しの分は [research/agent-facts/](../../research/agent-facts/)、7 章は [research/wiki-facts/](../../research/wiki-facts/)、8 章は [research/cost-facts/](../../research/cost-facts/)、9〜10 章は [research/harness-facts/](../../research/harness-facts/) にある。どれも `log.md`（単元ごと）と `report.md`（最終報告）からなる。下の表は、クリップに出している事実と、それを支える出典である（7 章から先の出典の欄は、research の項目番号を添えた）。
 
 | クリップ | 事実 | 出典 |
 |---|---|---|
@@ -117,6 +156,43 @@ LLM を、歴史、基本概念、チャットボット、ツール、つなぐ�
 | compact | Claude Code は上限が近づくと古いツールの出力を整理し、必要なら会話を要約する（`/compact` でも起動）。Claude API の context editing と memory tool は 2025-09-29 に公開ベータ。OpenAI の Responses API の compaction は 2025-12-11（自動の方式は 2026-02-10）。CLAUDE.md はセッションの始めに読む。AGENTS.md は 2025 年 8 月に共通の形式として公開（OpenAI Codex、Amp、Jules、Cursor、Factory などの協力） | Anthropic、OpenAI、agents.md（agent-facts H3、H4） |
 | subagent | 子のエージェントは自分のコンテキストウィンドウで働き、結果を親に返す。Claude Code のカスタムのサブエージェントは 2025-07-24（v1.0.60。委任そのものはそれ以前からある）。2025-06-13 の Anthropic の報告：親 Opus 4 ＋ 子 Sonnet 4 の構成が、社内の調査の評価で単独の Opus 4 を 90.2% 上回った。トークンはチャットの約 15 倍（単独のエージェントは約 4 倍）。90.2% と 15 倍は比べる相手が違う | Claude Code の文書と CHANGELOG; Anthropic 2025-06-13（agent-facts H5、llm-facts A6） |
 | horizon | 時間の長さは、人の専門家がその課題にかかる時間。AI の成功率が 50% になる長さを測る（AI が動き続ける時間ではない。課題は主にソフトウェア、ML、セキュリティの作業）。2025 年 3 月の論文の図 5 の値：GPT-2 2 秒、GPT-3 9 秒、GPT-3.5 36 秒、GPT-4 5 分、GPT-4 1106 8 分、Claude 3.5 Sonnet 18 分、o1-preview 22 分、Claude 3.5 Sonnet（新）28 分、o1 39 分、Claude 3.7 Sonnet 59 分。GPT-3 と GPT-3.5 は、後継の API モデルで代わりに測った値。2019〜2025 年は 212 日（約 7 か月）で 2 倍。改訂版の課題集 TH1.1（2026-01-29、2026-03-03 に計算を訂正）の値：GPT-5 3 時間 23 分、Claude Opus 4.5 4 時間 53 分、Claude Opus 4.6 約 12 時間（95% 区間は約 5〜61 時間）。16 時間を超える値は信頼できないと METR が明記。2024 年以降の倍加は 118 日（2025 年の論文）、88.6 日（TH1.1 の公開時）、105 日（2026-05-19 の報告） | Kwa ほか, arXiv:2503.14499v1; metr.org/time-horizons（2026-09-08 で更新を終了）; METR 2026-01-29, 2026-03-20, 2026-05-19（research Unit 9） |
+| lostmiddle | GPT-3.5-Turbo の 20 文書の QA で、正解の文書が先頭なら 75.8%、5 番目 57.2%、10 番目 53.8%、15 番目 55.4%、20 番目 63.2%。資料なし 56.1%、正解の文書だけ 88.3%。Chroma（2025-07-14）：LongMemEval の 306 問、Claude Sonnet 4 で、関係する部分だけ（約 300 トークン）0.89、全部（約 11 万 3,000 トークン）0.38 | Liu ほか, TACL 2024（arXiv v3 表 6）; Chroma「Context Rot」（wiki-facts K5） |
+| noremain | 「検索して答えるだけなら、答えは知識庫に残らない。整理した知識や答えを書き戻すと、次の仕事に使える」と言う（「RAG は積み上がらない」とは言い切らない）。問いと資料は例 | wiki-facts の要約 |
+| knowledgeplaces | 1945 Memex（Bush「As We May Think」）、Luhmann のツェッテルカステン（約 1952〜1997 年、約 9 万枚）、1965 ハイパーテキスト（Nelson）、1968 NLS の実演、1991 Web の公開（1989 提案、1990 最初のサイト）、1995 WikiWikiWeb、2001 Wikipedia、2020 Obsidian、2026 LLM Wiki。影響の一本の系譜としては描かない | The Atlantic 1945; Luhmann Archiv; CERN ほか（wiki-facts K3、K4） |
+| llmwiki | 2026-04-02 の Karpathy の投稿（約 100 記事、約 40 万語）、04-04 の idea file（gist「llm-wiki.md」）。原資料、wiki、決まりの三層を、取り込む、問う、点検するの三つで育てる。決まりと頁は例 | Karpathy の投稿と gist（wiki-facts K1、K2） |
+| ingest、query、lint | gist の Operations の節：1 つの資料で 10〜15 頁に手が入ることがある、問いでは index.md を先に読む、よい答えは頁に戻す、lint は矛盾、古い記述、孤立した頁、欠けた概念を探す。画面の資料、頁、呼び出しは例 | gist「llm-wiki.md」（wiki-facts K2） |
+| compile | Obsidian が IDE、LLM がプログラマー、wiki がコードベース、というたとえは gist の本文。GraphRAG（論文 2024-04-24）は索引を作るときにグラフと要約を作る。DeepWiki（2025-04-25 告知）はリポジトリを説明の頁にまとめる | gist; Edge ほか, arXiv:2404.16130; Cognition（wiki-facts K6） |
+| ideafile | idea file は 2026-04-04 の投稿。gist の初版は 75 行。三人の実装は例 | Karpathy の投稿; gist の履歴（wiki-facts K2） |
+| drift | RAG Collapse（2026-08-22）表 3：同じ回の回答がすべて同じものにそろった割合が 1.98% から 77.23% に（GPT-5.2 Chat、101 問）。誤りの割合ではない。理解の機会を手放す懸念は Hacker News のスレッド（2026-04-05）。「caches lie」の一句は出典が見つからないので使わない。言い換えの文は例 | Druck・Smith, arXiv:2608.22118; Hacker News（wiki-facts K8） |
+| wikimemory | DeepWiki 2025-04、AutoWiki（遅くとも 2026-03）、GBrain 2026-04、OpenWiki 2026-07。MemGPT 2023-10-12、ChatGPT のメモリー 2024-02-13（試験提供）、過去の会話の参照 2025-04-10、Claude の memory tool 2025-09-29（公開ベータ）。mem0「The State of Agent Wikis」（2026-07-21）。Anthropic の長く走るハーネスの記事（2025-11-26） | 各社の発表（wiki-facts K7、K9、K10） |
+| kvcache | 過去の各トークンのキーとバリューを層ごとに保存し、次のトークンの計算で使い回す。画面の回数（3 語で 18 回と 7 回、1,000 トークンに 100 語で 104,950 回と 1,099 回）は例の算術 | Pope ほか, arXiv:2211.05102; Kwon ほか（PagedAttention）, arXiv:2309.06180（cost-facts W1） |
+| kvsize | Llama 3.1 70B は 80 層、KV ヘッド 8、ヘッドの次元 128。bf16 で 1 トークン 2×80×8×128×2 = 327,680 バイト（320 KiB）、131,072 トークンで 40 GiB（約 43 GB）。重みは 70,553,706,496 パラメータで約 141 GB。1 本の文書の理論値で、実際のメモリの使い方とは別。「4 人が同時に」は例 | Llama 3 論文 Table 3; Meta の llama-models（cost-facts W2） |
+| kvshrink | MQA は 2019-11-06、GQA は 2023-05-22（EMNLP 2023）。MLA はキーとバリューをまとめて圧縮し、位置のための小さなキーと一緒に保存する（DeepSeek-V2、2024）。V3 の bf16 は 1 トークン 68.625 KiB（約 0.07 MB）。2.6 MB は 64 組を持つ場合の計算 | Shazeer, arXiv:1911.02150; Ainslie ほか, arXiv:2305.13245; DeepSeek-V2, arXiv:2405.04434（cost-facts W3、W4） |
+| promptcache | 同じ頭を次のリクエストでも使い回す。開始は Google（明示的な指定）2024-06-18、DeepSeek 2024-08-02、Anthropic 2024-08-14（ベータ）、OpenAI 2024-10-01（自動）。書き込みと読み出しの値段、保持時間は提供元とモデルで違う。Claude Sonnet 5.5 の読み出しは入力の 0.05 倍（2026-10-10） | 各社の文書と更新履歴（cost-facts W7） |
+| prefix | 前を書き換えると、その位置から後ろはキャッシュに当たらない。Manus（2025-07-18）はキャッシュの当たる率を最も大事な指標と呼んだ（著者の経験による評価）。画面の 37% は例 | Manus「Context Engineering for AI Agents」; Anthropic と OpenAI の文書（cost-facts W8） |
+| moe | Mixtral 8x7B は 467 億／129 億（8 個から 2 個）、DeepSeek-V3 は 6710 億／370 億（256 個から 8 個＋共有 1 個）、V4-Pro は 1.6 兆／490 億（384 個から 6 個＋共有 1 個）。選ぶ数は MoE の層ごと。どのトークンがどのエキスパートに行くかは例 | Mistral 2023; DeepSeek-V3, arXiv:2412.19437; V4 技術報告（cost-facts W5、W6） |
+| reasoning | 考える文章も出力のトークンとして課金される（見えなくても）。o1 は 2024-09、R1 は 2025-01。現行の V4 の考える量は「考えない／low／high／max」（low は 2026-08-13 に追加）。画面の問いと考える文章は例で、トークン数は o200k_base で数えた | OpenAI、Anthropic、DeepSeek の文書（cost-facts W9） |
+| sessioncost | 全文を持ち続け、毎回ほぼ同じ量を足すと、読ませた量の累計は回数の 2 乗に近く増える（30 回で 160.5 万トークン）。値段は Claude Sonnet 5.5 の 2026-10-10 の表（100 万トークンあたり入力 $2、キャッシュへの書き込み $2.50、読み出し $0.10）。キャッシュなし $3.21、あり $0.39 は例の計算 | Anthropic の価格表（cost-facts W10） |
+| harnesseng | Mitchell Hashimoto「My AI Adoption Journey」（2026-02-05）の Step 5 で harness engineering と呼んだ。エージェントが同じ誤りを繰り返さないよう、指示のファイルと確かめるプログラムを直す。本人も既存の呼び名があれば従うとしており、造語の初出とは書かない。セッションの中身は例 | Hashimoto 2026-02-05（harness-facts H1） |
+| nohands | OpenAI の Ryan Lopopolo（2026-02-11）：社内向けベータ版を、2025 年 8 月下旬の最初のコミットから約 5 か月、約 100 万行（基盤、ツール、文書を含む）、人が直接書いたコード 0 行、PR 約 1,500 件、1 人 1 日平均 3.5 件、3 人から 7 人。人は意図、優先順位、受け入れの条件、結果の判断を受け持った。同社の自己報告 | OpenAI「Harness engineering」（harness-facts H1） |
+| maplessons | 同じ記事の三つの教訓と短い引用（“map, not a 1,000-page instruction manual”、“inject remediation instructions into agent context”、“what capability is missing”）。ファイル名、決まり、足したツールは例 | OpenAI 2026-02-11（harness-facts H1） |
+| samemodel | LangChain（2026-02-17）：GPT-5.2-Codex を固定し、deepagents-cli の Terminal-Bench 2.0（89 題）が 52.8% → 66.5%。変えたのはプロンプト、ツール、ミドルウェア、考える量の配分。いつも xhigh 53.9%、いつも high 63.6%、xhigh → high → xhigh 66.5%。計算量をそろえた比較ではない | Trivedy, LangChain（harness-facts H2） |
+| metaharness | 提案役（Claude Code ＋ Opus 4.6）が過去の候補のコード、点、実行の記録をファイルから読み、次のハーネスを書く。対象のモデルの重みは変えない。TB2 の Haiku 4.5：Meta-Harness 37.6%、Goose 35.5%、Terminus-KIRA 33.7%、Terminus 2 28.3%。探すときと最後の評価に同じ 89 題を使う。Opus 4.6 では 76.4%（ForgeCode 81.8%）。候補ごとの点の動きは例 | Lee ほか, arXiv:2603.28052 v1（2026-03-30）Table 7（harness-facts H2） |
+| selfharness | 同じモデルが失敗を調べ、提案し、回帰を確かめて、自分のハーネスを書き換える（重みは変えない）。TB2.0 の 64 題の取り分けた課題で、MiniMax M2.5 40.5 → 61.9%、Qwen3.5-35B-A3B 23.8 → 38.1%、GLM-5 42.9 → 57.1%。取り分けた課題の点は、変更を採るかの判断にも使う | Zhang ほか, arXiv:2606.09498 v3（2026-08-20）Table 1（harness-facts H2） |
+| saturate | Vals AI の保存結果（2026-09-01 更新）：Claude Opus 5 97.00%、DeepSeek V4 Pro 0813 96.40%、GPT-5.6 Sol 96.20%（どれも mini-SWE-agent）。OpenAI は 2026-02-23 に報告をやめた。よく失敗する 138 題を調べ、59.4% に重い問題（500 題全体の割合ではない）。学習で問題と答えに触れた恐れも挙げた。Vals は 2026-08-13 に総合の指標から外した | Vals AI; OpenAI 2026-02-23（harness-facts H3） |
+| readscore | DeepSeek-V4-Pro-0813 のモデルカード：TB2.1 87.9（コードのエージェント課題は DeepSeek Harness minimal、effort max、temperature 1.0、top_p 0.95）。Vals AI（2026-09-28 更新）：Terminus 2、89 題、pass@1 で 54.68%。差のすべてをハーネスのせいにはしない。TB2.1 は 89 題のうち 28 題を直した版で、Opus 4.6 ＋ Claude Code は 2.0 の 58.0 から 2.1 の 70.1 | モデルカード（commit 72e1d32）; Vals AI; tbench.ai（harness-facts H3、H6） |
+| dsh | 2026-08-13、MIT の開発者向けプレビューとして公開（0.1.0-rc.5）。“Everything is a Plugin”、“There is no privileged core to patch”、“THERE WILL BE COMPATIBILITY-BREAKING CHANGES.”。プリセットは Standard、Minimal、Code（PTC）、Creator。起動の形（profile：web、headless、sdk、sdk-minimal、acp）とは別。Claude Code と Codex に任せる子のエージェントの部品、Landlock や Seatbelt のサンドボックスもある。モデルの接続の差し替え先（Claude Sonnet 5）は 10-5 の実験に合わせた | deepseek-harness の README、docs/architecture.md（harness-facts H4） |
+| cordis | Shi、Zhang、Cui「A Programming Paradigm for Spatiotemporal Composability」arXiv:2608.25512（2026-08-26、92 ページ）。外すとその登録も消える（取り消せる効果）、要るものがそろうと動く（依存の宣言）。取り消せるのは枠組みの中の登録だけ。チャットボットの枠組み Koishi（2019 年 8 月に開発開始）の部品の基盤として育った。画面のコードの書き方は例 | 論文 v1; deepseek-harness docs/cordis-primer.md; Koishi の文書（harness-facts H5） |
+| eventlog | “Model-visible means logged.”。追記だけの出来事の記録から、`deriveMessages()` がモデルに読ませる文書を組み立てる。保存は JSONL（`session.vN.jsonl[.zstd]`）。ステップはモデルへの 1 回の依頼とそのツール、ターンは入力を受けて落ち着くまで。すべての出力の即時の保存や、同じ出力の再現を約束するものではない。セッションの中身は例 | deepseek-harness docs/architecture.md（commit d743267）（harness-facts H4） |
+| minimal | 公開時（rc.5）の Minimal：持続する bash と str_replace_editor の 2 つ、“You are a helpful software engineer assistant.”、実行時の文脈なし、圧縮なし。現行版の構成は変わっている。前例：Anthropic（2025-01-06）は bash と編集の 2 つで SWE-bench Verified 49%。mini-SWE-agent（2025 年 7 月）はエージェントのクラスが約 100 行。Standard のツールの一覧は主なものだけ | deepseek-harness の公開時の commit 47f9438; Anthropic; mini-SWE-agent（harness-facts H4、H11） |
+| defaults | Weinberger・Hozez（PointFive）arXiv:2608.01347 v6（2026-09-10）§6.1 表 3：dsh 0.1.0rc7 ＋ Claude Sonnet 5、5 課題 × 5 条件 × 3 回。1 回あたりの請求額の平均は baseline $0.2753、policy −23.2%、rewrite −23.4%、effort −74.7%、full −82.2%。どれも 15/15 成功。既定で強い推論をかけていたのは著者の見立て。再現資料の URL は 404 | 論文 v6（harness-facts H7） |
+| ptc | Cloudflare「Code Mode」（2025-09-26）、Anthropic「Code execution with MCP」（2025-11-04、要る定義だけを読む例で 150,000 → 2,000 トークン、98.7% 減。仕事全体の削減率ではない）、Anthropic の Programmatic Tool Calling（2025-11-24、ベータ）。dsh の Code（PTC）プリセット。依頼、コード、トークンの数は例 | 各社の記事; deepseek-harness の ptc プリセット（harness-facts H12） |
+| platform | Bonamy・Choi「Codex as a platform: build on the open agent harness」（2026-08-19）、“The reusable part is the agent loop”。入口は codex exec、Codex SDK、app-server。CLI、中核、app-server、TypeScript SDK は Apache-2.0。IDE の拡張と Codex cloud は公開していない。Codex CLI は 2025-04-16 からオープンソース | OpenAI の記事と open-source の頁; openai/codex（commit 322bbf4）（harness-facts H8） |
+| appserver | JSON-RPC 2.0 の形だが `"jsonrpc":"2.0"` を送らない。既定は stdio で 1 行に 1 つの JSON。thread は会話、turn は依頼ごとの仕事、item は発話、コマンド、ファイルの変更など。画面の 11 通は実際のメソッド名で、パラメータは省いた。使う側は VS Code の拡張、デスクトップアプリ、Codex Web の worker。“a client-friendly, bidirectional JSON-RPC API”（Celia Chen、2026-02-04） | openai/codex の app-server と app-server-protocol（commit 322bbf4）; OpenAI 2026-02-04（harness-facts H9） |
+| approve | 承認は通知ではなく、サーバーからクライアントへの番号付きの要求（`item/commandExecution/requestApproval`）。同じ番号で `decision` を返す：accept、acceptForSession、decline（操作だけ断り turn は続く）、cancel（turn も止める）。ファイルの変更には `item/fileChange/requestApproval`。設定によっては要求が来ない。コマンドと画面は例 | ServerRequest.ts ほか（commit 322bbf4）（harness-facts H9） |
+| threads | `thread/start`、`thread/resume`、`thread/fork`、`turn/steer`、`turn/interrupt` はクライアントからの要求。thread の中身と時間の流れは例 | ClientRequest.ts（commit 322bbf4）（harness-facts H9） |
+| acp | ACP は 2025-08-27 に Zed が Gemini CLI のチームと公開。JSON-RPC 2.0、ローカルでは子プロセスの stdio。Claude Code はアダプター経由（Zed のベータ 2025-09-03）、Codex はアダプターが app-server を動かして変換（2025-10-16）。DeepSeek Harness の acp profile は自動化向け。session/new、session/prompt、session/update、session/request_permission、session/cancel | Zed の発表; ACP の仕様（commit 44d93e1）; codex-acp; deepseek-harness の acp（harness-facts H10） |
+| outlook | onorca.dev の中身は、ボスの指示（2026-10-10）でまだ調べていない。展望として名前の輪だけを置いた | — |
 
 ## 制作メモ
 
@@ -148,3 +224,26 @@ LLM を、歴史、基本概念、チャットボット、ツール、つなぐ�
 1. 1〜3 章の粒度を見直す。候補は、システムプロンプト（3 章。4-2 の説明書の前置きになる）、2023〜25 年の出来事を 1 本。
 2. 音は入れていない。入れるなら、何に音を付けるかから決める。
 3. 7 章から先に最新の話題を入れる（ボスの指示、2026-10-10）。例は LLM Wiki の考えと、DeepSeek Harness が優れているといわれる理由。説明に要る知識を [ch7-knowledge.md](ch7-knowledge.md) に洗い出した。次は、題材を決めてから research で裏を取る。
+
+### 2026-10-10（7 章から先）
+
+ボスの指示: KV キャッシュなども含めて大きなボリュームにし、順に作っていく。開いた Codex のハーネス（app-server）は、ボスも使っているので話を広げ、最後に onorca.dev の話へつなげる。onorca.dev はいまは調べ始めず、展望として枠だけ置く。
+
+7 章から 10 章の 39 本を足した。中身は上の「構成」の表にある。このメモの章番号は、下に書いた 7 章と 8 章の入れ替えの後のもの。
+
+- 9 章は、README の最初の案（4 本）を 8 本に広げた。ハーネス工学を、考え方（9-1）、OpenAI の例（9-2）、三つの教訓（9-3）に分け、自動の改良を Meta-Harness（9-5）と Self-Harness（9-6）に分け、点数の話を飽和（9-7）と読み方（9-8）に分けた。章の名は、測る話も入ったので「ハーネスを鍛える」から「鍛えて測る」にした（開幕の路線図に 10 の章名を並べるため、短くもした）。
+- 9-8 の最後で DeepSeek の自社の点に触れ、10 章の DeepSeek Harness につなぐ。10 章は、DeepSeek Harness の 5 本（部品、Cordis、記録、最小の構成、既定と費用）、PTC、Codex の 4 本（ループを貸す、app-server、承認、多くの thread）、ACP、展望の順。app-server はボスの使っているものなので、承認の往復と、一つのクライアントから多くの thread を動かす話を別の回にした。
+- 展望（10-12）は、6-10 の三重の輪の外に「束ねる仕組み」の輪と、破線の onorca.dev の輪を足す。onorca.dev の説明は「展望」の一語だけにしてある。中身はボスと決める。
+- 開幕の路線図は十章にし、三つのまとまり（LLM のしくみ、エージェント、いまの話題）を上に括った。締めの nest は 6 章の最後に残した。エージェントまでの前半のまとめとして働き、最後の 10-12 が同じ輪を広げて受ける。
+- 7 章の wiki のフォルダは `lib/wiki.js` にまとめた（ツールの位置を広げた配置 `WIDE`、raw/・wiki/ の頁とリンク・CLAUDE.md／index.md／log.md、頁ごとの読む・書く・指摘の印）。例の題材は、このデッキが引いた論文と概念にした。
+- 事実は 3 本の research で確かめた。7 章は `research/wiki-facts`（K1〜K10、確認 7・訂正 3）、8 章は `research/cost-facts`（W1〜W10、確認 6・訂正 4）、9〜10 章は `research/harness-facts`（H1〜H12、確認 7・訂正 5）。7〜8 章の訂正は画面と字幕に反映した。おもなもの: キャッシュの読み出しは「1 割」でなく Claude Sonnet 5.5 で 20 分の 1（8-4、8-5、8-8 は Sonnet 5.5 の料金で計算し直し、8-8 はドルで出した）。MLA は圧縮したベクトルに位置用のキーも置く。V4 の考える量は「考えない／low／high／max」。エキスパートを「専門の部分」と呼ばない。「送る」でなく「読ませる」。RAG は「積み上がらない」と言い切らず、「検索して答えるだけなら答えは残らない」とする。「a compiled wiki is a cache, and caches lie」は出典が見つからないので使わない。Bush が保守を考えなかったとは書かない。RAG Collapse の 77.23% は誤りの割合ではない。AutoWiki は遅くとも 2026 年 3 月からある。
+- 9〜10 章の訂正も画面と字幕に反映した: Cordis は Koishi（2019 年〜）のプラグイン基盤として育ったもので、取り消せるのは管理下の登録だけ。DeepSeek の自社値（TB2.1 87.9）と第三者（Vals、Terminus 2 で 54.68）の差を、すべてハーネスのせいにはしない。preset（Standard／Minimal／Code・PTC／Creator）と profile（web など）を分ける。公開時の Minimal は持続する bash と str_replace_editor の 2 つ。app-server は JSON-RPC 型だが `"jsonrpc":"2.0"` を送らず、承認はサーバーからクライアントへの要求。「Agent = Model + Harness」の世界初は確定しない（確認できたのは Trivedy、2026-03-10）。Hashimoto も harness engineering の造語者とは書かず「呼んだ」とする。
+- 9-8 の最後の札は「点を測った構成を、誰でも動かせる」と書きかけたが、点を測ったときの commit はモデルカードから確かめられないので、「minimal の構成も、誰でも動かせる」にした。
+- 字幕の 1 行が全角 35 字を超えると 3 行に折れる（字幕の箱は幅 1360px、37px の字で 1 字約 38px）。10-1 の 36 字の行が折れたので、全クリップの cue を Playwright で数えて確かめた。
+- 確認: 全 79 本の poster と、新しい 39 本と開幕の動きの一覧を見た。動きの一覧で見つけて直したもの: 9-8 の式のあと 3 秒ほど何も動かない（式の各項に問いの一言を足した）、10-6 の数字が始めに「0 回」「約 0 トークン」と出る（最初の呼び出しまで出さない）、9-2 の「約」が数え上げの間も出ている（数え終えてから出す）、10-3 の文書が縮むとき行がはみ出す（枠で切る）。「自動で次へ」で 79 本を通して再生し、どのクリップも次へ進むこと、各クリップの 2.5 秒の時点で字幕が不透明度 1 で出ていること、ページのエラーがないことを確かめた（通しで 25 分 27 秒）。unit 22、e2e 21、build はどれも通った。
+
+- ボスの指示で 7 章と 8 章を入れ替え、知識を育てる、計算と値段の順にした。章の境目の字幕に前の章を受ける言い回しはなかったので、直したのは章の並び、開幕の路線図、番号だけ。同じ指示で、ここまでをコミットして公開した。
+
+残っていること:
+
+1. 展望（10-12）の中身をボスと決める。いまは onorca.dev の名前と「展望」の一語だけ。
