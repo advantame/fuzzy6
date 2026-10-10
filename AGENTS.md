@@ -59,3 +59,10 @@ npm run capture -- …   # 使い方は tools/capture.mjs の先頭（dev サー
 - 依存はすべてプロジェクト内の `node_modules` に入れる。sudo は使わない。
 - Playwright は `@playwright/test` 1.62.1 に固定し、キャッシュ済みの chromium-1234 を使う。`playwright install-deps` は sudo apt を呼ぶので使わない。
 - ツールとテストは、ブラウザの各操作に timeout を付け、全体にも上限の時間を設ける。子プロセスは終了時に必ず閉じる。
+
+## 公開（2026-10-10 から）
+
+- 公開のリポジトリは `kouign-amann/fuzzy6`、公開版は <https://kouign-amann.github.io/fuzzy6/>（GitHub Pages）。
+- リモートの `main` に push すると、`.github/workflows/pages.yml` が unit テストとビルドを走らせ、`dist/` を Pages に配る。push したものはそのまま公開されるので、作りかけのクリップを `deck.js` に載せたまま push しない。
+- Pages は `/fuzzy6/` の下で配る。そのため `vite.config.js` の `base` を `'./'` にしてあり、ページどうしのリンクも `decks/llm/` のように相対パスで書く。自分で書く `href` や iframe の `src` を `/` で始めると、公開版で切れる（HTML の `<script src>` のように Vite がビルドで書き換えるものは別）。
+- この機械の gh には二つのアカウントが入っている。操作するアカウントを切り替えずに済ませるには、`GH_TOKEN=$(gh auth token --user kouign-amann)` を付けて `gh` や `git push` を呼ぶ。

@@ -4,6 +4,8 @@
 
 ## 見る
 
+公開版は <https://kouign-amann.github.io/fuzzy6/> で見られます。手元で動かすときは、次のようにします。
+
 ```bash
 nvm use            # Node 24
 npm ci
