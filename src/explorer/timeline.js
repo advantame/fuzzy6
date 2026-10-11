@@ -1,3 +1,4 @@
+import { readCast, lineBy, clipCast, recordMatches } from './cast.js';
 import { PACE } from './pace.js';
 import { parseLine, isName } from './script.js';
 
@@ -54,6 +55,8 @@ function mergeStops(stops, duration) {
   return result;
 }
 export function buildTimeline(clip, pace = mergePace(), voice) {
+  const actors = readCast(voice);
+  const cast = clipCast(clip, actors);
   const times = new Map();
   const lines = [];
   const cues = [];
@@ -67,7 +70,7 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     for (const mark of [{ at: 0 }, ...(clip.marks ?? clip.cues ?? [])])
       stops.push({ at: roundTime(mark.at), kind: 'line', line: null, label: mark.label ?? mark.text?.replace(/\*\*/g, '').slice(0, 12) ?? '' });
     stops.push({ at: duration, kind: 'still', line: null, label: '' });
-    return { duration, lines, cues: clip.cues ?? [], stops: mergeStops(stops, duration), at };
+    return { cast, duration, lines, cues: clip.cues ?? [], stops: mergeStops(stops, duration), at };
   }
   if (clip.duration !== undefined || clip.cues !== undefined) throw new Error('script cannot be combined with duration or cues');
   if (!Array.isArray(clip.script) || !clip.script.length) throw new Error('script must contain a line');
@@ -84,11 +87,12 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
   for (const source of clip.script) {
     name(source.id);
     const speed = lineSpeed(source, pace);
+    const by = lineBy(source, actors);
     const parsed = parseLine(source.text);
     for (const anchor of parsed.anchors) name(anchor.name);
     const spoken = source.text !== undefined;
     const record = voice?.manifest?.clips?.[clip.id]?.[source.id];
-    const speeds = record?.source === parsed.speech ? Object.keys(record.takes ?? {})
+    const speeds = recordMatches(record, by, actors) && record.source === parsed.speech ? Object.keys(record.takes ?? {})
       .filter(s => Number.isFinite(Number(s)) && Number(s) > 0)
       .sort((a, b) => {
         const delta = Math.abs(Number(a) - speed) - Math.abs(Number(b) - speed);
@@ -103,7 +107,7 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     const done = roundTime(end + seconds(source.tail ?? 0, 'tail'));
     const restName = source.rest ?? (source.still ? 'long' : 'normal');
     const rest = seconds(typeof restName === 'number' ? restName : pace.rest[restName], 'rest');
-    const line = { id: source.id, start, leadEnd, voice: voiceAt, end, done,
+    const line = { id: source.id, by, start, leadEnd, voice: voiceAt, end, done,
       next: roundTime(done + rest), spoken, take, speed: Number(speeds[0]), parsed,
       label: source.label ?? Array.from(parsed.plain).slice(0, 12).join('') };
     lines.push(line);
@@ -121,10 +125,10 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
   for (const line of lines) {
     times.set(line.id, line.start);
     for (const key of ['start', 'voice', 'end', 'done', 'next']) times.set(`${line.id}.${key}`, line[key]);
-    if (line.spoken) cues.push({ at: line.voice, to: Infinity, text: line.parsed.caption });
+    if (line.spoken) cues.push({ at: line.voice, to: Infinity, text: line.parsed.caption, by: line.by });
   }
   cues.forEach((cue, i) => { cue.to = cues[i + 1]?.at ?? Infinity; });
-  return { duration, lines, cues, stops: mergeStops(stops, duration), at };
+  return { cast, duration, lines, cues, stops: mergeStops(stops, duration), at };
 }
 export function nextTarget(timeline, t, pace) {
   if (t >= timeline.duration) return null;

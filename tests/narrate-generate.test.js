@@ -18,9 +18,10 @@ const encodeAudio = wav => {
   return { bytes, sha256: sha256(bytes), master, samples48 };
 };
 
-const voice = { speaker: '四国めたん', style: 'ノーマル' };
-const line = { clipId: 'sample', lineId: 'a', source: 'アイ', anchors: [{ name: 'point', offset: 1 }] };
-const mora = (text) => ({ text, vowel_length: 0.1, consonant_length: null, pitch: 5 });
+const actor = { name: '四国めたん', speaker: '四国めたん', style: 'ノーマル' };
+const voice = { cast: { metan: actor } };
+const line = { by: 'metan', clipId: 'sample', lineId: 'a', source: 'アイ', anchors: [{ name: 'point', offset: 1 }] };
+const mora = (text) => ({ text, vowel: text === 'ア' ? 'a' : 'i', vowel_length: 0.1, consonant_length: null, pitch: 5 });
 const full = { ...SETTINGS, speedScale: 1, kana: "ア'イ", accent_phrases: [{ moras: [mora('ア'), mora('イ')] }] };
 let root, voiceDir;
 function wavFor(query) {
@@ -42,6 +43,7 @@ beforeEach(async () => {
   engine.stop.mockResolvedValue();
   engine.style.mockResolvedValue(2);
   engine.request.mockImplementation(async (path, options) => {
+    if (path === '/user_dict') return {};
     if (path === '/audio_query') return structuredClone(options.params.text === 'ア' ? { ...full, accent_phrases: [{ moras: [mora('ア')] }] } : full);
     if (path === '/synthesis') return wavFor(options.body);
     throw new Error(`Unexpected request ${path}`);
@@ -101,7 +103,9 @@ describe('generation with a fake local engine', () => {
     expect(synth[0][1].body).toMatchObject({ ...SETTINGS, speedScale: 0.9 });
     expect(synth[0][1].params).toEqual({ speaker: 2, core_version: '0.16.1', enable_interrogative_upspeak: true });
     const manifest = JSON.parse(await readFile(join(voiceDir, 'manifest.json'), 'utf8'));
-    expect(manifest).toMatchObject({ version: 1, engine: { name: 'VOICEVOX', version: '0.25.2' }, voice });
+    expect(manifest).toMatchObject({ version: 2, engine: { name: 'VOICEVOX', version: '0.25.2' } });
+    expect(manifest.voice).toBeUndefined();
+    expect(manifest.clips.sample.a).toMatchObject({ by: 'metan', speaker: actor.speaker, style: actor.style });
     const record = manifest.clips.sample.a;
     expect(record.source).toBe('アイ'); expect(record.reading).toBe("ア'イ");
     expect(record.takes['1'].anchors.point).toBe(0.149);
@@ -120,6 +124,7 @@ describe('generation with a fake local engine', () => {
     expect((await readFile(join(voiceDir, 'manifest.json'))).equals(before)).toBe(true);
   });
   it('refuses synthesis on a prefix mismatch and still stops the engine', async () => {
+    engine.request.mockResolvedValueOnce({});
     engine.request.mockResolvedValueOnce(structuredClone(full));
     engine.request.mockResolvedValueOnce({ accent_phrases: [{ moras: [mora('ウ')] }] });
     await expect(run()).rejects.toThrow('sample/a {point}');
@@ -130,6 +135,7 @@ describe('generation with a fake local engine', () => {
   });
   it('rejects a WAV duration mismatch before saving the recording', async () => {
     engine.request.mockImplementation(async (path, options) => {
+      if (path === '/user_dict') return {};
       if (path === '/synthesis') return wavFor({ ...full, speedScale: 0.5 });
       return options.params.text === 'ア' ? { ...full, accent_phrases: [{ moras: [mora('ア')] }] } : full;
     });
@@ -148,4 +154,25 @@ describe('generation with a fake local engine', () => {
     expect(state.plan.map(p => p.status)).toEqual(['ready', 'missing']);
     expect(engine.stop).toHaveBeenCalledOnce();
   });
+});
+
+it('resolves engine style IDs once per narrator and records per-line mouth and identity', async () => {
+  const castVoice = { cast: { metan: actor, zunda: { name: 'ずんだもん', speaker: 'ずんだもん', style: 'ノーマル' } } };
+  engine.style.mockImplementation(async actor => actor.speaker === '四国めたん' ? 2 : 3);
+  const lines = collectLines({ voice: castVoice, chapters: [{ clips: [{ id: 'sample', script: [
+    { id: 'a', text: 'アイ' }, { id: 'b', text: 'アイ', by: 'zunda' }, { id: 'c', text: 'アイ', by: 'metan' },
+  ] }] }] });
+  const state = await inspectAssets(voiceDir, lines, castVoice);
+  await generate(root, voiceDir, state, castVoice, new AbortController().signal, { tools: {}, encodeAudio });
+  expect(engine.style.mock.calls.map(([actor]) => actor.speaker)).toEqual(['四国めたん', 'ずんだもん']);
+  expect(engine.request.mock.calls.filter(([path]) => path === '/audio_query').map(([, options]) => options.params.speaker)).toEqual([2, 3, 2]);
+  expect(engine.request.mock.calls.filter(([path]) => path === '/synthesis').map(([, options]) => options.params.speaker)).toEqual([2, 3, 2]);
+  const manifest = JSON.parse(await readFile(join(voiceDir, 'manifest.json'), 'utf8'));
+  expect(manifest.version).toBe(2);
+  expect(manifest.voice).toBeUndefined();
+  expect(manifest.clips.sample.b).toMatchObject({ by: 'zunda', speaker: 'ずんだもん', style: 'ノーマル' });
+  for (const entry of Object.values(manifest.clips.sample)) {
+    expect(entry.takes['1.3'].mouth).toEqual([[0, 'x'], [0.043, 'a'], [0.117, 'i'], [0.192, 'x']]);
+  }
+  expect((await inspectAssets(voiceDir, lines, castVoice)).plan.every(p => p.status === 'ready')).toBe(true);
 });

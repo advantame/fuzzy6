@@ -17,7 +17,7 @@ test('boot, URL selection and navigation controls', async ({ page }) => {
   await expect(page).toHaveURL(/c=sweep/);
   await page.locator('.mx-next').click(); await isClip(page, 'dom');
   await page.locator('.mx-prev').click(); await isClip(page, 'sweep');
-  await page.keyboard.press('End'); await isClip(page, 'script'); await expect(page.locator('.mx-next')).toBeDisabled();
+  await page.keyboard.press('End'); await isClip(page, 'duet'); await expect(page.locator('.mx-next')).toBeDisabled();
   await page.keyboard.press('Home'); await isClip(page, 'opening');
   await page.keyboard.press('2'); await isClip(page, 'short');
   await page.keyboard.press('1'); await isClip(page, 'opening');

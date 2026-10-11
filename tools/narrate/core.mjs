@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { parseLine, isName } from '../../src/explorer/script.js';
+import { readCast, lineBy, clipCast } from '../../src/explorer/cast.js';
 import { mergePace, lineSpeed } from '../../src/explorer/timeline.js';
+import { readLexicon, lineLexicon } from './lexicon.mjs';
 
 export const ENGINE_INFO = { name: 'VOICEVOX', version: '0.25.2' };
 export const CORE_VERSION = '0.16.1';
@@ -22,7 +24,7 @@ export const speedKey = (value) => {
 };
 
 export function parseArgs(args) {
-  const result = { generate: false, encode: false, prune: false, clips: [], speeds: null, help: false };
+  const result = { generate: false, encode: false, prune: false, inspect: false, json: false, clips: [], speeds: null, help: false };
   const flags = new Set();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -32,6 +34,8 @@ export function parseArgs(args) {
       if (arg === '--generate') result.generate = true;
       else if (arg === '--encode') result.encode = true;
       else if (arg === '--prune') result.prune = true;
+      else if (arg === '--inspect') result.inspect = true;
+      else if (arg === '--json') result.json = true;
       else if (arg === '--dry-run') { /* explicit default */ }
       else if (arg === '--help') result.help = true;
       else if (arg === '--speeds') {
@@ -45,7 +49,9 @@ export function parseArgs(args) {
       else result.clips.push(arg);
     }
   }
-  if (['--generate', '--encode', '--prune', '--dry-run'].filter(f => flags.has(f)).length > 1) throw new Error('--generate / --encode / --prune / --dry-run は同時に指定できません。');
+  if (['--generate', '--encode', '--prune', '--inspect', '--dry-run'].filter(f => flags.has(f)).length > 1) throw new Error('--generate / --encode / --prune / --inspect / --dry-run は同時に指定できません。');
+  if (result.json && !result.inspect) throw new Error('--json は --inspect と一緒に指定してください。');
+  if (result.inspect && result.clips.length !== 1) throw new Error('--inspect はクリップを一つ指定してください。');
   if (result.prune && result.speeds) throw new Error('--prune はデッキの歩調で判断するため --speeds と同時に指定できません。');
   if (!result.deck && !result.help) throw new Error('デッキを指定してください。');
   if (new Set(result.clips).size !== result.clips.length) throw new Error('クリップ指定が重複しています。');
@@ -53,6 +59,7 @@ export function parseArgs(args) {
 }
 
 export function collectLines(deck, selected = []) {
+  readLexicon(deck.voice?.lexicon);
   const clips = deck.chapters.flatMap((chapter) => chapter.clips);
   const ids = new Set();
   for (const clip of clips) {
@@ -60,11 +67,11 @@ export function collectLines(deck, selected = []) {
     ids.add(clip.id);
   }
   for (const id of selected) if (!ids.has(id)) throw new Error(`クリップがありません: ${id}`);
-  // A playback-only fixture may have manifest/url without synthesis configuration.
-  if (!deck.voice || (deck.voice.speaker === undefined && deck.voice.style === undefined)) return [];
+  const cast = readCast(deck.voice);
   const lines = [];
   const pace = mergePace(deck.pace);
   for (const clip of clips.filter((c) => !selected.length || selected.includes(c.id))) {
+    clipCast(clip, cast);
     if (clip.script === undefined) continue;
     if (!Array.isArray(clip.script)) throw new Error(`script は配列にしてください: ${clip.id}`);
     const names = new Set();
@@ -75,31 +82,43 @@ export function collectLines(deck, selected = []) {
     for (const line of clip.script) claim(line.id);
     for (const line of clip.script) {
       const requestedSpeed = lineSpeed(line, pace);
+      const by = lineBy(line, cast);
+      const actor = cast[by];
       if (line.text === undefined) continue;
       const speed = speedKey(requestedSpeed);
       if (typeof line.text !== 'string' || line.text.length > 2000) throw new Error(`原稿は2000文字以内: ${clip.id}/${line.id}`);
       const parsed = parseLine(line.text);
       for (const anchor of parsed.anchors) claim(anchor.name);
       if (!parsed.speech.trim()) throw new Error(`空の読み上げ: ${clip.id}/${line.id}（無音の文は text を省略）`);
-      lines.push({ clipId: clip.id, lineId: line.id, source: parsed.speech, anchors: parsed.anchors, speed });
+      if (!actor || (actor.speaker === undefined && actor.style === undefined)) continue;
+      if (![actor.speaker, actor.style].every(s => typeof s === 'string' && s.trim()))
+        throw new Error(`語り手 ${by} の speaker と style が必要です。`);
+      lines.push({ by, speaker: actor.speaker, style: actor.style, clipId: clip.id, lineId: line.id, source: parsed.speech, anchors: parsed.anchors, speed });
       if (lines.length > 2000) throw new Error('一度の処理は2000文以内にしてください。');
     }
   }
-  if (lines.length && ![deck.voice.speaker, deck.voice.style].every((s) => typeof s === 'string' && s.trim())) throw new Error('deck.voice の speaker と style が必要です。');
   return lines;
 }
 
-export const generationHash = (line, voice, speed) => sha256(JSON.stringify({
-  source: line.source, anchors: line.anchors, voice: { speaker: voice.speaker, style: voice.style },
-  engine: ENGINE_INFO, core: CORE_VERSION, settings: SETTINGS, speed: speedKey(speed), upspeak: true,
-}));
+// Individual voices are also used by persisted in-flight recording transactions.
+export const narrator = (line, voice) => voice.cast ? voice.cast[line.by] : voice;
+export const generationHash = (line, voice, speed) => {
+  const lexicon = lineLexicon(line.source, readLexicon(voice.lexicon));
+  return sha256(JSON.stringify({
+    source: line.source, anchors: line.anchors, by: line.by, voice: { speaker: narrator(line, voice).speaker, style: narrator(line, voice).style },
+    engine: ENGINE_INFO, core: CORE_VERSION, settings: SETTINGS, speed: speedKey(speed), upspeak: true,
+    // Omit the key entirely for legacy decks and unaffected sentences.
+    ...(lexicon.length ? { lexicon } : {}),
+  }));
+};
 
 export function takeStatus(manifest, line, voice, speed, exists) {
   const clip = Object.hasOwn(manifest.clips ?? {}, line.clipId) ? manifest.clips[line.clipId] : undefined;
   const entry = Object.hasOwn(clip ?? {}, line.lineId) ? clip[line.lineId] : undefined;
   const take = entry?.takes?.[speed];
   if (!exists || !take) return 'missing';
-  if (entry.source !== line.source || manifest.voice?.speaker !== voice.speaker || manifest.voice?.style !== voice.style ||
+  if (entry.source !== line.source || entry.by !== line.by || entry.speaker !== narrator(line, voice).speaker || entry.style !== narrator(line, voice).style ||
+      !Array.isArray(take.mouth) || !take.mouth.length ||
       manifest.engine?.version !== ENGINE_INFO.version || manifest.engine?.name !== ENGINE_INFO.name ||
       take.generationSha256 !== generationHash(line, voice, speed)) return 'stale';
   return 'ready';
@@ -118,21 +137,32 @@ export function queryTiming(query) {
     if (!Number.isFinite(length) || length < 0 || length > 180) throw new Error('音素の長さが不正です。');
     return roundEven(length / speed * 93.75);
   };
-  let total = frames(query.prePhonemeLength);
+  let total = 0;
+  const mouth = [];
+  const segment = (length, shape) => {
+    const n = frames(length);
+    if (total + n > 180 * 93.75) throw new Error('AudioQuery の長さが許容範囲外です。');
+    if (n && mouth.at(-1)?.[1] !== shape) mouth.push([millis(total / 93.75), shape]);
+    total += n;
+  };
+  const shapeOf = vowel => ({ a: 'a', i: 'i', u: 'u', e: 'e', o: 'o', n: 'n' })[vowel?.toLowerCase()] ?? 'x';
+  segment(query.prePhonemeLength, 'x');
   const moras = [];
   for (const phrase of query.accent_phrases) {
     for (const mora of phrase.moras) {
       if (typeof mora.text !== 'string' || !mora.text) throw new Error('拍の読みがありません。');
       moras.push({ text: mora.text, at: total / 93.75 });
-      total += frames(mora.vowel_length) + (mora.consonant_length == null ? 0 : frames(mora.consonant_length));
+      const shape = shapeOf(mora.vowel);
+      if (mora.consonant_length != null) segment(mora.consonant_length, /^(m|b|p)y?$/.test(mora.consonant) ? 'x' : shape);
+      segment(mora.vowel_length, shape);
     }
-    if (phrase.is_interrogative && phrase.moras.at(-1)?.pitch > 0) total += frames(0.15);
-    if (phrase.pause_mora) total += frames((query.pauseLength ?? phrase.pause_mora.vowel_length) * (query.pauseLengthScale ?? 1));
+    if (phrase.is_interrogative && phrase.moras.at(-1)?.pitch > 0) segment(0.15, shapeOf(phrase.moras.at(-1).vowel));
+    if (phrase.pause_mora) segment((query.pauseLength ?? phrase.pause_mora.vowel_length) * (query.pauseLengthScale ?? 1), 'x');
   }
   const speechEnd = total / 93.75;
-  total += frames(query.postPhonemeLength);
+  segment(query.postPhonemeLength, 'x');
   if (!moras.length || total > 180 * 93.75) throw new Error('AudioQuery の長さが許容範囲外です。');
-  return { moras, speechEnd, frames: total, duration: total / 93.75 };
+  return { moras, mouth, speechEnd, frames: total, duration: total / 93.75 };
 }
 
 // Compare mora tokens, not kana characters (キ vs キャ must fail). Accent and

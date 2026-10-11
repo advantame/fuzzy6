@@ -4,6 +4,8 @@
 
 import { FONTS } from './lib/theme.js';
 import manifest from './voice/manifest.json';
+import lexicon from './voice/lexicon.js';
+import { standing, hasFigures } from './lib/figures.js';
 import opening from './clips/opening.js';
 import timeline from './clips/timeline.js';
 import shannon from './clips/shannon.js';
@@ -94,13 +96,21 @@ export default {
   title: 'LLM',
   subtitle: '次の一語から、エージェントまで',
   fonts: FONTS,
+  // 17:9. The column on the right gives ずんだもん room beside the stage (spec §2).
+  frame: { gutter: 120 },
   voice: {
-    speaker: '四国めたん',
-    style: 'ノーマル',
-    credit: 'VOICEVOX:四国めたん',
+    // The cast (spec §7.2). The first speaker reads every line that names no one.
+    cast: {
+      metan: { name: '四国めたん', speaker: '四国めたん', style: 'ノーマル', credit: 'VOICEVOX:四国めたん', ...standing('metan', 'left') },
+      // ずんだもん has no line yet. Add `credit: 'VOICEVOX:ずんだもん'` with her first line.
+      zunda: { name: 'ずんだもん', speaker: 'ずんだもん', style: 'ノーマル', ...standing('zunda', 'right') },
+    },
+    lexicon,
     manifest,
     url: (file) => audio[`./voice/${file}`],
   },
+  // The figures are akihiyo's standing-picture materials, used locally (AGENTS.md).
+  credits: hasFigures ? ['立ち絵:akihiyo'] : [],
   chapters: [
     { id: 'history', title: '歴史', clips: [opening, timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
     { id: 'concepts', title: '基本概念', clips: [tokens, predict, embedding, attention, pretrain, context] },

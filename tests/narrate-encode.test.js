@@ -11,8 +11,9 @@ vi.mock('../tools/narrate/engine.mjs', () => ({
   startSupervisedEngine: engine.start, request: vi.fn(), resolveStyle: vi.fn(), TOTAL_MS: 1800000,
 }));
 import { encode, generate } from '../tools/narrate.mjs';
-const voice = { speaker: '四国めたん', style: 'ノーマル' };
-const line = { clipId: 'sample', lineId: 'a', source: 'アイ', anchors: [{ name: 'point', offset: 1 }] };
+const actor = { name: '四国めたん', speaker: '四国めたん', style: 'ノーマル' };
+const voice = { cast: { metan: actor } };
+const line = { by: 'metan', clipId: 'sample', lineId: 'a', source: 'アイ', anchors: [{ name: 'point', offset: 1 }] };
 const signal = () => new AbortController().signal;
 const wav = testWav(4801), info = validateWav(wav);
 const encodeAudio = vi.fn(bytes => {
@@ -29,10 +30,10 @@ beforeEach(async () => {
 });
 afterEach(async () => { await rm(root, { recursive: true, force: true }); });
 async function legacy(speeds = ['1']) {
-  const manifest = { version: 1, engine: ENGINE_INFO, voice, clips: {} };
+  const manifest = { version: 2, engine: ENGINE_INFO, clips: {} };
   for (const speed of speeds) {
     const file = `sample/a@${speed}.wav`;
-    const take = { file, sha256: sha256(wav), duration: 0.2, anchors: { point: 0.1 }, generationSha256: generationHash(line, voice, speed) };
+    const take = { file, sha256: sha256(wav), duration: 0.2, mouth: [[0, 'a'], [0.1, 'x']], anchors: { point: 0.1 }, generationSha256: generationHash(line, voice, speed) };
     applyRecording(manifest, { line, voice, speed, take, reading: 'アイ' });
     await writeFile(join(dir, file), wav);
   }
@@ -160,7 +161,7 @@ describe('Opus delivery migration and ownership', () => {
     const writer = await openWriter(dir, state);
     try {
       await writer.commit({ line: changed, voice, speed: '1', reading: 'ヘンコウ', previousSha256: sha256(wav),
-        take: { file: 'sample/a@1.wav', sha256: sha256(bytes), duration: 0.2, anchors: { point: 0.1 }, generationSha256: generationHash(changed, voice, '1') } }, bytes);
+        take: { file: 'sample/a@1.wav', sha256: sha256(bytes), duration: 0.2, mouth: [[0, 'a'], [0.1, 'x']], anchors: { point: 0.1 }, generationSha256: generationHash(changed, voice, '1') } }, bytes);
     } finally { await writer.close(); }
     const next = await inspect([changed]);
     expect(next.plan[0].status).toBe('encode'); // previous Opus is retired, not current

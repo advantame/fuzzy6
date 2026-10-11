@@ -1,6 +1,6 @@
 import { spawn, fork } from 'node:child_process';
 import { constants } from 'node:fs';
-import { access, mkdir, readFile, readdir, readlink, realpath } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, readlink, realpath, rmdir } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -8,7 +8,7 @@ import { CORE_VERSION, MAX_WAV_BYTES } from './core.mjs';
 
 export const ENGINE = '/home/apm/apps/voicevox-engine-0.25.2/run';
 const HOST = '127.0.0.1';
-const PORT = 50031;
+const PORT = 8083;
 export const TOTAL_MS = 30 * 60_000;
 
 export async function processIdentity(pid) {
@@ -47,6 +47,7 @@ export async function request(path, { signal, params = {}, body, bytes = false, 
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) { await response.body?.cancel(); throw new Error(`VOICEVOX ${path}: HTTP ${response.status}`); }
+  if (response.status === 204) { await response.body?.cancel(); return undefined; }
   const chunks = [];
   let length = 0;
   const limit = bytes ? MAX_WAV_BYTES : 2 * 1024 ** 2;
@@ -59,6 +60,26 @@ export async function request(path, { signal, params = {}, body, bytes = false, 
 }
 
 export async function startEngine(root, signal) {
+  const dir = join(root, '.cache/voicevox');
+  await mkdir(dir, { recursive: true });
+  const lock = join(dir, '.engine-lock');
+  try { await mkdir(lock); } catch (error) {
+    if (error.code === 'EEXIST') throw new Error(`別のエンジンまたは未回収のロックがあります: ${lock}`);
+    throw error;
+  }
+  let engine;
+  try { engine = await startUnlockedEngine(root, signal); }
+  catch (error) { await rmdir(lock); throw error; }
+  let stopped = false;
+  return { identity: engine.identity, stop: async () => {
+    if (stopped) return;
+    await engine.stop();
+    await rmdir(lock);
+    stopped = true;
+  } };
+}
+
+async function startUnlockedEngine(root, signal) {
   await access(ENGINE, constants.X_OK);
   await new Promise((resolve, reject) => {
     const server = createServer();
@@ -73,7 +94,7 @@ export async function startEngine(root, signal) {
   signal.throwIfAborted();
   const child = spawn('/usr/bin/prlimit', [
     '--as=4294967296:4294967296', '--core=0:0', '--cpu=1800:1800', '--nofile=256:256',
-    ENGINE, '--host', HOST, '--port', String(PORT), '--cpu_num_threads', '4', '--disable_mutable_api',
+    ENGINE, '--host', HOST, '--port', String(PORT), '--cpu_num_threads', '4',
   ], {
     cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, CUDA_VISIBLE_DEVICES: '', OMP_NUM_THREADS: '4', OPENBLAS_NUM_THREADS: '4',

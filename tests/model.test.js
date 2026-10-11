@@ -3,6 +3,12 @@ import { normalizeDeck, cuesAt, cueMarkup, formatTime, clampTime, canvasScale, a
 const clip = (id, extra = {}) => ({ id, duration: 10, setup() {}, ...extra });
 const deck = chapters => ({ chapters });
 describe('deck model', () => {
+  it.each([undefined, {}, { gutter: undefined }, { gutter: 0 }, { gutter: 120 }, { gutter: 240 }])('normalizes frame %j', frame => {
+    expect(normalizeDeck({ ...deck([{ id: 'a', clips: [clip('x')] }]), frame }).gutter).toBe(frame?.gutter ?? 0);
+  });
+  it.each([-1, 241, 1.5, NaN, Infinity, -Infinity, null, '120', false, {}, []])('rejects invalid gutter %j', gutter => {
+    expect(() => normalizeDeck({ ...deck([{ id: 'a', clips: [clip('x')] }]), frame: { gutter } })).toThrow(/deck.frame.gutter/);
+  });
   it('numbers chapters, numbered clips and all global positions', () => {
     const m = normalizeDeck(deck([{ id: 'a', clips: [clip('intro', { numbered: false }), clip('one'), clip('two')] }, { id: 'b', clips: [clip('three')] }]));
     expect(m.clips.map(c => [c.chapterNumber, c.number, c.global, c.index])).toEqual([[1, null, 1, 0], [1, 1, 2, 1], [1, 2, 3, 2], [2, 1, 4, 3]]);

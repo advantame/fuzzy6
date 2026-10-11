@@ -141,8 +141,9 @@ test('horizontal touch navigates stops and index arrows stop at chapter edges', 
   expect((await state(page)).t).toBe(0);
   await page.keyboard.press('i');
   await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
   await expect(page.locator('.mx-index')).toBeVisible();
-  await expect(page.locator('.mx-index-clip[data-clip="script"]')).toBeFocused();
+  await expect(page.locator('.mx-index-clip[data-clip="duet"]')).toBeFocused();
 });
 
 test('pace changes preserve line section and update stage values, controls and events', async ({ page }) => {
@@ -218,7 +219,7 @@ async function audioFixture(page, format = 'wav') {
     clip.script = [{ id: 'a', text: '声{mark}です', tail: 0.2 }, { id: 'silent', lead: 0.4 }];
     window.fixtureDeck.pace = { pre: 0.1 };
     window.fixtureDeck.credits = ['VOICEVOX:四国めたん'];
-    window.fixtureDeck.voice = { credit: 'VOICEVOX:四国めたん', url: () => format === 'opus' ? '/tests/fixtures/tone.opus' : '/test-narration.wav',
+    window.fixtureDeck.voice = { cast: { metan: { name: '四国めたん', credit: 'VOICEVOX:四国めたん' } }, url: () => format === 'opus' ? '/tests/fixtures/tone.opus' : '/test-narration.wav',
       manifest: { clips: { 'clip-0': { a: { source: '声です', takes: { '1': { duration: 3, anchors: { mark: 1 }, file: `test.${format}` } } } } } } };
     window.makeExplorer({ url: false });
   }, format);

@@ -36,7 +36,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: 1920px;
+  width: calc(1920px + var(--mx-gutter, 0px)); /* a deck may add a column on the right (spec §2) */
   height: 1080px;
   transform-origin: 0 0;
 }
@@ -45,12 +45,14 @@
 .mx-stage,
 .mx-corner,
 .mx-bar,
+.mx-gutter,
 .mx-index { position: absolute; }
 
 .mx-rail   { left: 0;     top: 0;     width: 320px;  height: 900px; z-index: 1; }
 .mx-stage  { left: 320px; top: 0;     width: 1600px; height: 900px; z-index: 0; overflow: hidden; background: var(--mx-stage-bg); }
 .mx-corner { left: 0;     top: 900px; width: 320px;  height: 180px; z-index: 1; }
-.mx-bar    { left: 320px; top: 900px; width: 1600px; height: 180px; z-index: 2; }
+.mx-bar    { left: 320px; top: 900px; width: calc(1600px + var(--mx-gutter, 0px)); height: 180px; z-index: 2; }
+.mx-gutter { left: 1920px; top: 0;    width: var(--mx-gutter, 0px); height: 900px; z-index: 1; }
 .mx-index  { left: 320px; top: 0;     width: 1600px; height: 900px; z-index: 3; }
 
 .mx-layer {
@@ -279,7 +281,7 @@
 .mx-seek {
   position: absolute;
   left: 0;
-  right: 0;
+  right: var(--mx-gutter, 0px); /* the time axis is the stage's lower edge, never wider */
   top: -16px;
   height: 32px;
   cursor: pointer;
@@ -356,7 +358,7 @@
 
 .mx-time {
   position: absolute;
-  right: 40px;
+  right: calc(40px + var(--mx-gutter, 0px));
   top: 30px;
   font: 500 15px/1 var(--mx-font-mono);
   letter-spacing: 0.04em;
@@ -368,7 +370,7 @@
 .mx-subs {
   position: absolute;
   left: 96px;
-  right: 96px;
+  right: calc(96px + var(--mx-gutter, 0px)); /* without figures, captions stay under the stage */
   top: 40px;
   bottom: 14px;
   display: flex;
@@ -833,3 +835,58 @@
   font-size: 13px;
 }
 .mx-tune-reset:hover { background: var(--mx-accent) !important; color: #121110; }
+
+/* ——— cast: figures at the two ends of the bar (spec 0.5) ——————————————— */
+
+.mx {
+  --mx-cast-h: 168px;   /* fits the bar; taller figures rise over the stage's bottom corners */
+  --mx-cast-w: 168px;   /* upper bound of a figure's width, and the room the captions give up */
+  --mx-cast-gap: 12px;
+}
+.mx-cast {
+  position: absolute;
+  bottom: 0;
+  z-index: 0;
+  height: var(--mx-cast-h);
+  width: min(var(--mx-cast-w), calc(var(--mx-cast-h) * var(--mx-figure-ratio, 1)));
+  pointer-events: none;
+  transition: filter 0.25s var(--mx-ease), opacity 0.25s var(--mx-ease);
+  animation: mx-cast-in 0.4s var(--mx-ease) both;
+}
+.mx-cast[data-side='left']  { left: var(--mx-cast-gap); }
+.mx-cast[data-side='right'] { right: var(--mx-cast-gap); }
+.mx-cast img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+  user-select: none;
+}
+/* A tall figure rises over the bar's upper edge. The seek bar stays on top of it. */
+.mx-seek { z-index: 1; }
+/* One image per shape stays in the DOM; only the one the figure's attribute names is shown. */
+.mx-cast-eyes,
+.mx-cast-mouth { visibility: hidden; }
+.mx-cast[data-eyes='open'] .mx-cast-eyes[data-shape='open'],
+.mx-cast[data-eyes='closed'] .mx-cast-eyes[data-shape='closed'],
+.mx-cast[data-mouth='x'] .mx-cast-mouth[data-shape='x'],
+.mx-cast[data-mouth='a'] .mx-cast-mouth[data-shape='a'],
+.mx-cast[data-mouth='i'] .mx-cast-mouth[data-shape='i'],
+.mx-cast[data-mouth='u'] .mx-cast-mouth[data-shape='u'],
+.mx-cast[data-mouth='e'] .mx-cast-mouth[data-shape='e'],
+.mx-cast[data-mouth='o'] .mx-cast-mouth[data-shape='o'],
+.mx-cast[data-mouth='n'] .mx-cast-mouth[data-shape='n'] { visibility: visible; }
+/* While someone speaks, the listener steps back. Alone, a figure never dims. */
+.mx-bar:has(.mx-cast[data-speaking]) .mx-cast:not([data-speaking]) { filter: brightness(0.74) saturate(0.8); }
+@keyframes mx-cast-in {
+  from { opacity: 0; transform: translateY(10px); }
+}
+/* Captions give up the figures' room on both sides, so they stay centred. */
+.mx[data-cast] .mx-subs {
+  left: calc(var(--mx-cast-w) + var(--mx-cast-gap) * 2);
+  right: calc(var(--mx-cast-w) + var(--mx-cast-gap) * 2);
+}
+.mx[data-cast] .mx-time { right: calc(var(--mx-cast-w) + var(--mx-cast-gap) * 2 + 8px); }
+.mx[data-clean] .mx-gutter { display: none; }

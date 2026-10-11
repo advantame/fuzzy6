@@ -46,7 +46,8 @@ if (!worker) {
 }
 async function capture() {
   const clean = takeFlag('--clean'), posters = takeFlag('--posters'), sheet = takeFlag('--sheet'), stops = takeFlag('--stops');
-  const size = String(takeValue('--size', '1920x1080')).split('x').map(Number);
+  const explicitSize = takeValue('--size', null);
+  const size = String(explicitSize ?? '1920x1080').split('x').map(Number);
   const every = Number(takeValue('--every', '1')), cols = Number(takeValue('--cols', '4'));
   const [deck, clipId, ...timesRaw] = argv;
   const safeId = value => /^[a-z0-9][a-z0-9-]*$/.test(value ?? '');
@@ -89,6 +90,17 @@ async function capture() {
     if (clean) url.searchParams.set('clean', '');
     await page.goto(url.href);
     await page.waitForFunction(() => window.__ready === true);
+    if (explicitSize === null && !clean) {
+      const gutter = await step(page.evaluate(async deck => {
+        const { default: data } = await import(`/decks/${deck}/deck.js`);
+        const { normalizeDeck } = await import('/src/explorer/model.js');
+        return normalizeDeck(data).gutter;
+      }, deck));
+      size[0] = 1920 + gutter;
+      await step(page.setViewportSize({ width: size[0], height: size[1] }));
+      // Flush resize before taking frames (also updates the canvas backing size).
+      await step(page.evaluate(() => window.dispatchEvent(new Event('resize'))));
+    }
     if (clipId && await step(page.evaluate(() => window.__mx.state().clip)) !== clipId) throw new Error(`Unknown clip: ${clipId}`);
     const screenshot = async path => { await page.screenshot({ path, timeout: 15000 }); console.log(path); };
     if (posters) {

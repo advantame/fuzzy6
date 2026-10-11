@@ -121,9 +121,9 @@
 }
 .mx-seek-hover-time { color: var(--mx-accent); }
 
-.mx-time { top: 34px; right: 44px; font-size: 16px; }
+.mx-time { top: 34px; right: calc(44px + var(--mx-gutter, 0px)); font-size: 16px; }
 
-.mx-subs { left: 120px; right: 120px; top: 48px; bottom: 18px; }
+.mx-subs { left: 120px; right: calc(120px + var(--mx-gutter, 0px)); top: 48px; bottom: 18px; }
 .mx-cue {
   font-size: 37px;
   line-height: 1.42;
@@ -131,6 +131,23 @@
   letter-spacing: 0.03em;
 }
 .mx-cue strong { color: var(--mx-accent); font-weight: 700; }
+
+/* ——— cast: 四国めたん on the left, ずんだもん on the right ————————————————
+   The two figures are exported at one scale, so giving each the same height per source row
+   (1600 and 1920 rows at 0.135) keeps their heads the same size. The headdress and the ears
+   rise a little over the seek bar. */
+.mx-cast { --mx-cast-w: 340px; --mx-cast-gap: 14px; }
+.mx-cast[data-id='metan'] { --mx-cast-h: 216px; }
+.mx-cast[data-id='zunda'] { --mx-cast-h: 259px; }
+/* The listener steps back less than the default: on the dark bar a deep dim turns muddy. */
+.mx-bar:has(.mx-cast[data-speaking]) .mx-cast:not([data-speaking]) { filter: brightness(0.86) saturate(0.9); }
+/* Captions take the room between the figures that are there. The deck's frame has a column
+   on the right (deck.js `frame.gutter`), so ずんだもん stands clear of the stage's corner. */
+.mx[data-cast] .mx-subs { left: 120px; right: calc(120px + var(--mx-gutter, 0px)); }
+.mx[data-cast] .mx-bar:has(.mx-cast[data-side='left']) .mx-subs { left: 318px; }
+.mx[data-cast] .mx-bar:has(.mx-cast[data-side='right']) .mx-subs { right: 282px; }
+.mx[data-cast] .mx-time { right: calc(44px + var(--mx-gutter, 0px)); }
+.mx[data-cast] .mx-bar:has(.mx-cast[data-side='right']) .mx-time { right: 292px; }
 
 /* ——— corner ——————————————————————————————————————————————————— */
 

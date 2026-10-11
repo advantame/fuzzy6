@@ -22,4 +22,4 @@
 
 ## 作り方
 
-語りの原稿はクリップの `script` にあります。`npm run narrate -- llm <clipId> --generate` が、この機械の VOICEVOX Engine を一時起動して WAV を合成し、そこから配る音声（Ogg Opus）を作って、`manifest.json` に記録します。WAV はリポジトリに入れません。くわしくは [docs/spec.md](../../../docs/spec.md) の §7.1 にあります。
+語りの原稿はクリップの `script` にあります。`npm run narrate -- llm <clipId> --generate` が、この機械の VOICEVOX Engine を一時起動して WAV を合成し、そこから配る音声（Ogg Opus）を作って、`manifest.json` に記録します。WAV はリポジトリに入れません。読みとアクセントを決めてある語は、[lexicon.js](lexicon.js) にあります。くわしくは [docs/spec.md](../../../docs/spec.md) の §7.1 にあります。

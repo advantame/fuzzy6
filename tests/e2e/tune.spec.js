@@ -106,7 +106,7 @@ test('changing a speed tier selects recordings only for lines that use that tier
     clip.script = [{ id: 'a', text: '例', speed: 'slow' }, { id: 'b', text: '例' }, { id: 'c', text: '例', speed: 'fast' }];
     const takes = { '1.1': { duration: 1, anchors: {}, file: 'slow.opus' },
       '1.3': { duration: 0.8, anchors: {}, file: 'normal.opus' }, '1.5': { duration: 0.6, anchors: {}, file: 'fast.opus' } };
-    window.fixtureDeck.voice = { manifest: { clips: { 'clip-0': Object.fromEntries(clip.script.map(l => [l.id, { source: '例', takes }])) } } };
+    window.fixtureDeck.voice = { cast: { metan: { name: 'Metan' } }, manifest: { clips: { 'clip-0': Object.fromEntries(clip.script.map(l => [l.id, { source: '例', takes }])) } } };
     window.makeExplorer();
   });
   await page.waitForFunction(() => window.__ready);

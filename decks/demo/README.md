@@ -26,3 +26,9 @@ the live stage values as data attributes for tests.
 
 Spec 0.3 replaces the earlier index behavior: ↓ stays at the chapter's last item.
 The new narration chapter follows Timing; `short` still advances to `cues`.
+
+2026-10-11: 仕様 0.5 の配役と立ち絵の見本を追加。`duet`（「二人の語り」）では、左の `metan` と右の `zunda` が交互に話す。絵は `lib/puppet.js` の色違いで、実際のキャラクター素材ではない。最初の二文は手書きの長さと口の形、最後の文は見積もりによる口の開閉を使う。音声ファイルや合成用の話者設定はなく、無音で確認できる。`script` は左の語り手だけを出し、`duet` へ移っても左の要素を保つ。
+
+- `?c=duet&sound=0` で通常再生、`?c=duet&t=0.5` で同じ時刻の静止画を確認する。
+- `&cast=0` または `window.__mx.setCast(false)` で隠し、`setCast(true)` で戻す。
+- 二人の文は「左の語り手から話します。」「次は、右の語り手です。」「録りがない文でも、口が動きます。」。動作確認用の例であり、事実や数値を説明する原稿ではない。

@@ -46,6 +46,7 @@ export function createChrome(root, deck, model, retire, frame) {
         </div>
         <div class="mx-subs" aria-live="polite"></div>
       </footer>
+      ${model.gutter > 0 ? '<div class="mx-gutter"></div>' : ''}
       <div class="mx-index" role="dialog" aria-label="目次" hidden>
         <header class="mx-index-head">
           <p class="mx-index-deck"></p><h2 class="mx-index-title"></h2>
@@ -61,7 +62,7 @@ export function createChrome(root, deck, model, retire, frame) {
     sound.append(element('span', 'mx-icon'), element('span', 'mx-sound-label', '音声'));
     q('corner').append(sound);
   }
-  const credits = [...new Set([...(deck.credits ?? []), deck.voice?.credit].filter(Boolean))];
+  const credits = [...new Set([...Object.values(deck.voice?.cast ?? {}).map(a => a?.credit), ...(deck.credits ?? [])].filter(Boolean))];
   if (credits.length) {
     const footer = element('footer', 'mx-credits');
     for (const credit of credits) footer.append(element('p', 'mx-credit', credit));
@@ -150,6 +151,7 @@ export function createChrome(root, deck, model, retire, frame) {
           (subs.querySelector('[data-state="out"]') ?? subs.firstElementChild).remove();
         const node = element('p', 'mx-cue');
         node.dataset.state = 'in';
+        if (cue.by !== undefined) node.dataset.by = cue.by;
         node.innerHTML = cueMarkup(cue.text);
         // Only insert new nodes: moving a live cue restarts its entrance animation.
         const following = cues.slice(index + 1).find(next => active.has(next));

@@ -9,7 +9,7 @@ const clip = { id: 'test', script: [
   { id: 'silent', lead: 1, tail: 0.2, rest: 0.25 },
   { id: 'b', text: '**end**', rest: 99 },
 ] };
-const voice = { manifest: { clips: { test: {
+const voice = { cast: { metan: { name: 'Metan' } }, manifest: { clips: { test: {
   a: { source: 'abcd', takes: {
     '1.3': { duration: 2, anchors: { mark: 0.6 }, file: 'a.wav' },
     '1.5': { duration: 1.5, anchors: { mark: 0.4 }, file: 'fast.wav' },
@@ -23,7 +23,7 @@ describe('timeline', () => {
   it('uses each line speed for its take and keeps line.speed as the recorded speed', () => {
     const script = [undefined, 'normal', 'slow', 'fast'].map((speed, i) => ({ id: `l${i}`, text: 'abc', speed }));
     const takes = Object.fromEntries([1, 1.2, 1.4, 1.6].map(speed => [speed, { duration: 3 / speed, anchors: {}, file: `${speed}.opus` }]));
-    const recordings = { manifest: { clips: { sample: Object.fromEntries(script.map(l => [l.id, { source: 'abc', takes }])) } } };
+    const recordings = { cast: { metan: { name: 'Metan' } }, manifest: { clips: { sample: Object.fromEntries(script.map(l => [l.id, { source: 'abc', takes }])) } } };
     const t = buildTimeline({ id: 'sample', script }, pace, recordings);
     expect(t.lines.map(l => l.speed)).toEqual([1.2, 1.2, 1, 1.4]); // all ties choose slower
     expect(t.lines.map(l => l.take.file)).toEqual(['1.2.opus', '1.2.opus', '1.opus', '1.4.opus']);
@@ -48,7 +48,7 @@ describe('timeline', () => {
     expect(t.duration).toBe(6.95);
     expect(['a', 'a.start', 'a.voice', 'a.end', 'a.done', 'a.next', 'mark', 'b.next'].map(t.at))
       .toEqual([0, 0, 0.8, 2.8, 3.2, 4.2, 1.4, 6.95]);
-    expect(t.cues).toEqual([{ at: 0.8, to: 5.95, text: 'abcd' }, { at: 5.95, to: Infinity, text: '**end**' }]);
+    expect(t.cues).toEqual([{ by: 'metan', at: 0.8, to: 5.95, text: 'abcd' }, { by: 'metan', at: 5.95, to: Infinity, text: '**end**' }]);
     expect(t.stops.map(s => [s.at, s.kind, s.line])).toEqual([[0, 'line', 'a'], [3.2, 'still', 'a'], [4.2, 'line', 'silent'], [5.65, 'line', 'b'], [6.95, 'still', 'b']]);
     expect(() => t.at('absent')).toThrow(/Unknown/);
     expect(posterTime({ poster: 'a.done' }, t)).toBe(3.2);

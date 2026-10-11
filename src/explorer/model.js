@@ -1,6 +1,9 @@
 export const W = 1600;
 export const H = 900;
 export function normalizeDeck(deck) {
+  const gutter = deck.frame?.gutter === undefined ? 0 : deck.frame.gutter;
+  if (!Number.isInteger(gutter) || gutter < 0 || gutter > 240)
+    throw new Error('deck.frame.gutter must be an integer from 0 to 240');
   const chapters = new Set();
   const ids = new Map();
   const clips = [];
@@ -28,7 +31,7 @@ export function normalizeDeck(deck) {
     }
   }
   if (!clips.length) throw new Error('Deck must contain at least one clip');
-  return { clips, ids };
+  return { clips, ids, gutter };
 }
 export function clampTime(t, duration) {
   const n = Number(t);

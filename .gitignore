@@ -6,4 +6,8 @@ playwright-report/
 *.log
 .DS_Store
 .cache/
+staging/
 decks/*/voice/**/*.wav
+
+# Standing-figure art is used locally only; it is not in the repository (AGENTS.md).
+decks/*/figures/

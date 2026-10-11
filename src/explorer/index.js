@@ -1,3 +1,4 @@
+import { createCastView } from './cast-view.js';
 import { normalizeDeck, clampTime, advanceTime, seekState } from './model.js';
 import { createChrome } from './chrome.js';
 import { createLayer } from './layer.js';
@@ -13,6 +14,8 @@ export function createExplorer(host, deck, options = {}) {
   const root = document.createElement('div');
   root.className = 'mx';
   root.dataset.deck = deck.id;
+  root.style.setProperty('--mx-gutter', `${model.gutter}px`);
+  root.toggleAttribute('data-gutter', model.gutter > 0);
   root.toggleAttribute('data-still', still);
   root.toggleAttribute('data-clean', clean);
   host.append(root);
@@ -32,6 +35,7 @@ export function createExplorer(host, deck, options = {}) {
   let soundOn = params.get('sound') !== '0';
   let soundState = soundOn ? 'on' : 'off';
   let subs = true;
+  let castOn = params.get('cast') !== '0';
   let landingTimer;
   let tune;
   const sound = still ? null : createSound(deck.voice);
@@ -102,6 +106,7 @@ export function createExplorer(host, deck, options = {}) {
   }
   const chrome = createChrome(root, deck, model, retire, frame);
   const { q } = chrome;
+  const castView = createCastView(root, q('subs'));
   function state() {
     return {
       deck: deck.id,
@@ -114,7 +119,7 @@ export function createExplorer(host, deck, options = {}) {
       state: status,
       auto,
       indexOpen,
-      sound: soundState, subs,
+      sound: soundState, subs, cast: castView.state(),
       line: timing ? positionAt(timing.value, t)?.line ?? null : null,
       stops: timing ? timing.value.stops.map(s => ({ ...s })) : [],
       target: timing ? nextTarget(timing.value, t, pace) : null,
@@ -156,6 +161,7 @@ export function createExplorer(host, deck, options = {}) {
     if (!current || destroyed) return;
     layer.render(t);
     chrome.render(view(), t, instant || still, still, nextTarget(timing.value, t, pace));
+    castView.render(current.clip.id, timing.value, t, castOn);
     emit('time');
   }
   function ended(natural = false) {
@@ -263,6 +269,11 @@ export function createExplorer(host, deck, options = {}) {
     if (subs) root.removeAttribute('data-subs');
     else root.dataset.subs = 'off';
   }
+  function setCast(on) {
+    cancelHold();
+    castOn = !!on;
+    if (current && !destroyed) castView.render(current.clip.id, timing.value, t, castOn);
+  }
   function setPace(patch) {
     const nextPace = mergePace(pace, patch);
     cancelHold();
@@ -340,6 +351,10 @@ export function createExplorer(host, deck, options = {}) {
       history.replaceState(null, '', url);
     }
     render(true);
+    if (still) {
+      await castView.wait();
+      if (ticket !== generation || destroyed) return;
+    }
     if (!still) {
       const incoming = layer;
       void incoming.el.offsetWidth;
@@ -495,7 +510,7 @@ export function createExplorer(host, deck, options = {}) {
     if (restore && indexWasPlaying) play();
   }
   function resize() {
-    const w = clean ? 1600 : 1920;
+    const w = clean ? 1600 : 1920 + model.gutter;
     const h = clean ? 900 : 1080;
     // The open tuning panel (spec §8.1) stands beside the frame, not over the stage.
     const side = root.querySelector('.mx-tune:not([data-collapsed])')?.offsetWidth ?? 0;
@@ -524,6 +539,7 @@ export function createExplorer(host, deck, options = {}) {
     events.clear();
     sound?.destroy();
     tune?.destroy();
+    castView.destroy();
     layer?.dispose();
     outgoing?.dispose();
     root.remove();
@@ -540,7 +556,7 @@ export function createExplorer(host, deck, options = {}) {
     state,
     at: name => timing.value.at(name),
     pace: () => structuredClone(pace),
-    setPace, setSound, setSubs,
+    setPace, setSound, setSubs, setCast,
     nextStop: () => moveStop(false),
     prevStop: () => moveStop(true),
     go,

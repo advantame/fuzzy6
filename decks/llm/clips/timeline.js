@@ -43,6 +43,7 @@ export default clip({
   id: 'timeline',
   title: '言語モデルの年表',
   kicker: '1948–2025',
+  cast: ['metan', 'zunda'], // ずんだもん listens: a trial of the two figures side by side
   script: [
     {
       id: 'a',

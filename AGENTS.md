@@ -6,6 +6,7 @@
 
 ```
 docs/spec.md            部品と契約の仕様（正本）
+docs/narration.md       語りの書き方（VOICEVOX に自然に読ませるための決まり）
 src/explorer/           engine。spec の実装（index.js が createExplorer）
 src/explorer/explorer.css  幾何と既定の見た目
 src/explorer/pace.js    歩調（どのクリップにも効く時間の変数）の既定値
@@ -14,6 +15,7 @@ decks/<id>/             一つのデッキ（テーマ）。index.html, main.js,
 index.html, src/home/   デッキの一覧（表紙は各デッキの静止フレームを iframe で出す。spec §8）
 tools/capture.mjs       静止フレーム、各クリップの poster、止まりごとの絵、連続フレームの一覧を撮る
 tools/narrate.mjs       語りの音声を合成し、語りの記録（voice/manifest.json）を書く
+tools/figures/export.py 立ち絵を PSD から書き出す（画像はリポジトリに入れない）
 research/<題>/          調査の記録（log.md と report.md）
 tests/                  unit（vitest）と e2e（playwright）
 ```
@@ -58,7 +60,8 @@ LLM デッキを見直して決めた、どのデッキにも効く作り方。�
 - **時間の好みは歩調に置く。** 入り、ずらし、間、強調の速さは `pace` から読む。あるクリップだけの数字が増えてきたら、歩調の段階が足りていない。
 - **話す速さは三段。** 基本は 1.3、ゆっくりは 1.1、早口は 1.5（ボスが 1-1 を聞き比べて決めた）。文ごとに `speed` で選び、文の途中で速さを変えたいときは、文を分ける。どういう文をゆっくりにし、どういう文を早口にするかの目安は、まだ決めていない。
 - **字幕は出す。** 音声を付けても、字幕は既定で出す。式や記号のように見比べるものは、字幕ではなく図の中に書く。
-- **読みを確かめる。** 合成のあとに出る読み（カナ）を見て、数字、英語、記号の読み違いを `[表記|よみ]` で直す。
+- **読みを確かめる。** 合成のあとに出る読み（カナ）を見て、数字、英語、記号の読み違いを `[表記|よみ]` で直す。アクセントや長音の長さまで直したい語は、デッキの語彙（`voice.lexicon`、spec §7.3）に書く。型ごとの書き方は [docs/narration.md](docs/narration.md) にまとめてある。
+- **音は数字でも確かめる。** Claude は音を聞けない。語彙を足したら `npm run narrate -- <deck> <id> --inspect` で、拍ごとの高さと長さを見る。最後に決めるのは、聞いたボス。聞いて決まったことは、語彙の項目の横と、デッキの README に書く。
 
 ## 次のデッキに向けて（2026-10-11 の話し合いから）
 
@@ -68,6 +71,10 @@ LLM デッキを見直して決めた、どのデッキにも効く作り方。�
 - **設計の下書き。** クリップが、時刻の純粋関数として「押せる領域」（矩形、行き先のクリップの id、名前）を返す。engine がステージの上に DOM のボタンを重ねる。降りるときはいまのクリップと時刻を積み、戻るときは同じ時刻へ戻る。行き先は id で指すので、デッキどうしは import しないまま。そのために、クリップは id で指せる単位に保つ。迷子にしないための決まり（本線、現在地、戻り先を保つ。必須の前提と、任意の深掘りを分ける）は、research/motion-principles の規則 17 にある。
 - **2-3 の補足の図。** 前半は右が空いている。ここに「ベクトルとは」に答える図を置く。手本は、ラムダ技術部の動画の運び（数の一つ一つを、読める特徴の表として見せてから、「???」と実際の数に替える。画像は `~/projects/fuzzy6/staging/Image1〜6.png`）。作り物なので「イメージ」の札を付ける。
 - **最初の試作の題材。** research は、ベクトルの合成と、単位円の高さから sin のグラフへの対応の二つを勧めている（report.md の「推奨する次の行動」）。作る順が説明になる図（ベクトルをつなぐ順）と、そろえてから強調する図の両方を試せる。
+- **立ち絵の絵（2026-10-11、ボスの決定）。** 四国めたんとずんだもんの立ち絵には、akihiyo さんの立ち絵素材（「立ちめたん素材」「立ちずんだもん素材」）を使う。**画像はリポジトリに入れない。** 元の PSD は `~/projects/fuzzy6/staging/` にあり、書き出した PNG は `decks/llm/figures/` に置く（`.gitignore` で除いてある）。だから、新しく取り出した作業環境と公開版には立ち絵が出ない。デッキは、画像がなければ立ち絵なしで動く（`decks/llm/lib/figures.js`）。
+  - ボスが挙げた根拠: 作者が内部のデータ（PSD）ごと公開している。公開ページで東北ずん子プロジェクトを親作品に登録している。作者は、公式ページ、X、Skeb のどこでも、利用条件やクレジットについて書いていない。広く公開する作品と限定公開の作品を分けている作者で、この素材は広く公開する側にある。参考にした見解は <https://be-cando.com/voicevox_character-syuueki/#toc16>。指摘を受けたら、その時に対応する（支払いを含む）。
+  - 調査（[research/character-figures/report.md](research/character-figures/report.md)）では、この素材の作者の条件は一次資料で確かめられず、公開リポジトリに置けるかは判断を保留していた。配布の ZIP にも説明の文書はなかった。リポジトリに入れないのは、そのため。
+  - 書き出しは `tools/figures/export.py` と、デッキの `figures.recipe.json`（PSD のどのレイヤをどの口と目に使うか、どこで切り抜くか）で行う。手順は下の「環境」にある。
 - **参考にした以前の制作。** 語りと視線の導き方は、fuzzy3（`~/projects/fuzzy3/docs/COMPILER.md` の beats と narration、`docs/MOTIONS.md` §7）と、fuzzy4（`~/projects/fuzzy4/docs/narration.md`、`docs/narration-cue-alignment.md`）で一度作っている。声のあとの間（`holdAfterMs`）、発話ごとの印、合成のデータからの時刻の計算は、そこから引き継いだ。
 
 ## クリップを作る手順（2026-10-10 に LLM デッキで固め、2026-10-11 に語りを足した）
@@ -100,7 +107,9 @@ LLM デッキを見直して決めた、どのデッキにも効く作り方。�
 - 依存はすべてプロジェクト内の `node_modules` に入れる。sudo は使わない。
 - Playwright は `@playwright/test` 1.62.1 に固定し、キャッシュ済みの chromium-1234 を使う。`playwright install-deps` は sudo apt を呼ぶので使わない。
 - ツールとテストは、ブラウザの各操作に timeout を付け、全体にも上限の時間を設ける。子プロセスは終了時に必ず閉じる。
-- 語りの音声は、この機械にある VOICEVOX Engine 0.25.2（`~/apps/voicevox-engine-0.25.2`、CPU 版）を `tools/narrate.mjs` が一時起動して合成する。常駐させない。話者は四国めたん（ノーマル）。合成した WAV は `.gitignore` で除いてあり、リポジトリに入るのは、そこから作った配る音声（Ogg Opus、`~/.local/bin/opusenc` で作る）と語りの記録。2026-10-11 にボスが承認した合成は、1-1 の 3 文だけ（話速は 0.9、1、1.1 と、あとからボスが頼んだ 1.3、1.4、1.5、1.6）。ほかのクリップを合成するときは、あらためて承認を得る。
+- 語りの音声は、この機械にある VOICEVOX Engine 0.25.2（`~/apps/voicevox-engine-0.25.2`、CPU 版）を `tools/narrate.mjs` が一時起動して合成する。常駐させない。話者は四国めたん（ノーマル）。合成した WAV は `.gitignore` で除いてあり、リポジトリに入るのは、そこから作った配る音声（Ogg Opus、`~/.local/bin/opusenc` で作る）と語りの記録。2026-10-11 にボスが承認した合成は、1-1 の 3 文だけ（話速は 0.9、1、1.1 と、あとからボスが頼んだ 1.3、1.4、1.5、1.6。ボスの指摘した読みを直すための合成し直しも、この 3 文の中で行った）。ほかのクリップを合成するときは、あらためて承認を得る。合成せずに拍の数字を見る `--inspect` も、エンジンを起動するので、同じ扱いにする。
+- 立ち絵の書き出しには、プロジェクトの中の Python 環境を使う（`.cache/psd-venv`、psd-tools 1.24.0。`.cache/` は `.gitignore` で除いてある）。なければ `python3 -m venv .cache/psd-venv` のあと `.cache/psd-venv/bin/python -m pip install --only-binary=:all: psd-tools==1.24.0` で作る。書き出しは `.cache/psd-venv/bin/python -I tools/figures/export.py decks/llm/figures.recipe.json --source ~/projects/fuzzy6/staging`。PSD は外から来たファイルなので、`-I` を付け、素材のフォルダの中では実行しない。
+- 道具のエンジンは 127.0.0.1 の 8083 番で待ち受け、データ（ユーザー辞書を含む）をプロジェクトの中の `.cache/voicevox/` に持つ。この機械のほかの VOICEVOX（`~/.local/share/voicevox-engine`）には触れない。
 - 通常のモード（静止フレームでないモード）の確認では、ブラウザが操作の前の音を止める。Playwright で確かめるときは、Chromium を `--autoplay-policy=no-user-gesture-required` で起動するか、`.mx-unlock` を押す。
 - `codexctl research run` は、起動の直後に `thread/resume: list_turns is not supported yet` で落ちることがあった（2026-10-11、codex-cli 0.160.0）。thread 自体は動いているので、`codexctl research start …` で始めて、`codexctl research attend <thread>` を付ける。ふつうの依頼も、`codexctl new …` と `codexctl wait <thread>` に分けておくと、待つ側だけを付け直せる。
 

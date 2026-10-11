@@ -21,10 +21,11 @@ vi.mock('../tools/narrate/engine.mjs', () => ({
   startSupervisedEngine: engine.start, request: vi.fn(), resolveStyle: vi.fn(), TOTAL_MS: 1800000,
 }));
 import { prune, encode } from '../tools/narrate.mjs';
-const voice = { speaker: 'test', style: 'normal' };
+const actor = { name: 'test', speaker: 'test', style: 'normal' };
+const voice = { cast: { metan: actor } };
 const lines = [
-  { clipId: 'sample', lineId: 'a', source: 'ア', anchors: [], speed: '1.3' },
-  { clipId: 'sample', lineId: 'b', source: 'イ', anchors: [], speed: '1.1' },
+  { by: 'metan', clipId: 'sample', lineId: 'a', source: 'ア', anchors: [], speed: '1.3' },
+  { by: 'metan', clipId: 'sample', lineId: 'b', source: 'イ', anchors: [], speed: '1.1' },
 ];
 const wav = testWav(4800), opus = testOgg(9600);
 let root, dir;
@@ -37,12 +38,12 @@ beforeEach(async () => {
   fault.file = null;
   root = await mkdtemp(join(tmpdir(), 'narrate-prune-'));
   dir = join(root, 'voice'); await mkdir(join(dir, 'sample'), { recursive: true });
-  const manifest = { version: 1, engine: ENGINE_INFO, voice, clips: { sample: {} } };
+  const manifest = { version: 2, engine: ENGINE_INFO, clips: { sample: {} } };
   for (const line of lines) {
-    const entry = manifest.clips.sample[line.lineId] = { source: line.source, reading: line.source, takes: {} };
+    const entry = manifest.clips.sample[line.lineId] = { by: line.by, speaker: actor.speaker, style: actor.style, source: line.source, reading: line.source, takes: {} };
     for (const speed of ['1.1', '1.3', '1.5']) {
       const base = `sample/${line.lineId}@${speed}`;
-      entry.takes[speed] = { file: `${base}.opus`, sha256: sha256(opus), duration: 0.2, anchors: {},
+      entry.takes[speed] = { file: `${base}.opus`, sha256: sha256(opus), duration: 0.2, mouth: [[0, 'a'], [0.1, 'x']], anchors: {},
         generationSha256: generationHash(line, voice, speed), master: { file: `${base}.wav`, sha256: sha256(wav) } };
       await writeFile(join(dir, `${base}.wav`), wav);
       await writeFile(join(dir, `${base}.opus`), opus);

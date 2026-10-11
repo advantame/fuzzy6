@@ -42,9 +42,10 @@ import { inspectAssets, openWriter, applyRecording, readOptional } from '../tool
 
 const mora = (text, vowelLength = 0.1, consonantLength = null) => ({ text, vowel_length: vowelLength, consonant_length: consonantLength, pitch: 5 });
 const query = (moras = [mora('ア'), mora('イ')]) => ({ ...SETTINGS, speedScale: 1, accent_phrases: [{ moras, pause_mora: null, is_interrogative: false }] });
-const voice = { speaker: '四国めたん', style: 'ノーマル' };
-const line = { clipId: 'sample', lineId: 'a', source: 'アイ', anchors: [{ name: 'point', offset: 1 }] };
-const emptyManifest = () => ({ version: 1, engine: { ...ENGINE_INFO }, voice: { ...voice }, clips: {} });
+const actor = { name: '四国めたん', speaker: '四国めたん', style: 'ノーマル' };
+const voice = { cast: { metan: actor } };
+const line = { by: 'metan', clipId: 'sample', lineId: 'a', source: 'アイ', anchors: [{ name: 'point', offset: 1 }] };
+const emptyManifest = () => ({ version: 2, engine: { ...ENGINE_INFO }, clips: {} });
 function wav(sample = 100, seconds = 0.2) {
   const dataSize = Math.round(seconds * 24000) * 2;
   const b = Buffer.alloc(44 + dataSize);
@@ -57,7 +58,7 @@ function wav(sample = 100, seconds = 0.2) {
 }
 function update(speed = '1', source = line, bytes = wav(), selectedVoice = voice) {
   return { line: source, voice: selectedVoice, speed, reading: 'アイ', previousSha256: null,
-    take: { file: `${source.clipId}/${source.lineId}@${speed}.wav`, duration: 0.2, anchors: { point: 0.1 }, sha256: sha256(bytes), generationSha256: generationHash(source, selectedVoice, speed) } };
+    take: { file: `${source.clipId}/${source.lineId}@${speed}.wav`, duration: 0.2, mouth: [[0, 'a'], [0.1, 'x']], anchors: { point: 0.1 }, sha256: sha256(bytes), generationSha256: generationHash(source, selectedVoice, speed) } };
 }
 
 const dirs = [];
@@ -98,7 +99,7 @@ describe('arguments and deck input', () => {
     expect(() => parseArgs(['llm', '--prune', '--speeds', '1.1'])).toThrow('同時');
   });
   it('defaults to dry-run, canonicalizes speeds, and uses the merged pace', () => {
-    expect(parseArgs(['llm'])).toEqual({ deck: 'llm', clips: [], speeds: null, generate: false, encode: false, prune: false, help: false });
+    expect(parseArgs(['llm'])).toEqual({ deck: 'llm', clips: [], speeds: null, generate: false, encode: false, prune: false, inspect: false, json: false, help: false });
     expect(parseArgs(['llm', 'timeline', '--generate', '--speeds', '0.90,1.0,1.1'])).toMatchObject({ clips: ['timeline'], generate: true, speeds: ['0.9', '1', '1.1'] });
     expect(parseArgs(['--help']).help).toBe(true);
   });
@@ -113,14 +114,14 @@ describe('arguments and deck input', () => {
     const lines = collectLines({ voice, chapters: [{ clips: [{ id: 'sample', script: [
       { id: 'a', text: '**1948 年**\n{point}[GPT|ジーピーティー]' }, { id: 'silent', lead: 3 },
     ] }] }] });
-    expect(lines).toEqual([{ clipId: 'sample', lineId: 'a', source: '1948年ジーピーティー', anchors: [{ name: 'point', offset: 5 }], speed: '1.3' }]);
+    expect(lines).toEqual([{ by: 'metan', speaker: actor.speaker, style: actor.style, clipId: 'sample', lineId: 'a', source: '1948年ジーピーティー', anchors: [{ name: 'point', offset: 5 }], speed: '1.3' }]);
   });
   it('handles decks without voice, script, or spoken lines', () => {
     expect(collectLines({ chapters: [{ clips: [{ id: 'x', duration: 2 }] }] })).toEqual([]);
     expect(collectLines({ voice, chapters: [{ clips: [{ id: 'x', duration: 2 }] }] })).toEqual([]);
     expect(collectLines({ voice, chapters: [{ clips: [{ id: 'x', script: [{ id: 'a', lead: 2 }] }] }] })).toEqual([]);
-    expect(collectLines({ voice: { speaker: 'test' }, chapters: [{ clips: [{ id: 'x', duration: 2 }] }] })).toEqual([]);
-    expect(collectLines({ voice: { manifest: {}, url: () => undefined }, chapters: [{ clips: [{ id: 'x', script: [{ id: 'a', text: 'ア' }] }] }] })).toEqual([]);
+    expect(() => collectLines({ voice: { speaker: 'test' }, chapters: [{ clips: [{ id: 'x', duration: 2 }] }] })).toThrow('obsolete');
+    expect(collectLines({ voice: { cast: { metan: { name: 'Metan' } }, manifest: {}, url: () => undefined }, chapters: [{ clips: [{ id: 'x', script: [{ id: 'a', text: 'ア' }] }] }] })).toEqual([]);
   });
   it('rejects unknown clips and cross-line anchor/line collisions', () => {
     expect(() => collectLines({ chapters: [{ clips: [] }] }, ['absent'])).toThrow('ありません');
@@ -189,7 +190,7 @@ describe('staleness and partial multi-speed updates', () => {
     expect(takeStatus(manifest, line, voice, '1', true)).toBe('ready');
     expect(takeStatus(manifest, { ...line, source: 'ウエ' }, voice, '1', true)).toBe('stale');
     expect(takeStatus(manifest, { ...line, anchors: [{ name: 'point', offset: 0 }] }, voice, '1', true)).toBe('stale');
-    expect(takeStatus(manifest, line, { ...voice, style: 'あまあま' }, '1', true)).toBe('stale');
+    expect(takeStatus(manifest, line, { cast: { metan: { ...actor, style: 'あまあま' } } }, '1', true)).toBe('stale');
     manifest.clips.sample.a.takes['1'].generationSha256 = 'old-settings';
     expect(takeStatus(manifest, line, voice, '1', true)).toBe('stale');
     delete manifest.clips.sample.a.takes['1'].generationSha256;
@@ -207,13 +208,13 @@ describe('staleness and partial multi-speed updates', () => {
     expect(Object.keys(m.clips.sample.a.takes).sort()).toEqual(['0.9', '1']);
     expect(Object.keys(m._retired)).toEqual([]);
   });
-  it('retires other clips when the global speaker changes', () => {
+  it('keeps other narrators and clips when recording a different voice', () => {
     const m = emptyManifest();
     applyRecording(m, update());
     const other = { ...line, clipId: 'other' };
-    applyRecording(m, update('1', other, wav(), { ...voice, speaker: '別話者' }));
-    expect(Object.keys(m.clips.sample.a.takes)).toEqual([]);
-    expect(Object.keys(m._retired)).toEqual(['sample/a@1.wav']);
+    applyRecording(m, update('1', other, wav(), { cast: { metan: { ...actor, speaker: '別話者' } } }));
+    expect(Object.keys(m.clips.sample.a.takes)).toEqual(['1']);
+    expect(Object.keys(m._retired)).toEqual([]);
   });
   it('handles valid IDs that are also Object property names', () => {
     const m = emptyManifest();
@@ -298,5 +299,96 @@ describe('WAV validation and safe incremental persistence', () => {
     await expect(readOptional(target, 4)).rejects.toThrow('容量');
     await symlink(target, join(voiceDir, 'sample/a@1.wav'));
     await expect(inspectAssets(voiceDir, [line], voice, ['1'])).rejects.toThrow('symlink');
+  });
+});
+
+describe('cast synthesis and manifest v2', () => {
+  const cast = { metan: actor, zunda: { name: 'ずんだもん', speaker: 'ずんだもん', style: 'ノーマル' }, listener: { name: 'Listener' } };
+  const deck = script => ({ voice: { cast }, chapters: [{ clips: [{ id: 'sample', script }] }] });
+  it('resolves each sentence and excludes playback-only narrators', () => {
+    const lines = collectLines(deck([
+      { id: 'a', text: 'ア' }, { id: 'b', text: 'イ', by: 'zunda' },
+      { id: 'c', text: 'ウ', by: 'listener' }, { id: 'd', by: 'zunda', lead: 1 },
+    ]));
+    expect(lines.map(l => [l.lineId, l.by, l.speaker, l.style])).toEqual([
+      ['a', 'metan', '四国めたん', 'ノーマル'], ['b', 'zunda', 'ずんだもん', 'ノーマル'],
+    ]);
+  });
+  it('checks unknown by even for silent and playback-only sentences', () => {
+    for (const text of ['ア', undefined]) expect(() => collectLines(deck([{ id: 'a', text, by: 'unknown' }]))).toThrow('by');
+  });
+  it('marks missing mouth and changed narrator, speaker or style stale', () => {
+    const m = emptyManifest(); applyRecording(m, update());
+    expect(takeStatus(m, { ...line, by: 'zunda' }, { cast }, '1', true)).toBe('stale');
+    expect(takeStatus(m, line, { cast: { metan: { ...actor, speaker: 'new' } } }, '1', true)).toBe('stale');
+    expect(takeStatus(m, line, { cast: { metan: { ...actor, style: 'new' } } }, '1', true)).toBe('stale');
+    delete m.clips.sample.a.takes['1'].mouth;
+    expect(takeStatus(m, line, voice, '1', true)).toBe('stale');
+  });
+  it('migrates every v1 sentence on the next write, keeping its original speaker/style and file', async () => {
+    const dir = await fixture();
+    const m = emptyManifest(); applyRecording(m, update());
+    m.version = 1; m.voice = { speaker: 'Old speaker', style: 'Old style' };
+    const entry = m.clips.sample.a;
+    delete entry.by; delete entry.speaker; delete entry.style;
+    delete entry.takes['1'].mouth;
+    // Include a removed sentence; migration must cover more than today's selection.
+    m.clips.removed = { silent: { source: 'old', takes: {} } };
+    await save(dir, m); await writeFile(join(dir, 'sample/a@1.wav'), wav());
+    const before = await readFile(join(dir, 'manifest.json'));
+    const state = await inspectAssets(dir, [line], voice, ['1']);
+    expect(state.plan[0].status).toBe('stale');
+    expect((await readFile(join(dir, 'manifest.json'))).equals(before)).toBe(true);
+    const writer = await openWriter(dir, state);
+    try { await writer.persist(); } finally { await writer.close(); }
+    const saved = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8'));
+    expect(saved.version).toBe(2); expect(saved.voice).toBeUndefined();
+    for (const entry of [saved.clips.sample.a, saved.clips.removed.silent])
+      expect(entry).toMatchObject({ by: 'metan', speaker: 'Old speaker', style: 'Old style' });
+    expect(saved.clips.sample.a.takes['1'].file).toBe('sample/a@1.wav');
+    expect((await readFile(join(dir, 'sample/a@1.wav'))).equals(wav())).toBe(true);
+  });
+});
+
+describe('mouth follows phoneme frames', () => {
+  const seconds = frames => frames / 93.75;
+  const mora = (vowel, consonant = null, vf = 3, cf = 2) => ({
+    text: '拍', vowel, consonant, vowel_length: seconds(vf),
+    consonant_length: consonant ? seconds(cf) : null, pitch: 5,
+  });
+  const query = moras => ({ ...SETTINGS, speedScale: 1, prePhonemeLength: seconds(2), postPhonemeLength: seconds(2), accent_phrases: [{ moras }] });
+  const time = frames => Math.round(seconds(frames) * 1000) / 1000;
+  it('handles labials, palatalized consonants, devoicing, n, closure, pauses and merged shapes', () => {
+    const q = query([
+      mora('a', 'k'), mora('a', 'b'), mora('i', 'my'), mora('u', 'py'),
+      mora('N', null, 2), mora('cl', null, 2), mora('I', 's'), mora('e', null, 2), mora('e', null, 2),
+    ]);
+    q.accent_phrases[0].pause_mora = { vowel_length: seconds(3) };
+    q.accent_phrases.push({ moras: [mora('o', null, 2)] });
+    const result = queryTiming(q);
+    expect(result.frames).toBe(42);
+    expect(result.mouth).toEqual([[0, 'x'], ...[
+      [2, 'a'], [7, 'x'], [9, 'a'], [12, 'x'], [14, 'i'], [17, 'x'], [19, 'u'],
+      [22, 'n'], [24, 'x'], [26, 'i'], [31, 'e'], [35, 'x'], [38, 'o'], [40, 'x'],
+    ].map(([frames, shape]) => [time(frames), shape])]);
+    expect(anchorSeconds(q, 1)).toBe(time(7));
+    expect(anchorSeconds(q, 9)).toBe(time(38));
+  });
+  it.each(['m', 'my', 'b', 'by', 'p', 'py'])('closes during consonant %s', consonant => {
+    expect(queryTiming(query([mora('A', consonant)])).mouth).toEqual([[0, 'x'], [time(4), 'a'], [time(7), 'x']]);
+  });
+  it('uses the same speed-scaled rounding and interrogative extension as anchors', () => {
+    const q = query([mora('U', 'k', 5, 3)]);
+    q.speedScale = 2; q.accent_phrases[0].is_interrogative = true;
+    const result = queryTiming(q); // pre 1, consonant 2, vowel 2, question 7, post 1
+    expect(result.frames).toBe(13);
+    expect(result.mouth).toEqual([[0, 'x'], [time(1), 'u'], [time(12), 'x']]);
+    expect(anchorSeconds(q, 0)).toBe(result.mouth[1][0]);
+    expect(anchorSeconds(q, 1)).toBe(result.mouth[2][0]);
+  });
+  it('omits zero-length shapes and starts at zero even without leading silence', () => {
+    const q = query([mora('a', 'p', 3, 0), mora('a', null, 0), mora('a', null, 3)]);
+    q.prePhonemeLength = 0;
+    expect(queryTiming(q).mouth).toEqual([[0, 'a'], [time(6), 'x']]);
   });
 });

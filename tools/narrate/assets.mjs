@@ -3,7 +3,7 @@ import { open, lstat, mkdir, rename, unlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { MAX_OPUS_BYTES, MAX_TAKES, parseOggOpus } from './opus.mjs';
-import { ENGINE_INFO, MAX_WAV_BYTES, generationHash, sha256, speedKey, takeStatus, validateWav } from './core.mjs';
+import { ENGINE_INFO, MAX_WAV_BYTES, narrator, generationHash, sha256, speedKey, takeStatus, validateWav } from './core.mjs';
 
 const MAX_JSON = 8 * 1024 ** 2;
 const FILE = /^[a-z][a-z0-9-]*\/[a-z][a-z0-9-]*@(0\.\d+|[12](?:\.\d+)?)\.(?:wav|opus)$/;
@@ -40,29 +40,33 @@ async function directory(path) {
 
 export function applyRecording(manifest, update) {
   const { line, voice, speed, take, reading } = update;
+  const actor = narrator(line, voice);
   manifest._retired ??= {};
   const retire = (entry) => {
     for (const old of Object.values(entry.takes)) manifest._retired[old.file] = old;
     entry.takes = {};
   };
-  if (manifest.voice?.speaker !== voice.speaker || manifest.voice?.style !== voice.style ||
-      manifest.engine?.name !== ENGINE_INFO.name || manifest.engine?.version !== ENGINE_INFO.version) {
+  if (manifest.engine?.name !== ENGINE_INFO.name || manifest.engine?.version !== ENGINE_INFO.version) {
     for (const clip of Object.values(manifest.clips)) for (const entry of Object.values(clip)) retire(entry);
   }
   manifest.engine = { ...ENGINE_INFO };
-  manifest.voice = { speaker: voice.speaker, style: voice.style };
+  manifest.version = 2;
+  delete manifest.voice;
   if (!Object.hasOwn(manifest.clips, line.clipId)) manifest.clips[line.clipId] = {};
   const clip = manifest.clips[line.clipId];
   if (!Object.hasOwn(clip, line.lineId)) clip[line.lineId] = { takes: {} };
   const entry = clip[line.lineId];
   for (const [key, old] of Object.entries(entry.takes)) {
-    if (entry.source !== line.source || old.generationSha256 !== generationHash(line, voice, key)) {
+    if (entry.source !== line.source || entry.by !== line.by || entry.speaker !== actor.speaker || entry.style !== actor.style || old.generationSha256 !== generationHash(line, voice, key)) {
       manifest._retired[old.file] = old;
       delete entry.takes[key];
     }
   }
   const previous = entry.takes[speed];
   if (previous && previous.file !== take.file) manifest._retired[previous.file] = previous;
+  entry.by = line.by;
+  entry.speaker = actor.speaker;
+  entry.style = actor.style;
   entry.source = line.source;
   entry.reading = reading;
   entry.takes[speed] = take;
@@ -127,8 +131,19 @@ export async function inspectAssets(voiceDir, lines, voice = {}, speeds = null, 
   await directory(dirname(voiceDir));
   const present = await directory(voiceDir);
   const raw = present ? await readOptional(join(voiceDir, 'manifest.json')) : null;
-  const manifest = raw ? JSON.parse(raw.toString('utf8')) : { version: 1, engine: { ...ENGINE_INFO }, voice: { speaker: voice.speaker, style: voice.style }, clips: {} };
-  if (manifest.version !== 1 || !manifest.clips || typeof manifest.clips !== 'object' || Array.isArray(manifest.clips)) throw new Error('既存manifestの形式を確認してください。');
+  const manifest = raw ? JSON.parse(raw.toString('utf8')) : { version: 2, engine: { ...ENGINE_INFO }, clips: {} };
+  if (![1, 2].includes(manifest.version) || !manifest.clips || typeof manifest.clips !== 'object' || Array.isArray(manifest.clips)) throw new Error('既存manifestの形式を確認してください。');
+  if (manifest.version === 1) {
+    const by = Object.keys(voice.cast ?? {})[0];
+    for (const entries of Object.values(manifest.clips)) for (const entry of Object.values(entries)) {
+      entry.by = by;
+      entry.speaker = manifest.voice?.speaker;
+      entry.style = manifest.voice?.style;
+    }
+    if (manifest._pending?.line) manifest._pending.line.by = by;
+    manifest.version = 2;
+    delete manifest.voice;
+  }
   // A journal closes the asset-rename / manifest-rename crash window.
   // Dry-run resolves it only in memory; --generate persists recovery under the lock.
   const needsRecovery = Boolean(manifest._pending);
