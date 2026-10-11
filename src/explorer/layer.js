@@ -1,5 +1,5 @@
 import { W, H, canvasScale } from './model.js';
-export function createLayer(clip, root, { k, still, thumb = false, report }) {
+export function createLayer(clip, root, { k, still, thumb = false, report, timing, pace }) {
   const el = document.createElement('div');
   el.className = 'mx-layer';
   el.dataset.clip = clip.id;
@@ -9,6 +9,7 @@ export function createLayer(clip, root, { k, still, thumb = false, report }) {
   let disposed = false;
   let scale = canvasScale(k, devicePixelRatio);
   let lastTime;
+  let lastDuration;
   function fail(error) {
     if (failed) return;
     failed = true;
@@ -34,6 +35,9 @@ export function createLayer(clip, root, { k, still, thumb = false, report }) {
     el,
     still,
     thumb,
+    at: name => timing().at(name),
+    get duration() { return timing().duration; },
+    get pace() { return pace(); },
     theme: name => getComputedStyle(root).getPropertyValue(name).trim(),
     canvas(opts = {}) {
       const canvas = document.createElement('canvas');
@@ -57,10 +61,11 @@ export function createLayer(clip, root, { k, still, thumb = false, report }) {
     },
     render(t) {
       if (failed || disposed) return;
-      if (lastTime !== t) {
+      if (lastTime !== t || lastDuration !== timing().duration) {
         el.style.setProperty('--mx-t', t);
-        el.style.setProperty('--mx-p', t / clip.duration);
+        el.style.setProperty('--mx-p', timing().duration ? t / timing().duration : 1);
         lastTime = t;
+        lastDuration = timing().duration;
       }
       try {
         for (const { ctx } of canvases) ctx.setTransform(scale, 0, 0, scale, 0, 0);

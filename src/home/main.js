@@ -11,6 +11,7 @@ import '@fontsource/ibm-plex-mono/500.css';
 import './home.css';
 import llm from '../../decks/llm/deck.js';
 import demo from '../../decks/demo/deck.js';
+import { buildTimeline, mergePace } from '../explorer/timeline.js';
 
 const DECKS = [
   { deck: llm, href: 'decks/llm/', cover: 'opening', size: 'large' },
@@ -32,15 +33,17 @@ function totalTime(seconds) {
 
 function card({ deck, href, cover, size, note }) {
   const clips = deck.chapters.flatMap((c) => c.clips);
-  const coverClip = clips.find((c) => c.id === cover);
-  const seconds = clips.reduce((n, c) => n + c.duration, 0);
+  const pace = mergePace(deck.pace);
+  const timelines = new Map(clips.map(c => [c.id, buildTimeline(c, pace, deck.voice)]));
+  const coverTimeline = timelines.get(cover);
+  const seconds = [...timelines.values()].reduce((n, timeline) => n + timeline.duration, 0);
 
   const li = el('li', 'deck');
   li.dataset.size = size;
 
   const frame = el('div', 'deck-cover');
   const iframe = el('iframe');
-  iframe.src = `${href}?c=${cover}&t=${coverClip.duration}&clean`;
+  iframe.src = `${href}?c=${cover}&t=${coverTimeline.duration}&clean`;
   iframe.loading = 'lazy';
   iframe.tabIndex = -1;
   iframe.title = `${deck.title} の表紙`;
@@ -69,7 +72,7 @@ function card({ deck, href, cover, size, note }) {
   body.append(ruler, el('span', 'deck-open', '開く'));
   li.append(frame, body);
 
-  preview(li, iframe, scrub, coverClip.duration);
+  preview(li, iframe, scrub, coverTimeline.duration);
   return li;
 }
 

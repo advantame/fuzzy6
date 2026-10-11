@@ -572,3 +572,264 @@
   transition: none !important;
   animation: none !important;
 }
+
+/* ——— narration and stops (spec 0.3) ————————————————————————————— */
+
+.mx[data-subs='off'] .mx-subs { visibility: hidden; }
+.mx-stage { touch-action: none; }
+
+/* The corner's arrows follow the deck axis: up is the previous clip, down the next. */
+.mx-prev { --mx-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 15l8-8 8 8' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.mx-next { --mx-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 9l8 8 8-8' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+@keyframes mx-nudge {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(5px); }
+}
+
+/* Sound: a speaker that loses its waves when the narration is off. */
+.mx-corner:has(.mx-sound) .mx-auto { grid-column: 2; }
+.mx-sound {
+  grid-area: 2 / 3;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--mx-ink);
+  transition: color 0.2s;
+  --mx-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 9.5v5h3.6l4.9 4v-13l-4.9 4H3.5Z'/%3E%3Cpath d='M15.4 8.6a4.8 4.8 0 0 1 0 6.8M18 6a8.5 8.5 0 0 1 0 12' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.mx-sound .mx-icon { width: 24px; height: 24px; }
+.mx-sound-label { display: none; }
+.mx-sound[aria-pressed='false'] {
+  color: var(--mx-muted);
+  --mx-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3.5 9.5v5h3.6l4.9 4v-13l-4.9 4H3.5Z'/%3E%3Cpath d='m15.5 9.5 5 5m0-5-5 5' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.mx-sound:hover { color: var(--mx-accent); }
+.mx[data-sound='blocked'] .mx-sound { color: var(--mx-accent); }
+
+/* The browser is holding the sound back: one button over a dimmed stage. */
+.mx .mx-unlock {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 38px 22px 30px;
+  border-radius: 999px;
+  background: var(--mx-bg);
+  color: var(--mx-ink);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 0 200vmax rgb(0 0 0 / 0.32), 0 12px 40px rgb(0 0 0 / 0.3);
+}
+.mx-unlock::before {
+  content: '';
+  width: 30px;
+  height: 30px;
+  background: var(--mx-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 4.5v15a1 1 0 0 0 1.5.86l12.4-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 4.5v15a1 1 0 0 0 1.5.86l12.4-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.mx .mx-unlock:hover { color: var(--mx-accent); }
+
+/* Stops on the seek bar: a tick where a sentence begins, a diamond where the picture rests. */
+.mx-seek-mark[data-kind='still'] { width: 16px; margin-left: -8px; }
+.mx-seek-mark[data-kind='still']::before {
+  left: 3px;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: var(--mx-bg);
+  box-shadow: inset 0 0 0 2px var(--mx-ink);
+}
+.mx-seek-mark:hover::before { background: var(--mx-accent); box-shadow: none; }
+.mx-seek-mark[aria-label]:hover::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1;
+  background: var(--mx-ink);
+  color: var(--mx-bg);
+  pointer-events: none;
+}
+
+/* Where → goes from here: a ring on the stop it will land on, or a small chevron that
+   travels ahead of the head when the press will only skip. */
+.mx-seek-target {
+  position: absolute;
+  left: calc(var(--at) * 100%);
+  top: 16px;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.mx-seek-target[hidden] { display: none; }
+.mx-seek-target::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--mx-accent);
+  opacity: 0.9;
+}
+.mx-seek-target[data-kind='skip']::before {
+  left: -7px;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  border: solid var(--mx-muted);
+  border-width: 2px 2px 0 0;
+  transform: rotate(45deg);
+  opacity: 0.8;
+}
+
+/* Landed on a still by a jump: the head breathes once while the clock waits. */
+.mx[data-landing] .mx-seek-head { animation: mx-land 1s var(--mx-ease) infinite; }
+@keyframes mx-land {
+  50% { box-shadow: 0 0 0 4px var(--mx-bg), 0 0 0 9px color-mix(in srgb, var(--mx-accent) 45%, transparent); }
+}
+
+/* Credits sit at the foot of the rail. */
+.mx-credits { margin-top: auto; padding-bottom: 26px; }
+.mx-credit {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--mx-muted);
+}
+
+/* ——— tuning panel (spec §8.1): a column beside the frame, outside its scaling —————— */
+
+.mx-tune {
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 20;
+  width: 340px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #1b1a18;
+  color: #f4f1e9;
+  border-left: 1px solid #3b3732;
+  font: 400 13px/1.45 var(--mx-font);
+}
+.mx-tune[data-collapsed] { width: 56px; height: 52px; border: 0; background: none; }
+.mx-tune-toggle {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font: 500 20px/1 var(--mx-font-mono);
+  background: #2a2825 !important;
+  color: #f4f1e9;
+}
+.mx-tune-toggle:hover { background: var(--mx-accent) !important; color: #121110; }
+.mx-tune-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 24px;
+}
+.mx-tune-title {
+  order: -2;
+  margin: 0 46px 12px 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.mx-tune-position {
+  order: -1;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  margin: 0 -20px;
+  padding: 9px 20px;
+  background: #121110;
+  border-block: 1px solid #3b3732;
+  font: 500 13px/1.3 var(--mx-font-mono);
+  color: var(--mx-accent);
+}
+.mx-tune-group {
+  margin: 20px 0 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #3b3732;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #958f84;
+}
+.mx-tune-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1px 12px;
+  padding: 7px 0 6px;
+}
+.mx-tune-label { grid-area: 1 / 1; font-size: 14px; font-weight: 500; }
+.mx-tune-hint { grid-area: 2 / 1 / 3 / 3; font-size: 12px; color: #958f84; }
+.mx-tune-field input[type='number'],
+.mx-tune-field select {
+  grid-area: 1 / 2;
+  width: 72px;
+  padding: 3px 6px;
+  border: 1px solid #3b3732;
+  border-radius: 4px;
+  background: #121110;
+  color: #f4f1e9;
+  font: 500 13px/1.3 var(--mx-font-mono);
+  text-align: right;
+}
+.mx-tune-field select { width: auto; max-width: 150px; text-align: left; font-family: var(--mx-font); }
+.mx-tune-field select:disabled { opacity: 0.4; }
+.mx-tune-field input[type='range'] {
+  grid-area: 3 / 1 / 4 / 3;
+  width: 100%;
+  margin: 3px 0 0;
+  accent-color: var(--mx-accent);
+}
+.mx-tune-field:focus-within .mx-tune-label { color: var(--mx-accent); }
+.mx-tune-json {
+  display: block;
+  margin-top: 24px;
+  min-height: 190px;
+  padding: 10px;
+  border: 1px solid #3b3732;
+  border-radius: 4px;
+  background: #121110;
+  color: #958f84;
+  font: 400 11px/1.5 var(--mx-font-mono);
+  resize: vertical;
+}
+.mx-tune-reset {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 4px;
+  background: #2a2825 !important;
+  color: #f4f1e9;
+  font-size: 13px;
+}
+.mx-tune-reset:hover { background: var(--mx-accent) !important; color: #121110; }

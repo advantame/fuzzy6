@@ -11,13 +11,13 @@ test('boot, URL selection and navigation controls', async ({ page }) => {
   await expect(page.locator('.mx')).toHaveAttribute('data-state', 'playing');
   await expect(page.locator('.mx-prev')).toBeDisabled();
   await expect(page.locator('.mx-heading-body:not([data-out]) .mx-no')).toHaveCount(0);
-  for (const [key, id] of [['ArrowRight', 'sweep'], ['PageDown', 'dom'], ['PageDown', 'short'], ['PageUp', 'dom'], ['ArrowLeft', 'sweep']]) {
+  for (const [key, id] of [['ArrowDown', 'sweep'], ['PageDown', 'dom'], ['PageDown', 'short'], ['PageUp', 'dom'], ['ArrowUp', 'sweep']]) {
     await page.keyboard.press(key); await isClip(page, id);
   }
   await expect(page).toHaveURL(/c=sweep/);
   await page.locator('.mx-next').click(); await isClip(page, 'dom');
   await page.locator('.mx-prev').click(); await isClip(page, 'sweep');
-  await page.keyboard.press('End'); await isClip(page, 'cues'); await expect(page.locator('.mx-next')).toBeDisabled();
+  await page.keyboard.press('End'); await isClip(page, 'script'); await expect(page.locator('.mx-next')).toBeDisabled();
   await page.keyboard.press('Home'); await isClip(page, 'opening');
   await page.keyboard.press('2'); await isClip(page, 'short');
   await page.keyboard.press('1'); await isClip(page, 'opening');
@@ -43,8 +43,8 @@ test('seek click, drag, focus retention and keyboard slider', async ({ page }) =
   expect(await page.locator('.mx-seek').evaluate(el => el === document.activeElement)).toBe(false);
   await page.mouse.move(1120, 900); await page.mouse.down(); await page.mouse.move(1520, 900); await page.mouse.up();
   expect((await state(page)).t).toBeCloseTo(9, 1);
-  await page.keyboard.press('ArrowRight'); await isClip(page, 'dom'); await seek(page, 2);
-  for (let i = 0; i < 8; i++) {
+  await page.keyboard.press('ArrowDown'); await isClip(page, 'dom'); await seek(page, 2);
+  for (let i = 0; i < 10; i++) {
     await page.keyboard.press('Tab');
     if (await page.locator('.mx-seek').evaluate(el => el === document.activeElement)) break;
   }
@@ -84,7 +84,7 @@ test('ending and automatic hold with input cancellation', async ({ page }) => {
   await boot(page, '?c=short&auto=1'); await isClip(page, 'cues');
 });
 test('index focus, arrows, selection, restoration and canvas thumbnails', async ({ page }) => {
-  await boot(page, '?c=sweep'); await page.keyboard.press('ArrowUp');
+  await boot(page, '?c=sweep'); await page.keyboard.press('i');
   await expect(page.locator('.mx-index')).toBeVisible();
   await expect(page.locator('.mx-index-clip[data-clip="sweep"]')).toBeFocused();
   await expect(page.locator('.mx')).toHaveAttribute('data-state', 'paused');
@@ -138,7 +138,7 @@ test('rapid navigation coalesces setups and limits layers', async ({ page }) => 
   await page.evaluate(() => {
     window.maxLayers = 0;
     new MutationObserver(() => { window.maxLayers = Math.max(window.maxLayers, document.querySelectorAll('.mx-layer').length); }).observe(document.querySelector('.mx-stage'), { childList: true });
-    for (let i = 0; i < 10; i++) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    for (let i = 0; i < 10; i++) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
   });
   await isClip(page, 'clip-10');
   expect(await page.evaluate(() => window.setups)).toEqual([0, 10]);
@@ -162,7 +162,7 @@ test('events, deterministic render, teardown and entire demo without errors', as
   const errors = []; page.on('pageerror', error => errors.push(error.message)); page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
   await boot(page, '?t=0');
   await page.evaluate(() => { window.events = []; for (const name of ['change', 'state', 'time']) window.__mx.on(name, s => window.events.push([name, s.clip])); });
-  for (const id of ['opening', 'sweep', 'dom', 'short', 'cues']) { await page.evaluate(id => window.__go(id, 0.5), id); await isClip(page, id); }
+  for (const id of ['opening', 'sweep', 'dom', 'short', 'cues', 'script']) { await page.evaluate(id => window.__go(id, 0.5), id); await isClip(page, id); }
   expect(await page.evaluate(() => ['change', 'state', 'time'].every(name => window.events.some(e => e[0] === name)))).toBe(true);
   await page.evaluate(() => window.__go('sweep', 3));
   const same = await page.evaluate(() => {
@@ -176,10 +176,10 @@ test('touch swipes navigate and taps toggle playback', async ({ page, context })
   const cdp = await context.newCDPSession(page);
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true });
   await boot(page);
-  const touch = (type, x = 1000) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y: 400 }] });
-  await touch('touchStart', 1000); await touch('touchMove', 960); await touch('touchMove', 850); await touch('touchEnd');
+  const touch = (type, y = 400) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: 1000, y }] });
+  await touch('touchStart', 500); await touch('touchMove', 460); await touch('touchMove', 350); await touch('touchEnd');
   await isClip(page, 'sweep');
-  await touch('touchStart', 850); await touch('touchMove', 890); await touch('touchMove', 1000); await touch('touchEnd');
+  await touch('touchStart', 350); await touch('touchMove', 390); await touch('touchMove', 500); await touch('touchEnd');
   await isClip(page, 'opening');
   await touch('touchStart'); await touch('touchEnd'); await expect(page.locator('.mx')).toHaveAttribute('data-state', 'paused');
 });

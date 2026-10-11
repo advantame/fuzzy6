@@ -1,0 +1,47 @@
+fuzzy6 — Motion Explorer
+Copyright (c) 2026 advantame. All rights reserved.
+
+このリポジトリは、中身を見られるように公開しています。利用を許諾するものではありません。
+
+このリポジトリに含まれるもの（ソースコード、文書、図とアニメーション、語りの原稿、
+合成した音声、調査の記録）を、権利者の書面による事前の許可なく、複製、改変、再配布、
+公衆への送信、他の作品やサービスへの組み込みに使うことを禁じます。
+
+次のことは、禁じていません。
+
+- GitHub の利用規約が利用者に認めている範囲で、GitHub の上でこのリポジトリを閲覧し、
+  fork すること。fork した先でも、上の禁止はそのまま及びます。
+- 公開しているウェブサイト（https://advantame.github.io/fuzzy6/）をブラウザで見ること。
+- 引用など、法律が認めている利用。
+
+第三者のもの
+
+- 語りの音声は、VOICEVOX（四国めたん）で合成したものです。表記は「VOICEVOX:四国めたん」。
+  音声には、VOICEVOX の利用規約と、四国めたんの音源利用規約がかかっています。
+  くわしくは decks/llm/voice/README.md にあります。
+- 公開しているウェブサイトの書体は IBM Plex（SIL Open Font License 1.1）です。
+  書体のファイルはこのリポジトリに含まれず、ビルドのときに npm のパッケージから取り込みます。
+- 開発に使うソフトウェアは、それぞれのライセンスに従います。
+- 文書と調査の記録が引用している論文、規約、製品の名前などの権利は、それぞれの権利者にあります。
+
+許可の相談は、GitHub の Issues（https://github.com/advantame/fuzzy6/issues）へ。
+
+--------------------------------------------------------------------------------
+
+English summary (the Japanese text above governs)
+
+This repository is published so that it can be read. It is not licensed for use.
+Without prior written permission from the copyright holder, you may not copy, modify,
+redistribute, publicly transmit, or incorporate into other works or services anything in
+this repository: source code, documents, pictures and animations, narration scripts,
+synthesized audio, or research notes.
+
+Not prohibited: viewing and forking this repository on GitHub as far as GitHub's Terms of
+Service allow (the prohibition above continues to apply to forks); viewing the published
+website in a browser; and uses the law permits, such as quotation.
+
+The narration audio was synthesized with VOICEVOX (voice: 四国めたん, credit
+"VOICEVOX:四国めたん") and is also subject to the VOICEVOX terms of use and the terms of
+that voice library; see decks/llm/voice/README.md. The typefaces of the published site are
+IBM Plex (SIL Open Font License 1.1), taken from npm at build time. Development
+dependencies remain under their own licenses.

@@ -1,14 +1,16 @@
 import { clampTime, cuesAt, formatTime } from './model.js';
-export function bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor }) {
+export function bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor, unlock, cues }) {
   const { q, buttons } = chrome;
   const toggle = () => (api.state().state === 'playing' ? api.pause() : api.play());
+  let unlockGesture = false;
   listen(root, 'pointerdown', e => {
+    unlockGesture = !e.target.closest('.mx-sound') && unlock();
     cancelHold();
-    if (e.target.closest('button, .mx-seek') && !e.target.closest('.mx-index')) e.preventDefault();
+    if (e.target.closest('button, .mx-seek') && !e.target.closest('.mx-index, .mx-tune')) e.preventDefault();
     if (api.state().indexOpen && !e.target.closest('.mx-index, .mx-crumb')) api.closeIndex();
   });
   listen(root, 'mousedown', e => {
-    if (e.target.closest('button, .mx-seek') && !e.target.closest('.mx-index')) e.preventDefault();
+    if (e.target.closest('button, .mx-seek') && !e.target.closest('.mx-index, .mx-tune')) e.preventDefault();
   });
   listen(root, 'pointermove', () => {
     cancelHold();
@@ -16,11 +18,15 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
   });
   listen(root, 'wheel', cancelHold, { passive: true });
   listen(root, 'click', e => {
+    if (unlockGesture) { unlockGesture = false; return; }
+    cancelHold();
     const button = e.target.closest('button');
     if (!button) return;
     if (button.matches('.mx-next')) void api.next();
     else if (button.matches('.mx-prev')) void api.prev();
     else if (button.matches('.mx-play')) toggle();
+    else if (button.matches('.mx-sound')) api.setSound(api.state().sound === 'off');
+    else if (button.matches('.mx-unlock')) unlock();
     else if (button.matches('.mx-auto')) toggleAuto();
     else if (button.matches('.mx-crumb')) api.openIndex(button.dataset.level === 'chapter');
     else if (button.matches('.mx-seek-mark')) api.seek(Number(button.dataset.seconds));
@@ -44,7 +50,7 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
     e => {
       if (!touchOrigin || e.touches.length !== 1) return;
       const point = e.touches[0];
-      if (Math.abs(point.clientX - touchOrigin.x) > Math.abs(point.clientY - touchOrigin.y))
+      if (Math.max(Math.abs(point.clientX - touchOrigin.x), Math.abs(point.clientY - touchOrigin.y)) > 10)
         e.preventDefault();
     },
     { passive: false },
@@ -57,11 +63,15 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
   });
   listen(q('stage'), 'pointerup', e => {
     if (!touch || touch.id !== e.pointerId) return;
+    if (unlockGesture || e.target.closest('button')) { touch = null; return; }
     const dx = e.clientX - touch.x;
     const dy = e.clientY - touch.y;
-    if (touch.type === 'touch' && Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy)) {
+    if (touch.type === 'touch' && Math.max(Math.abs(dx), Math.abs(dy)) >= 60) {
       e.preventDefault();
-      if (dx < 0) void api.next();
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) void api.nextStop();
+        else void api.prevStop();
+      } else if (dy < 0) void api.next();
       else void api.prev();
     } else if (Math.hypot(dx, dy) < 10) toggle();
     touch = null;
@@ -82,11 +92,10 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
   });
   listen(slider, 'pointermove', e => {
     const time = pointerTime(e);
-    const clip = model.ids.get(api.state().clip)?.clip;
     q('seek-hover').hidden = false;
     q('seek-hover').style.setProperty('--at', api.state().duration ? time / api.state().duration : 0);
     q('seek-hover-time').textContent = formatTime(time);
-    q('seek-hover-text').textContent = cuesAt(clip?.cues, time)
+    q('seek-hover-text').textContent = cuesAt(cues(), time)
       .map(c => c.text.replace(/\*\*/g, ''))
       .join('\n');
     if (drag?.id === e.pointerId) api.seek(time);
@@ -115,6 +124,13 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
       return;
     const key = e.key.toLowerCase();
     const state = api.state();
+    if (state.sound === 'blocked') {
+      e.preventDefault();
+      if (key === 'm') api.setSound(false);
+      else unlock();
+      return;
+    }
+    unlock();
     if (state.indexOpen) {
       if (['escape', 'i'].includes(key)) {
         e.preventDefault();
@@ -132,10 +148,6 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
         const chapter = at.chapterNumber - 1;
         let target;
         if (key === 'arrowup' || key === 'arrowdown') {
-          if (key === 'arrowdown' && at.row === at.chapter.clips.length - 1) {
-            api.closeIndex();
-            return;
-          }
           const row = at.row + (key === 'arrowup' ? -1 : 1);
           target = model.ids.get(
             at.chapter.clips[Math.max(0, Math.min(at.chapter.clips.length - 1, row))].id,
@@ -170,14 +182,16 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
       return;
     }
     const navigation =
-      ['arrowleft', 'arrowright', 'pageup', 'pagedown', 'home', 'end'].includes(key) || /^[1-9]$/.test(key);
+      ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'pageup', 'pagedown', 'home', 'end'].includes(key) || /^[1-9]$/.test(key);
     if (navigation && e.repeat) {
       e.preventDefault();
       return;
     }
     let action;
-    if (['arrowright', 'pagedown'].includes(key)) action = api.next;
-    else if (['arrowleft', 'pageup'].includes(key)) action = api.prev;
+    if (key === 'arrowright') action = api.nextStop;
+    else if (key === 'arrowleft') action = api.prevStop;
+    else if (['arrowdown', 'pagedown'].includes(key)) action = api.next;
+    else if (['arrowup', 'pageup'].includes(key)) action = api.prev;
     else if (key === 'home') action = () => api.go(model.clips[0].clip.id);
     else if (key === 'end') action = () => api.go(model.clips.at(-1).clip.id);
     else if (/^[1-9]$/.test(key))
@@ -191,7 +205,9 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
         api.seek(0);
         api.play();
       };
-    else if (key === 'i' || key === 'arrowup') action = () => api.openIndex();
+    else if (key === 'i') action = () => api.openIndex();
+    else if (key === 'm') action = () => api.setSound(state.sound === 'off');
+    else if (key === 'c') action = () => api.setSubs(!state.subs);
     else if (key === 'a') action = toggleAuto;
     else if (key === 'f')
       action = () => {

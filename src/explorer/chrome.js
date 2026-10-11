@@ -20,11 +20,11 @@ export function createChrome(root, deck, model, retire, frame) {
       </aside>
       <main class="mx-stage"></main>
       <div class="mx-corner">
-        <button class="mx-prev" aria-label="前のクリップ（←）"><span class="mx-icon"></span></button>
+        <button class="mx-prev" aria-label="前のクリップ（↑）"><span class="mx-icon"></span></button>
         <div class="mx-count">
           <span class="mx-count-now"></span><span class="mx-count-sep">/</span><span class="mx-count-all"></span>
         </div>
-        <button class="mx-next" aria-label="次のクリップ（→）"><span class="mx-icon"></span></button>
+        <button class="mx-next" aria-label="次のクリップ（↓）"><span class="mx-icon"></span></button>
         <button class="mx-play" aria-label="再生 / 一時停止（Space）"><span class="mx-icon"></span></button>
         <button class="mx-auto" aria-pressed="false" aria-label="自動で次へ（A）">
           <span class="mx-icon"></span><span class="mx-auto-label">自動</span>
@@ -35,6 +35,7 @@ export function createChrome(root, deck, model, retire, frame) {
           <div class="mx-seek-track"></div>
           <div class="mx-seek-fill"></div>
           <div class="mx-seek-marks"></div>
+          <div class="mx-seek-target" hidden></div>
           <div class="mx-seek-head"></div>
           <div class="mx-seek-hover" hidden>
             <span class="mx-seek-hover-time"></span><span class="mx-seek-hover-text"></span>
@@ -53,6 +54,34 @@ export function createChrome(root, deck, model, retire, frame) {
       </div>
     </div>`;
   const q = cls => root.querySelector(`.mx-${cls}`);
+  if (deck.voice) {
+    const sound = element('button', 'mx-sound');
+    sound.setAttribute('aria-label', '音声（M）');
+    sound.setAttribute('aria-pressed', 'true');
+    sound.append(element('span', 'mx-icon'), element('span', 'mx-sound-label', '音声'));
+    q('corner').append(sound);
+  }
+  const credits = [...new Set([...(deck.credits ?? []), deck.voice?.credit].filter(Boolean))];
+  if (credits.length) {
+    const footer = element('footer', 'mx-credits');
+    for (const credit of credits) footer.append(element('p', 'mx-credit', credit));
+    q('rail').append(footer);
+  }
+  function timing(clip) {
+    q('seek').setAttribute('aria-valuemax', clip.duration);
+    q('time-all').textContent = formatTime(clip.duration);
+    q('seek-marks').replaceChildren();
+    for (const mark of clip.stops) {
+      const button = element('button', 'mx-seek-mark');
+      button.tabIndex = -1;
+      button.style.setProperty('--at', clip.duration ? mark.at / clip.duration : 0);
+      button.dataset.time = formatTime(mark.at);
+      button.dataset.seconds = mark.at;
+      button.dataset.kind = mark.kind;
+      button.setAttribute('aria-label', mark.label || formatTime(mark.at));
+      q('seek-marks').append(button);
+    }
+  }
   q('crumb').textContent = deck.title;
   q('index-deck').textContent = deck.title;
   q('index-title').textContent = deck.subtitle ?? deck.title;
@@ -131,6 +160,7 @@ export function createChrome(root, deck, model, retire, frame) {
   }
   return {
     q,
+    timing,
     ticks,
     buttons,
     change(entry, still) {
@@ -168,22 +198,18 @@ export function createChrome(root, deck, model, retire, frame) {
         tick.dataset.state = i < index ? 'past' : i === index ? 'current' : 'future';
       });
       buttons.forEach((b, i) => b.setAttribute('aria-current', String(i === index)));
-      q('seek').setAttribute('aria-valuemax', clip.duration);
-      q('time-all').textContent = formatTime(clip.duration);
-      q('seek-marks').replaceChildren();
-      for (const mark of clip.marks ?? clip.cues ?? []) {
-        const button = element('button', 'mx-seek-mark');
-        button.tabIndex = -1;
-        button.style.setProperty('--at', mark.at / clip.duration);
-        button.dataset.time = formatTime(mark.at);
-        button.dataset.seconds = mark.at;
-        button.setAttribute('aria-label', mark.label ?? formatTime(mark.at));
-        q('seek-marks').append(button);
-      }
+      timing(clip);
     },
-    render(clip, t, instant, still = false) {
+    render(clip, t, instant, still = false, target = null) {
       const seek = q('seek');
-      const progress = String(t / clip.duration);
+      const targetNode = q('seek-target');
+      if (targetNode.hidden !== !target) targetNode.hidden = !target;
+      if (target) {
+        const at = String(clip.duration ? target.at / clip.duration : 0);
+        if (targetNode.style.getPropertyValue('--at') !== at) targetNode.style.setProperty('--at', at);
+        if (targetNode.dataset.kind !== target.kind) targetNode.dataset.kind = target.kind;
+      }
+      const progress = String(clip.duration ? t / clip.duration : 1);
       const seconds = String(t);
       const time = formatTime(t);
       const label = `${time} / ${formatTime(clip.duration)}`;

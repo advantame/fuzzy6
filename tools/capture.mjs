@@ -7,6 +7,8 @@
  *   -> test-output/<deck>/posters/<NN>-<clipId>.png
  * npm run capture -- <deck> <clipId> --sheet [--every S] [--cols N] [--clean]
  *   -> test-output/<deck>/<clipId>_sheet.png (480px tiles, up to 60 frames)
+ * npm run capture -- <deck> <clipId> --stops [--clean] [--size WxH]
+ *   -> test-output/<deck>/<clipId>_stops/ (stops and line.start + pace.ground)
  * --timeout seconds bounds the entire run (default 240). A separate supervisor
  * terminates the worker and its browser process group if graceful cleanup stalls.
  * Viewports are limited to 8 million pixels; sheet image data to 64 MiB.
@@ -43,17 +45,18 @@ if (!worker) {
   await capture();
 }
 async function capture() {
-  const clean = takeFlag('--clean'), posters = takeFlag('--posters'), sheet = takeFlag('--sheet');
+  const clean = takeFlag('--clean'), posters = takeFlag('--posters'), sheet = takeFlag('--sheet'), stops = takeFlag('--stops');
   const size = String(takeValue('--size', '1920x1080')).split('x').map(Number);
   const every = Number(takeValue('--every', '1')), cols = Number(takeValue('--cols', '4'));
   const [deck, clipId, ...timesRaw] = argv;
   const safeId = value => /^[a-z0-9][a-z0-9-]*$/.test(value ?? '');
   if (!safeId(deck) || (!posters && !safeId(clipId))) throw new Error('Usage: capture <deck> <clipId> <t...> | <deck> --posters | <deck> <clipId> --sheet');
-  if (posters && (sheet || clipId)) throw new Error('--posters accepts only a deck');
+  if (posters && (sheet || stops || clipId)) throw new Error('--posters accepts only a deck');
+  if (stops && sheet) throw new Error('--stops and --sheet are exclusive');
   if (size.length !== 2 || !size.every(n => Number.isInteger(n) && n > 0 && n <= 8192) || size[0] * size[1] > 8e6) throw new Error('Invalid or excessive viewport size');
   if (!Number.isFinite(every) || every <= 0 || !Number.isInteger(cols) || cols < 1 || cols > 12) throw new Error('Invalid --every or --cols');
   const times = timesRaw.map(Number);
-  if (times.length > 60 || times.some(t => !Number.isFinite(t) || t < 0) || (!sheet && !posters && !times.length) || (sheet && times.length)) throw new Error('Provide 1–60 finite nonnegative times, or --sheet/--posters');
+  if (times.length > 60 || times.some(t => !Number.isFinite(t) || t < 0) || (!sheet && !posters && !stops && !times.length) || ((sheet || stops) && times.length)) throw new Error('Provide 1–60 finite nonnegative times, or --sheet/--posters');
   const root = resolve(import.meta.dirname, '..', 'test-output', deck);
   await mkdir(root, { recursive: true });
   let browser, closing, interrupted = false;
@@ -91,13 +94,33 @@ async function capture() {
     if (posters) {
       const entries = await step(page.evaluate(async deck => {
         const { default: data } = await import(`/decks/${deck}/deck.js`);
-        return data.chapters.flatMap(c => c.clips.map(clip => ({ id: clip.id, t: clip.poster ?? clip.duration })));
+        const { buildTimeline, mergePace, posterTime } = await import('/src/explorer/timeline.js');
+        return data.chapters.flatMap(c => c.clips.map(clip => ({ id: clip.id, t: posterTime(clip, buildTimeline(clip, mergePace(data.pace), data.voice)) })));
       }, deck));
       await mkdir(resolve(root, 'posters'), { recursive: true });
       for (const [i, entry] of entries.entries()) {
         if (!safeId(entry.id)) throw new Error(`Unsafe clip id: ${entry.id}`);
         await step(page.evaluate(({ id, t }) => window.__go(id, t), entry));
         await screenshot(resolve(root, 'posters', `${String(i + 1).padStart(Math.max(2, String(entries.length).length), '0')}-${entry.id}.png`));
+      }
+    } else if (stops) {
+      const entries = await step(page.evaluate(async ({ deck, clipId }) => {
+        const { default: data } = await import(`/decks/${deck}/deck.js`);
+        const clip = data.chapters.flatMap(c => c.clips).find(c => c.id === clipId);
+        const { buildTimeline } = await import('/src/explorer/timeline.js');
+        const pace = window.__mx.pace();
+        const timeline = buildTimeline(clip, pace, data.voice);
+        return [
+          ...timeline.stops.map(s => ({ t: s.at, label: `${s.kind}-${s.line ?? 'clip'}` })),
+          ...timeline.lines.map(l => ({ t: Math.min(timeline.duration, l.start + pace.ground), label: `ground-${l.id}` })),
+        ].sort((a, b) => a.t - b.t);
+      }, { deck, clipId }));
+      if (entries.length > 300) throw new Error('Stops exceed 300 frames');
+      const directory = resolve(root, `${clipId}_stops`);
+      await mkdir(directory, { recursive: true });
+      for (const [i, entry] of entries.entries()) {
+        await step(page.evaluate(t => window.__setTime(t), entry.t));
+        await screenshot(resolve(directory, `${String(i + 1).padStart(3, '0')}-${entry.label}_t${entry.t}.png`));
       }
     } else if (sheet) {
       const duration = await step(page.evaluate(() => window.__mx.state().duration));

@@ -3,6 +3,7 @@
 // (README.md has the plan and sources).
 
 import { FONTS } from './lib/theme.js';
+import manifest from './voice/manifest.json';
 import opening from './clips/opening.js';
 import timeline from './clips/timeline.js';
 import shannon from './clips/shannon.js';
@@ -83,11 +84,23 @@ import threads from './clips/threads.js';
 import acp from './clips/acp.js';
 import outlook from './clips/outlook.js';
 
+// The narration is synthesised ahead of time (spec §7.1, `npm run narrate -- llm`). The record
+// and the delivered audio (Ogg Opus) are in the repository; where a file is missing or the
+// browser cannot decode it, the clip plays silently on the recorded timing.
+const audio = import.meta.glob('./voice/**/*.opus', { eager: true, query: '?url', import: 'default' });
+
 export default {
   id: 'llm',
   title: 'LLM',
   subtitle: '次の一語から、エージェントまで',
   fonts: FONTS,
+  voice: {
+    speaker: '四国めたん',
+    style: 'ノーマル',
+    credit: 'VOICEVOX:四国めたん',
+    manifest,
+    url: (file) => audio[`./voice/${file}`],
+  },
   chapters: [
     { id: 'history', title: '歴史', clips: [opening, timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
     { id: 'concepts', title: '基本概念', clips: [tokens, predict, embedding, attention, pretrain, context] },

@@ -74,6 +74,18 @@ body {
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* credit and licence: quiet, at the foot of the rail, one click from the terms */
+.home-credit {
+  margin: auto 0 0;
+  padding-top: 28px;
+  font-size: 12px;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.home-credit a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.home-credit a:hover { color: var(--accent); }
 .home-frame b {
   display: inline-block;
   min-width: 4.2em;

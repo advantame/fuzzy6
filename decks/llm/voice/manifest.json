@@ -1,0 +1,343 @@
+{
+  "version": 1,
+  "clips": {
+    "timeline": {
+      "a": {
+        "takes": {
+          "1.3": {
+            "file": "timeline/a@1.3.opus",
+            "duration": 5.419,
+            "anchors": {
+              "y48": 0.896,
+              "but": 2.56,
+              "band": 3.893
+            },
+            "sha256": "c1583394258a1bc6187d738147ccc36c8fb8d67a306cbdc53f83d10ae9865443",
+            "generationSha256": "2e370a2b8432c172ca58ca100cff204430b025226b59bf2e9535b41dd36bde94",
+            "master": {
+              "file": "timeline/a@1.3.wav",
+              "sha256": "4bf51baf612592982658539469996f9536d1221e6f454a8021d97621a33f41c3"
+            }
+          }
+        },
+        "source": "最初の手がかりは1948年。けれど出来事の多くは、最後の10年に集まっている。",
+        "reading": "サイショノ'/テガ'カリワ/セ'ン/キュ'ウヒャク/ヨ'ンジュウ/ハチ'ネン、ケ'レド/デキ'ゴトノ/オ'オクワ、サ'イゴノ/ジュウ'ネンニ/アツマ'ッテ/イル'"
+      },
+      "b": {
+        "takes": {
+          "1.3": {
+            "file": "timeline/b@1.3.opus",
+            "duration": 4.843,
+            "anchors": {
+              "tf": 0.043,
+              "gpt": 2.069,
+              "chat": 2.987
+            },
+            "sha256": "a7a456d51bd5f03a17e690735064c1145eabeedf45bfa101ba24159b73d42e1b",
+            "generationSha256": "1f94b28aa69ac146f1f8f0c1bf96370567e2bbae0ac3be45a2de82ee79c187b4",
+            "master": {
+              "file": "timeline/b@1.3.wav",
+              "sha256": "4e0aafaf8808f99d7e7eafd538efaa9269c2d7fdc86375593005c1084f19fe07"
+            }
+          }
+        },
+        "source": "2017年のTransformerから、GPT、ChatGPTへと一気に進んだ。",
+        "reading": "ニセ'ンジュウ/ナナ'ネンノ/ト'ランスフォオマアカラ、ジイピイティ'イ、チャ'ットジイピイティイエト/イ'ッキニ/ススンダ'"
+      },
+      "c": {
+        "takes": {
+          "1.3": {
+            "file": "timeline/c@1.3.opus",
+            "duration": 5.301,
+            "anchors": {
+              "y24": 0.043,
+              "agent": 3.147
+            },
+            "sha256": "be6c8e082a9894d1acf0ede5ebf7e73b31adddf7bcd5a8bdc4217195e4a6ab8d",
+            "generationSha256": "f655a97365a12e97938b794538b091b271c72fc01ce82be42dd623173c676f7b",
+            "master": {
+              "file": "timeline/c@1.3.wav",
+              "sha256": "24f3f4d476cd3eaf999a214184a0fa37f006efab0e5f597db041e0da977433de"
+            }
+          }
+        },
+        "source": "2024年からは、考えてから答えるモデルや、ツールを使って動くエージェントが加わった。",
+        "reading": "ニセ'ン/ニ'ジュウ/ヨ'ネンカラワ、カンガ'エテカラ/コタエ'ル/モ'デルヤ、ツ'ウルオ/_ツカッテ'/ウゴ'ク/エ'エジェントガ/クワワッタ'"
+      }
+    }
+  },
+  "_retired": {
+    "timeline/a@1.opus": {
+      "file": "timeline/a@1.opus",
+      "duration": 7.051,
+      "anchors": {
+        "y48": 1.152,
+        "but": 3.285,
+        "band": 5.045
+      },
+      "sha256": "426570643a06b4395fc4edf7ea95e980e833e02775bf532bea92e86cc31adb43",
+      "generationSha256": "adabf679f3fd44d69abeb0ea18c056e724e0679e407bb858b4775c56077d94bc",
+      "master": {
+        "file": "timeline/a@1.wav",
+        "sha256": "d825a6ecf329641a6c0e46b18f5de022c4d7e841e255529c5b77475cc59143e5"
+      }
+    },
+    "timeline/a@0.9.opus": {
+      "file": "timeline/a@0.9.opus",
+      "duration": 7.829,
+      "anchors": {
+        "y48": 1.291,
+        "but": 3.691,
+        "band": 5.632
+      },
+      "sha256": "654474903ba675cffe8aefd0ce2bf50e8f664336e1e8e9465bb02af0a1932795",
+      "generationSha256": "a6dd82290f89fc2c8e40eecfbe3f799011248beececdd0aa3861657caba6c870",
+      "master": {
+        "file": "timeline/a@0.9.wav",
+        "sha256": "42394d9c32b23d15a39ce31e2e60abc74d5c72cf668ad3538cc98e7ddefa23b0"
+      }
+    },
+    "timeline/a@1.1.opus": {
+      "file": "timeline/a@1.1.opus",
+      "duration": 6.464,
+      "anchors": {
+        "y48": 1.067,
+        "but": 3.019,
+        "band": 4.629
+      },
+      "sha256": "dfacdd2450ec9975c183573b849de4bfdf25571ae14269f5f4a9efe1d5a6b44f",
+      "generationSha256": "ead2dbf0a910e488ddd50cbe68dc6ba6134280772d64d96e2ce68e57778b06d2",
+      "master": {
+        "file": "timeline/a@1.1.wav",
+        "sha256": "d609b05f3acea833d7f39867845ec38abb7de339e7ebbe924a9d170e0abe95be"
+      }
+    },
+    "timeline/a@1.4.opus": {
+      "file": "timeline/a@1.4.opus",
+      "duration": 5.003,
+      "anchors": {
+        "y48": 0.8,
+        "but": 2.315,
+        "band": 3.573
+      },
+      "sha256": "26ea2aaf0d614d5a9f9084812290e883619fe1eecb06dcb1f83dbec7bb925bc8",
+      "generationSha256": "d30edeeabe7a7ad80946e48d7ff01887e802789b020b85ad8a1ace5918b4d6ad",
+      "master": {
+        "file": "timeline/a@1.4.wav",
+        "sha256": "5ee84fe4ea9dec835c900941d399988319e052423200ff36983d8bdb7ad5c54f"
+      }
+    },
+    "timeline/a@1.5.opus": {
+      "file": "timeline/a@1.5.opus",
+      "duration": 4.757,
+      "anchors": {
+        "y48": 0.779,
+        "but": 2.219,
+        "band": 3.403
+      },
+      "sha256": "757850cb8d7272d83e2686bd510ce2642204a5c0584fc6f03d16a973f671c881",
+      "generationSha256": "4135884643081fbf47de90a34d939a554c14d5faddc25915287610c8c313c2f4",
+      "master": {
+        "file": "timeline/a@1.5.wav",
+        "sha256": "ae80dfd8cbfe5c1d9321b0e2bf44e55e05d18f00ac76f07ca121db223553be84"
+      }
+    },
+    "timeline/a@1.6.opus": {
+      "file": "timeline/a@1.6.opus",
+      "duration": 4.491,
+      "anchors": {
+        "y48": 0.736,
+        "but": 2.091,
+        "band": 3.211
+      },
+      "sha256": "ddc47613c9f8d3049955264d5e071b81e88d04d4e6f607859a808e4366736f0c",
+      "generationSha256": "df57452037b7cd671623ef885c127c0717f7719094c84d9dca8f94b6089a0424",
+      "master": {
+        "file": "timeline/a@1.6.wav",
+        "sha256": "ada667256162f5c4e99745c9d3ae72cf55351a3e5f9b3690f731f854ee3358b9"
+      }
+    },
+    "timeline/b@1.opus": {
+      "file": "timeline/b@1.opus",
+      "duration": 6.315,
+      "anchors": {
+        "tf": 0.053,
+        "gpt": 2.72,
+        "chat": 3.915
+      },
+      "sha256": "61c59ebb6252a88e9170cd81ea329b87db0dca0eb59dd67b1d9fb2ac4c6e1bda",
+      "generationSha256": "c0a92039035f228ebcfb7932f1c1f7d76bdd6625044291f22f2476b542b03526",
+      "master": {
+        "file": "timeline/b@1.wav",
+        "sha256": "18b8f0328d47efa897d628f1dd595d515d197b89d4ff4d1039315aa14d2a6473"
+      }
+    },
+    "timeline/b@0.9.opus": {
+      "file": "timeline/b@0.9.opus",
+      "duration": 7.019,
+      "anchors": {
+        "tf": 0.053,
+        "gpt": 3.04,
+        "chat": 4.384
+      },
+      "sha256": "71d3b25c2c9743e95e91596ebb5bd58a28ed7265d148f3693537c6a2308e92d1",
+      "generationSha256": "a06ff608f9d038564112505a86e64f0fa39e9942171692a01690124a7e34249d",
+      "master": {
+        "file": "timeline/b@0.9.wav",
+        "sha256": "9f701896a955050ed57e22cb85c562806ec1fb62037ad1b1fcbafe9c5b7b9dbb"
+      }
+    },
+    "timeline/b@1.1.opus": {
+      "file": "timeline/b@1.1.opus",
+      "duration": 5.76,
+      "anchors": {
+        "tf": 0.043,
+        "gpt": 2.453,
+        "chat": 3.552
+      },
+      "sha256": "66c670faec77bdd5d2d03f92eef18d2979b85166449dac63b1f5d3b579e5be65",
+      "generationSha256": "a644c2553412c8c7e5a2fd02637ad00c7f5b8b9ad0c0c2736e22fc0ed1e85409",
+      "master": {
+        "file": "timeline/b@1.1.wav",
+        "sha256": "0ff3a8ca2caed0c9e7e2e2025b27a7e31a269675143f3a418691d384e8eb4b13"
+      }
+    },
+    "timeline/b@1.4.opus": {
+      "file": "timeline/b@1.4.opus",
+      "duration": 4.448,
+      "anchors": {
+        "tf": 0.032,
+        "gpt": 1.909,
+        "chat": 2.773
+      },
+      "sha256": "058768c62d9864b98ee36888179b6491eb274d1f7d94f37f83689f21dcfec838",
+      "generationSha256": "536f7370996834d0020ee55272bbac04e9c3ceb0007a23fd1a24002332b4c1cf",
+      "master": {
+        "file": "timeline/b@1.4.wav",
+        "sha256": "8a003583dab94779347f7c5ffe6bc90514cbf618bf9e123b90b58a9b2af304f4"
+      }
+    },
+    "timeline/b@1.5.opus": {
+      "file": "timeline/b@1.5.opus",
+      "duration": 4.224,
+      "anchors": {
+        "tf": 0.032,
+        "gpt": 1.824,
+        "chat": 2.635
+      },
+      "sha256": "73da3c1cae9eaf539a63c277fb764b7db1cfc548d1d8b37ffa464ab39ca922ac",
+      "generationSha256": "22ec5b94951b1ed21c523a0c7ea2532d46967758487a03e06567d700caeafea3",
+      "master": {
+        "file": "timeline/b@1.5.wav",
+        "sha256": "269faf85f812b0e9fd196fb08a9c92260bec87a7adbdd792c4fe4d1be854b097"
+      }
+    },
+    "timeline/b@1.6.opus": {
+      "file": "timeline/b@1.6.opus",
+      "duration": 3.968,
+      "anchors": {
+        "tf": 0.032,
+        "gpt": 1.717,
+        "chat": 2.464
+      },
+      "sha256": "4a2ae522d91c73fa2518f6c0629ee46eef73ffb2811990c1c06c0f72dbf528a9",
+      "generationSha256": "4458dafb4eb89e8ad4ccdc3d56e8d64b0aaf25734c299c46d4d21bdd2e98bc4f",
+      "master": {
+        "file": "timeline/b@1.6.wav",
+        "sha256": "daa9040209d9ef63a734b0af4a6fb2433d75ceeff1788a3998649255b2390a92"
+      }
+    },
+    "timeline/c@1.opus": {
+      "file": "timeline/c@1.opus",
+      "duration": 6.773,
+      "anchors": {
+        "y24": 0.053,
+        "agent": 4.053
+      },
+      "sha256": "1036d1cd47b5b3ef2ce75d2d52c4d0aa86a0884c588f1471ab12799c12fc416d",
+      "generationSha256": "edad1893481381d03d4f66cafc294177c14c8a4a950b2312ff398b0053c7a38a",
+      "master": {
+        "file": "timeline/c@1.wav",
+        "sha256": "a6f1102103cd9155b0140ecfcc4b927ce5f2ecd4a7acd3aa17bd66bb607a647b"
+      }
+    },
+    "timeline/c@0.9.opus": {
+      "file": "timeline/c@0.9.opus",
+      "duration": 7.595,
+      "anchors": {
+        "y24": 0.053,
+        "agent": 4.512
+      },
+      "sha256": "55a9e4793b40340299010ec0ecc53bf0b69c2430057ae4003844ab08b98d4b76",
+      "generationSha256": "4c0362ac08f0fb018103d07f2a8bf10abb8adc28a3b281bc2e113d464944705b",
+      "master": {
+        "file": "timeline/c@0.9.wav",
+        "sha256": "7ae3bc5a3b49ffaf76932b59ca4c57875c0c8e09ee50c378497a44dd23df0493"
+      }
+    },
+    "timeline/c@1.1.opus": {
+      "file": "timeline/c@1.1.opus",
+      "duration": 6.144,
+      "anchors": {
+        "y24": 0.043,
+        "agent": 3.659
+      },
+      "sha256": "1a97e3af59c84d86e0245fd6b140837436d11151bb904c92660a83a953e3332b",
+      "generationSha256": "49befaddc57aa0ae852d8d2f73835b8d1b1b1a7cf065a08a0fcfa0264df6b2e2",
+      "master": {
+        "file": "timeline/c@1.1.wav",
+        "sha256": "cb1562a8d37111486005a51eb4af6272e9538e2fbe412e181f7ad4126be5db71"
+      }
+    },
+    "timeline/c@1.4.opus": {
+      "file": "timeline/c@1.4.opus",
+      "duration": 4.832,
+      "anchors": {
+        "y24": 0.032,
+        "agent": 2.891
+      },
+      "sha256": "077425c6954163b93af4192df6e57aa5127184827174d3cfd3cac60020c65f99",
+      "generationSha256": "d26f4f9a31ff203592030847e8002144ce76d90debb46a29fbbca2ccd890f229",
+      "master": {
+        "file": "timeline/c@1.4.wav",
+        "sha256": "904ac4f38aa4eb032c003f4744dfa98bbf8d1eedf5eade899207e0718af2345b"
+      }
+    },
+    "timeline/c@1.5.opus": {
+      "file": "timeline/c@1.5.opus",
+      "duration": 4.491,
+      "anchors": {
+        "y24": 0.032,
+        "agent": 2.656
+      },
+      "sha256": "c221609b62b4a071c6e4064db3c0e48a5b55f06f0babaade67be263abbb96553",
+      "generationSha256": "5ae4ceb30bf6da22c27ef67fd51bb02d52598cf579cceae6c05d748cf89164f0",
+      "master": {
+        "file": "timeline/c@1.5.wav",
+        "sha256": "b9df62f4558084441cdb63708954991186a5d7847f3451bf05aa7f035edeea9c"
+      }
+    },
+    "timeline/c@1.6.opus": {
+      "file": "timeline/c@1.6.opus",
+      "duration": 4.288,
+      "anchors": {
+        "y24": 0.032,
+        "agent": 2.528
+      },
+      "sha256": "9dc89e6defc89b75c9fe9ad9d4415eb399116af8e24fbbd5dee6de0e3da87a09",
+      "generationSha256": "cfe06aa0234813f44c1a9b6222878de9fc2df536f17f4c1c85395d7a06d05fbf",
+      "master": {
+        "file": "timeline/c@1.6.wav",
+        "sha256": "7514e31209f9e6a226abafad3c6289d7eea5668816d20c640b2d601af4e49a84"
+      }
+    }
+  },
+  "engine": {
+    "name": "VOICEVOX",
+    "version": "0.25.2"
+  },
+  "voice": {
+    "speaker": "四国めたん",
+    "style": "ノーマル"
+  }
+}

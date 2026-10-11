@@ -2,6 +2,8 @@ import { normalizeDeck, clampTime, advanceTime, seekState } from './model.js';
 import { createChrome } from './chrome.js';
 import { createLayer } from './layer.js';
 import { bindInput } from './input.js';
+import { buildTimeline, mergePace, nextTarget, previousTarget, preservePosition, positionAt, posterTime } from './timeline.js';
+import { createSound } from './sound.js';
 
 export function createExplorer(host, deck, options = {}) {
   const model = normalizeDeck(deck);
@@ -25,6 +27,21 @@ export function createExplorer(host, deck, options = {}) {
   let layer = null;
   let outgoing = null;
   let t = 0;
+  let pace = mergePace(deck.pace);
+  let timing;
+  let soundOn = params.get('sound') !== '0';
+  let soundState = soundOn ? 'on' : 'off';
+  let subs = true;
+  let landingTimer;
+  let tune;
+  const sound = still ? null : createSound(deck.voice);
+  const view = () => ({ ...current.clip, ...timing.value });
+  function compute(clip) {
+    try { return buildTimeline(clip, pace, deck.voice); }
+    catch (error) {
+      return { ...buildTimeline({ duration: 1 }), error };
+    }
+  }
   let status = 'loading';
   let k = 1;
   let auto = params.get('auto') === '1' || !!deck.autoAdvance;
@@ -93,10 +110,14 @@ export function createExplorer(host, deck, options = {}) {
       index: current?.index ?? -1,
       count: model.clips.length,
       t,
-      duration: current?.clip.duration ?? 0,
+      duration: timing?.value.duration ?? 0,
       state: status,
       auto,
       indexOpen,
+      sound: soundState, subs,
+      line: timing ? positionAt(timing.value, t)?.line ?? null : null,
+      stops: timing ? timing.value.stops.map(s => ({ ...s })) : [],
+      target: timing ? nextTarget(timing.value, t, pace) : null,
     };
   }
   function emit(name) {
@@ -108,6 +129,7 @@ export function createExplorer(host, deck, options = {}) {
     root.dataset.state = value;
     emit('state');
     if (value !== 'playing') {
+      sound?.stop();
       cancelFrame(clockFrame);
       clockFrame = null;
       lastStamp = undefined;
@@ -120,6 +142,10 @@ export function createExplorer(host, deck, options = {}) {
   function cancelHold() {
     cancelTimer(holdTimer);
     holdTimer = null;
+    cancelTimer(landingTimer);
+    landingTimer = null;
+    root.removeAttribute('data-landing');
+    if (status === 'playing') startClock();
   }
   function showCursor(schedule = status === 'playing') {
     cancelTimer(cursorTimer);
@@ -129,23 +155,25 @@ export function createExplorer(host, deck, options = {}) {
   function render(instant = false) {
     if (!current || destroyed) return;
     layer.render(t);
-    chrome.render(current.clip, t, instant || still, still);
+    chrome.render(view(), t, instant || still, still, nextTarget(timing.value, t, pace));
     emit('time');
   }
-  function ended() {
+  function ended(natural = false) {
     setState('ended');
     cancelHold();
-    if (auto && !still && !indexOpen && current.index < model.clips.length - 1)
-      holdTimer = later(() => next(), Math.max(0, current.clip.hold ?? 2.5) * 1000);
+    if (natural && auto && !still && !indexOpen && current.index < model.clips.length - 1)
+      holdTimer = later(() => next(), Math.max(0, current.clip.hold ?? pace.end) * 1000);
   }
   function startClock() {
-    if (clockFrame || status !== 'playing' || document.hidden || destroyed) return;
+    if (clockFrame || status !== 'playing' || document.hidden || destroyed || landingTimer) return;
     clockFrame = frame(stamp => {
       clockFrame = null;
-      t = advanceTime(t, lastStamp === undefined ? 0 : (stamp - lastStamp) / 1000, current.clip.duration);
+      const dt = lastStamp === undefined ? 0 : Math.max(0, Math.min(0.1, (stamp - lastStamp) / 1000));
+      t = soundOn && sound ? sound.clock(current.clip.id, timing.value, t, dt)
+        : advanceTime(t, dt, timing.value.duration);
       lastStamp = stamp;
       render();
-      if (t >= current.clip.duration) ended();
+      if (t >= timing.value.duration) ended(true);
       else startClock();
     });
   }
@@ -171,8 +199,88 @@ export function createExplorer(host, deck, options = {}) {
       console.error(`Motion Explorer: ${id}`, error);
     }
   };
-  function newLayer(clip, thumb = false) {
-    return createLayer(clip, root, { k, still, thumb, report });
+  function newLayer(clip, thumb = false, box = timing) {
+    const source = box.value.error ? { ...clip, setup() { throw box.value.error; } } : clip;
+    return createLayer(source, root, { k, still, thumb, report, timing: () => box.value, pace: () => pace });
+  }
+  function prepareSound(entry, timeline) {
+    if (!sound) return;
+    sound.prepare([entry, model.clips[entry.index - 1], model.clips[entry.index + 1]].filter(Boolean)
+      .map(e => ({ id: e.clip.id, timeline: e === entry ? timeline : compute(e.clip) })), soundOn);
+  }
+  function syncSound() {
+    if (root.dataset.sound !== soundState) root.dataset.sound = soundState;
+    if (q('sound') && q('sound').getAttribute('aria-pressed') !== String(soundOn))
+      q('sound').setAttribute('aria-pressed', String(soundOn));
+    if (soundState === 'blocked') {
+      if (!q('unlock')) {
+        const button = document.createElement('button');
+        button.className = 'mx-unlock';
+        button.textContent = '音声つきで再生';
+        q('stage').append(button);
+      }
+    } else q('unlock')?.remove();
+  }
+  function blocked() {
+    const waiting = soundOn && sound && timing.value.lines.some(l => l.spoken) && sound.blocked();
+    soundState = waiting ? 'blocked' : soundOn ? 'on' : 'off';
+    syncSound();
+    return waiting;
+  }
+  function unlock() {
+    if (soundState !== 'blocked') {
+      if (soundOn && sound && (deck.voice || timing?.value.lines.some(l => l.spoken))) void sound.unlock();
+      return false;
+    }
+    const ticket = generation;
+    void sound.unlock().then(() => {
+      if (!destroyed && ticket === generation && status === 'paused' && !blocked()) play();
+    });
+    return true;
+  }
+  function setSound(on) {
+    cancelHold();
+    soundOn = !!on;
+    sound?.stop();
+    const wasBlocked = soundState === 'blocked';
+    soundState = soundOn ? 'on' : 'off';
+    syncSound();
+    if (current && soundOn && sound) {
+      prepareSound(current, timing.value);
+      const resume = status === 'playing' || wasBlocked;
+      const ticket = generation;
+      void sound.unlock().then(() => {
+        if (destroyed || ticket !== generation || !soundOn) return;
+        if (!blocked() && resume && status === 'paused') play();
+      });
+      if (blocked()) setState('paused');
+    }
+    if (wasBlocked && !soundOn) play();
+  }
+  function setSubs(on) {
+    cancelHold();
+    subs = !!on;
+    if (subs) root.removeAttribute('data-subs');
+    else root.dataset.subs = 'off';
+  }
+  function setPace(patch) {
+    const nextPace = mergePace(pace, patch);
+    cancelHold();
+    sound?.stop();
+    pace = nextPace;
+    if (!current) return;
+    const before = timing.value;
+    timing.value = compute(current.clip);
+    t = preservePosition(before, timing.value, t);
+    lastStamp = undefined;
+    chrome.timing(view());
+    prepareSound(current, timing.value);
+    thumbDone.clear();
+    render(true);
+    if (t >= timing.value.duration) ended();
+    else if (status === 'ended') setState('paused');
+    emit('timeline');
+    thumbnails();
   }
   async function navigate(index, seconds = 0, dir = 'jump') {
     if (destroyed) return;
@@ -185,6 +293,10 @@ export function createExplorer(host, deck, options = {}) {
     await bootFonts;
     if (ticket !== generation || destroyed) return;
     await loadFonts(entry.clip.fonts);
+    if (ticket !== generation || destroyed) return;
+    const nextTimeline = compute(entry.clip);
+    prepareSound(entry, nextTimeline);
+    if (sound && soundOn) await sound.waitFirst(entry.clip.id, nextTimeline);
     if (ticket !== generation || destroyed) return;
     if (indexOpen) closeIndex(false);
     // Retire the previous exit before adding an entrance: at most two live layers.
@@ -205,7 +317,8 @@ export function createExplorer(host, deck, options = {}) {
       }
     }
     current = entry;
-    t = clampTime(seconds, entry.clip.duration);
+    timing = { value: nextTimeline };
+    t = clampTime(seconds, timing.value.duration);
     root.dataset.chapter = entry.chapter.id;
     root.dataset.clip = entry.clip.id;
     root.dataset.dir = dir;
@@ -219,7 +332,7 @@ export function createExplorer(host, deck, options = {}) {
     layer.el.dataset.role = still ? 'current' : 'in';
     q('stage').append(layer.el);
     layer.setup();
-    chrome.change(entry, still);
+    chrome.change({ ...entry, clip: view() }, still);
     document.title = `${entry.clip.title} — ${deck.title}`;
     if (options.url !== false) {
       const url = new URL(location.href);
@@ -234,8 +347,9 @@ export function createExplorer(host, deck, options = {}) {
         if (incoming === layer) incoming.el.dataset.role = 'current';
       });
     }
-    if (t >= entry.clip.duration) ended();
-    else setState(still ? 'paused' : 'playing');
+    if (t >= timing.value.duration) ended();
+    else setState(still || blocked() ? 'paused' : 'playing');
+    emit('timeline');
     emit('change');
     for (const i of [entry.index - 1, entry.index + 1])
       if (model.clips[i]) void loadFonts(model.clips[i].clip.fonts);
@@ -257,10 +371,11 @@ export function createExplorer(host, deck, options = {}) {
   function play() {
     cancelHold();
     if (!current || destroyed || status === 'loading' || indexOpen) return;
-    if (t >= current.clip.duration) {
+    if (t >= timing.value.duration) {
       t = 0;
       render(true);
     }
+    if (!still && blocked()) { setState('paused'); unlock(); return; }
     setState('playing');
   }
   function pause() {
@@ -270,12 +385,41 @@ export function createExplorer(host, deck, options = {}) {
   function seek(seconds) {
     cancelHold();
     if (!current || destroyed) return;
-    t = clampTime(seconds, current.clip.duration);
+    sound?.stop();
+    t = clampTime(seconds, timing.value.duration);
     lastStamp = undefined;
-    const nextState = seekState(status, t, current.clip.duration);
+    const nextState = seekState(status, t, timing.value.duration);
     render(true);
     if (nextState === 'ended') ended();
     else setState(nextState);
+  }
+  function moveStop(backward) {
+    cancelHold();
+    if (!current || status === 'loading') return;
+    const wasPlaying = status === 'playing' || status === 'ended';
+    const target = backward ? previousTarget(timing.value, t, pace) : nextTarget(timing.value, t, pace);
+    if (!target) {
+      if (backward && current.index > 0) return navigate(current.index - 1, Infinity, 'prev');
+      if (!backward && status === 'ended') return next();
+      return;
+    }
+    seek(target.at);
+    if (t >= timing.value.duration) return;
+    if (wasPlaying && !still) {
+      setState('playing');
+      if (target.kind === 'stop' && timing.value.stops.some(s => s.at === t && s.kind === 'still') && pace.land > 0) {
+        sound?.stop();
+        cancelFrame(clockFrame);
+        clockFrame = null;
+        lastStamp = undefined;
+        root.setAttribute('data-landing', '');
+        landingTimer = later(() => {
+          landingTimer = null;
+          root.removeAttribute('data-landing');
+          startClock();
+        }, pace.land * 1000);
+      }
+    }
   }
   function toggleAuto() {
     cancelHold();
@@ -301,10 +445,11 @@ export function createExplorer(host, deck, options = {}) {
       await loadFonts(entry.clip.fonts);
       if (!destroyed && indexOpen && run === thumbnailRun) {
         // Render at stage size so clip layout and text metrics match playback.
-        const preview = newLayer(entry.clip, true);
+        const box = { value: compute(entry.clip) };
+        const preview = newLayer(entry.clip, true, box);
         try {
           preview.setup();
-          preview.render(clampTime(entry.clip.poster ?? entry.clip.duration, entry.clip.duration));
+          preview.render(posterTime(entry.clip, box.value));
           const thumb = chrome.buttons[entry.index].querySelector('canvas');
           thumb.width = Math.max(1, Math.floor(112 * k * devicePixelRatio));
           thumb.height = Math.max(1, Math.floor(63 * k * devicePixelRatio));
@@ -313,6 +458,9 @@ export function createExplorer(host, deck, options = {}) {
           ctx.imageSmoothingQuality = 'high';
           for (const { canvas } of preview.canvases) ctx.drawImage(canvas, 0, 0, thumb.width, thumb.height);
           if (preview.canvases.length) thumb.dataset.drawn = '';
+          thumbDone.add(entry.clip.id);
+        } catch (error) {
+          report(entry.clip.id, error);
           thumbDone.add(entry.clip.id);
         } finally {
           preview.dispose();
@@ -349,10 +497,13 @@ export function createExplorer(host, deck, options = {}) {
   function resize() {
     const w = clean ? 1600 : 1920;
     const h = clean ? 900 : 1080;
-    k = Math.min(innerWidth / w, innerHeight / h);
+    // The open tuning panel (spec §8.1) stands beside the frame, not over the stage.
+    const side = root.querySelector('.mx-tune:not([data-collapsed])')?.offsetWidth ?? 0;
+    const room = Math.max(320, innerWidth - side);
+    k = Math.min(room / w, innerHeight / h);
     root.style.setProperty('--mx-k', k);
     q('frame').style.transform =
-      `translate(${(innerWidth - w * k) / 2}px, ${(innerHeight - h * k) / 2}px) scale(${k})`;
+      `translate(${(room - w * k) / 2}px, ${(innerHeight - h * k) / 2}px) scale(${k})`;
     outgoing?.resize(k);
     layer?.resize(k);
     render(true);
@@ -371,6 +522,8 @@ export function createExplorer(host, deck, options = {}) {
     timers.clear();
     frames.clear();
     events.clear();
+    sound?.destroy();
+    tune?.destroy();
     layer?.dispose();
     outgoing?.dispose();
     root.remove();
@@ -385,6 +538,11 @@ export function createExplorer(host, deck, options = {}) {
   }
   const api = {
     state,
+    at: name => timing.value.at(name),
+    pace: () => structuredClone(pace),
+    setPace, setSound, setSubs,
+    nextStop: () => moveStop(false),
+    prevStop: () => moveStop(true),
     go,
     next,
     prev,
@@ -401,13 +559,15 @@ export function createExplorer(host, deck, options = {}) {
     destroy,
   };
   syncAuto();
+  syncSound();
   root.dataset.state = status;
-  bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor });
+  bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor, unlock, cues: () => timing?.value.cues ?? [] });
   listen(window, 'resize', resize);
   listen(document, 'visibilitychange', () => {
     cancelHold();
     lastStamp = undefined;
     if (document.hidden) {
+      sound?.stop();
       cancelFrame(clockFrame);
       clockFrame = null;
     } else startClock();
@@ -420,6 +580,14 @@ export function createExplorer(host, deck, options = {}) {
     window.__go = (id, t = 0) => go(id, { t });
   }
   resize();
-  void navigate(pending, still ? Number(params.get('t')) : 0);
+  void (async () => {
+    if (params.has('tune')) {
+      const { createTune } = await import('./tune.js');
+      if (destroyed) return;
+      tune = createTune(root, deck, api, () => timing ? positionAt(timing.value, t) : null);
+      resize();
+    }
+    if (!destroyed) await navigate(pending, still ? Number(params.get('t')) : 0);
+  })();
   return api;
 }

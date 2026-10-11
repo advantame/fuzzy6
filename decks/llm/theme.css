@@ -111,6 +111,9 @@
 }
 .mx-seek-mark { top: 16px; }
 .mx-seek-mark::before { top: 0; height: 12px; background: #5c5750; }
+/* a still sits on the lit edge itself */
+.mx-seek-mark[data-kind='still']::before { top: -5px; height: 10px; background: var(--mx-bg); }
+.mx-seek-mark:hover::before { background: var(--mx-accent); }
 .mx-seek-hover {
   background: var(--mx-stage-bg);
   color: #151412;
@@ -148,6 +151,9 @@
 .mx-count-all { font: 600 20px/1 var(--mx-font-mono); }
 .mx-play { margin-left: -10px; }
 .mx-auto-label { font-size: 16px; }
+.mx-sound { justify-self: end; margin-right: 6px; }
+
+.mx-credits { padding-bottom: 30px; }
 
 /* ——— index: a printed contents page on the stage ——————————————————— */
 

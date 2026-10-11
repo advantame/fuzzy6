@@ -11,7 +11,7 @@ export function normalizeDeck(deck) {
     for (const [row, clip] of chapter.clips.entries()) {
       if (ids.has(clip.id)) throw new Error(`Duplicate clip id: ${clip.id}`);
       if (typeof clip.setup !== 'function') throw new Error(`Clip ${clip.id}: missing setup`);
-      if (!Number.isFinite(clip.duration) || clip.duration <= 0)
+      if (clip.script === undefined && (!Number.isFinite(clip.duration) || clip.duration <= 0 || clip.duration > 90))
         throw new Error(`Clip ${clip.id}: duration must be positive`);
       const entry = {
         clip,
