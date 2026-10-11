@@ -113,13 +113,15 @@ LLM デッキを見直して決めた、どのデッキにも効く作り方。�
 - 通常のモード（静止フレームでないモード）の確認では、ブラウザが操作の前の音を止める。Playwright で確かめるときは、Chromium を `--autoplay-policy=no-user-gesture-required` で起動するか、`.mx-unlock` を押す。
 - `codexctl research run` は、起動の直後に `thread/resume: list_turns is not supported yet` で落ちることがあった（2026-10-11、codex-cli 0.160.0）。thread 自体は動いているので、`codexctl research start …` で始めて、`codexctl research attend <thread>` を付ける。ふつうの依頼も、`codexctl new …` と `codexctl wait <thread>` に分けておくと、待つ側だけを付け直せる。
 
-## 公開（2026-10-10 から）
+## 公開（2026-10-11 から、限られた人に見せる）
 
-- 公開のリポジトリは `advantame/fuzzy6`、公開版は <https://advantame.github.io/fuzzy6/>（GitHub Pages）。2026-10-11 に `kouign-amann/fuzzy6` から移管した。リポジトリの旧 URL は GitHub が新しい方へ転送するが、公開版の旧 URL（`kouign-amann.github.io/fuzzy6/`）は転送されない。
-- リモートの `main` に push すると、`.github/workflows/pages.yml` が unit テストとビルドを走らせ、`dist/` を Pages に配る。push したものはそのまま公開されるので、作りかけのクリップを `deck.js` に載せたまま push しない。
-- 2026-10-11 の変更（語り、止まり、歩調、1-1 の作り直し、ライセンス）は、ブランチ `searobin` にコミットしてある。push は、ボスがしばらく保留にしている（2026-10-11）。ボスが指示するまで、`main` へのマージも push もしない。公開版は 2026-10-10 の内容のまま。
-- Pages は `/fuzzy6/` の下で配る。そのため `vite.config.js` の `base` を `'./'` にしてあり、ページどうしのリンクも `decks/llm/` のように相対パスで書く。自分で書く `href` や iframe の `src` を `/` で始めると、公開版で切れる（HTML の `<script src>` のように Vite がビルドで書き換えるものは別）。
-- この機械の gh には二つのアカウントが入っている。操作するアカウントを切り替えずに済ませるには、`GH_TOKEN=$(gh auth token --user advantame)` を付けて `gh` や `git push` を呼ぶ。
-- リポジトリのライセンスは「All rights reserved」（[LICENSE](LICENSE)、2026-10-11、ボスの決定）。中身を見られるように公開するが、複製、改変、再配布、再利用は許諾しない。当面の厳しめの扱いで、緩めるときはボスが決める。
-- 語りの音声は、公開リポジトリと GitHub Pages に置いてよい。ただし再利用は許諾しない（2026-10-11、ボスの決定。判断の材料は [research/voice-terms/report.md](research/voice-terms/report.md)）。公開版は CI がリポジトリからビルドするので、配る音声（`decks/<id>/voice/**/*.opus`）と語りの記録をリポジトリに入れる。合成した原本の WAV は入れない。
+- **2026-10-11、ボスの決定。** GitHub のリポジトリ `advantame/fuzzy6` を非公開にし、見せる場所を、GitHub Pages からボスの限定公開アプリ基盤に移す。基盤は、秘密の URL を知っている人にだけアプリを見せる。基盤のリポジトリは、この機械の `~/projects/fuzzy2` にある。
+- 公開版の URL は秘密にする。コード、文書、コミットの文面、テストや撮影の記録のどこにも書かない。確かめるときも、URL を出力に出さない。
+- 基盤への登録、鍵の発行、サーバでの作業は、運用者（ボスか、基盤のセッション）が行う。このリポジトリのセッションは、基盤のリポジトリを編集しない。2026-10-11 の時点で、登録はまだ済んでいない。
+- 登録が済んだあとの反映は、ボスの指示を受けて、このリポジトリのセッションが実行してよい（`bash ~/projects/fuzzy2/platform/scripts/ship-app.sh <アプリの id>`。ssh と docker を使うので、サンドボックスの外で実行する）。届くのは、コミット済みの内容だけ。Git 管理外のファイル（立ち絵の画像、合成した原本の WAV）は公開版に入らない。作りかけのクリップを `deck.js` に載せたまま反映しない。
+- リモートの `main` に push すると、`.github/workflows/ci.yml` が unit テストとビルドを走らせる。push しただけでは、公開版は変わらない。2026-10-10 から使っていた GitHub Pages への配信（`pages.yml`）は、2026-10-11 にやめた。
+- 基盤は、アプリを公開 URL の途中（アプリからは見えない接頭辞の下）に置く。そのため `vite.config.js` の `base` を `'./'` にしてあり、ページどうしのリンクも `decks/llm/` のように相対パスで書く。自分で書く `href` や iframe の `src` を `/` で始めると、公開版で切れる（HTML の `<script src>` のように Vite がビルドで書き換えるものは別）。
+- この機械の gh には二つのアカウントが入っている。操作するアカウントを切り替えずに済ませるには、`GH_TOKEN=$(gh auth token --user advantame)` を付けて `gh` や `git push` を呼ぶ。リポジトリは、2026-10-11 に `kouign-amann/fuzzy6` から `advantame/fuzzy6` へ移管した。
+- リポジトリのライセンスは「All rights reserved」（[LICENSE](LICENSE)、2026-10-11、ボスの決定）。複製、改変、再配布、再利用は許諾しない。当面の厳しめの扱いで、緩めるときはボスが決める。LICENSE と README の「ライセンス」の文面は、公開リポジトリだった時のまま（GitHub での閲覧と fork、Pages の URL、Issues の窓口に触れている）。書き直すかどうかは、ボスが決める。トップページからの LICENSE へのリンクは、非公開にすると開けなくなるので外した。
+- 語りの音声は、再利用を許諾しない（2026-10-11、ボスの決定。判断の材料は [research/voice-terms/report.md](research/voice-terms/report.md)）。公開リポジトリと GitHub Pages に置いてよい、という同じ日の判断は、リポジトリを非公開にしたので、いまは使っていない。公開版はコミット済みの内容からビルドするので、配る音声（`decks/<id>/voice/**/*.opus`）と語りの記録をリポジトリに入れる。合成した原本の WAV は入れない。
 - 語りを足すときは、足した文が音源の規約の制限する用途に当たらないことを確かめ、`decks/<id>/voice/README.md` に日付と一緒に書く。表記「VOICEVOX:四国めたん」は、rail（`deck.voice.credit`）、トップページ、ルートの README、音声のフォルダの README に出している。

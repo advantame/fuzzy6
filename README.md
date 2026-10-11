@@ -4,7 +4,7 @@
 
 ## 見る
 
-公開版は <https://advantame.github.io/fuzzy6/> で見られます。手元で動かすときは、次のようにします。
+手元で動かすときは、次のようにします。公開版は、URL を伝えた人にだけ見せています（2026-10-11 から。くわしくは [AGENTS.md](AGENTS.md) の「公開」）。
 
 ```bash
 nvm use            # Node 24

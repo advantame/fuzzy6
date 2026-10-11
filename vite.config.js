@@ -36,7 +36,7 @@ function deckChars() {
 }
 
 export default defineConfig({
-  // Relative asset paths, so dist/ works under any path (GitHub Pages serves it at /<repo>/).
+  // Relative asset paths, so dist/ works under any path (the host serves it below a prefix the app never sees).
   base: './',
   plugins: [deckChars()],
   server: { host: '127.0.0.1', port: 5175, strictPort: true },
