@@ -11,7 +11,7 @@
 // retained. --prune only compares takes belonging to the selected spoken lines.
 // --generate / --inspect: local CPU Engine 0.25.2 / Core 0.16.1 on 127.0.0.1:8083 only.
 // Check port availability and ownership; prlimit AS=4GiB, CPU=1800s, no core dumps,
-// 256 open files; four inference/BLAS threads, CUDA hidden, one engine, no retries.
+// 256 open files; ten inference/BLAS threads, CUDA hidden, one engine, no retries.
 // XDG directories: <project>/.cache/voicevox/. Require 16GiB available RAM.
 // Mutable APIs enabled for the dictionary only through our owned local engine.
 // Lifetime .cache/voicevox/.engine-lock serializes engines across decks/modes.

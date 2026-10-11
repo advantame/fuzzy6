@@ -1,0 +1,35 @@
+# 道具と環境の記録
+
+語りの合成、立ち絵の書き出し、codex の呼び方について、測った数字、決めた経緯、手順を残す文書です。作業のたびに守る決まりは、[AGENTS.md](../AGENTS.md) の「環境」に短くまとめてあります。この文書は 2026-10-11 に、AGENTS.md の「環境」と「次のデッキに向けて」の節から移しました。
+
+## 語りの合成（VOICEVOX Engine）
+
+- 語りの音声は、この機械にある VOICEVOX Engine 0.25.2（`~/apps/voicevox-engine-0.25.2`、CPU 版）を `tools/narrate.mjs` が一時起動して合成する。いまは常駐させていない（理由は下の項）。話者は四国めたん（ノーマル）。合成した WAV は `.gitignore` で除いてあり、リポジトリに入るのは、そこから作った配る音声（Ogg Opus、`~/.local/bin/opusenc` で作る）と語りの記録。
+- 2026-10-11 にボスが承認した合成は、1-1 の 3 文だけ（話速は 0.9、1、1.1 と、あとからボスが頼んだ 1.3、1.4、1.5、1.6。ボスの指摘した読みを直すための合成し直しも、この 3 文の中で行った）。ほかのクリップを合成するときは、あらためて承認を得る。合成せずに拍の数字を見る `--inspect` も、エンジンを起動するので、同じ扱いにする。
+- 道具のエンジンは 127.0.0.1 の 8083 番で待ち受け、データ（ユーザー辞書を含む）をプロジェクトの中の `.cache/voicevox/` に持つ。この機械のほかの VOICEVOX（`~/.local/share/voicevox-engine`）には触れない。
+- 合成の速さは、2026-10-11 に 1-1 の 3 文（音声 15.6 秒ぶん）で測った。エンジンの起動は 0.5 秒、モデルの読み込みは最初の照会の 0.5 秒。`--inspect` は一回 2.8 秒で、何も起動しない既定の実行は 1.1 秒（ほとんどがデッキの読み込み）。合成にかかる時間は、4 スレッドで音声の長さの 6.5 分の 1、10 スレッドで 12.7 分の 1、20 スレッドで 7.6 分の 1。そこで、エンジンのスレッドを 4 から 10 にした（`tools/narrate/engine.mjs`）。速いコアへの固定（`taskset`）は、付けても変わらなかった。
+- スレッドの数が同じなら、同じ音声が出る。数を変えると、標本の 1〜2% が、最大で 32768 分の 2 だけ変わる。聞いて決めた録りを合成し直すと、同じ原稿でもファイルは別のものになる。
+- エンジンは、常駐させてよい（2026-10-11、ボス）。いまは一時起動のままにしている。常駐で縮むのは一回の実行につき多くても 1.7 秒で、その代わりに、辞書の取り合いを防ぐ排他と、止め忘れの始末が要るため。一度に何十回も `--inspect` を繰り返す作業が出てきたら、考え直す。
+
+## 立ち絵
+
+- **2026-10-11、ボスの決定。** 四国めたんとずんだもんの立ち絵には、akihiyo さんの立ち絵素材（「立ちめたん素材」「立ちずんだもん素材」）を使う。**画像はリポジトリに入れない。** 元の PSD は `~/projects/fuzzy6/staging/` にあり、書き出した PNG は `decks/llm/figures/` に置く（`.gitignore` で除いてある）。だから、新しく取り出した作業環境と公開版には立ち絵が出ない。デッキは、画像がなければ立ち絵なしで動く（`decks/llm/lib/figures.js`）。
+  - ボスが挙げた根拠: 作者が内部のデータ（PSD）ごと公開している。公開ページで東北ずん子プロジェクトを親作品に登録している。作者は、公式ページ、X、Skeb のどこでも、利用条件やクレジットについて書いていない。広く公開する作品と限定公開の作品を分けている作者で、この素材は広く公開する側にある。参考にした見解は <https://be-cando.com/voicevox_character-syuueki/#toc16>。指摘を受けたら、その時に対応する（支払いを含む）。
+  - 調査（[research/character-figures/report.md](../research/character-figures/report.md)）では、この素材の作者の条件は一次資料で確かめられず、公開リポジトリに置けるかは判断を保留していた。配布の ZIP にも説明の文書はなかった。リポジトリに入れないのは、そのため。
+- 書き出しは `tools/figures/export.py` と、デッキの `figures.recipe.json`（PSD のどのレイヤをどの口と目に使うか、どこで切り抜くか）で行う。
+- 書き出しには、プロジェクトの中の Python 環境を使う（`.cache/psd-venv`、psd-tools 1.24.0。`.cache/` は `.gitignore` で除いてある）。なければ、次のように作る。
+
+  ```bash
+  python3 -m venv .cache/psd-venv
+  .cache/psd-venv/bin/python -m pip install --only-binary=:all: psd-tools==1.24.0
+  ```
+
+- 書き出しのコマンドは次のとおり。PSD は外から来たファイルなので、`-I` を付け、素材のフォルダの中では実行しない。
+
+  ```bash
+  .cache/psd-venv/bin/python -I tools/figures/export.py decks/llm/figures.recipe.json --source ~/projects/fuzzy6/staging
+  ```
+
+## codex
+
+- `codexctl research run` は、起動の直後に `thread/resume: list_turns is not supported yet` で落ちることがあった（2026-10-11、codex-cli 0.160.0）。thread 自体は動いているので、`codexctl research start …` で始めて、`codexctl research attend <thread>` を付ける。ふつうの依頼も、`codexctl new …` と `codexctl wait <thread>` に分けておくと、待つ側だけを付け直せる。

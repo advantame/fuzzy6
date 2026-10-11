@@ -10,6 +10,10 @@ export const ENGINE = '/home/apm/apps/voicevox-engine-0.25.2/run';
 const HOST = '127.0.0.1';
 const PORT = 8083;
 export const TOTAL_MS = 30 * 60_000;
+// One per performance core (10 of this machine's 20). Measured 2026-10-11: 4 threads
+// x6.5 realtime, 10 threads x12.7, 20 threads x7.6. A take's samples depend on this
+// count in the last bit or two, so changing it changes the bytes of a re-synthesis.
+const THREADS = '10';
 
 export async function processIdentity(pid) {
   try {
@@ -94,10 +98,10 @@ async function startUnlockedEngine(root, signal) {
   signal.throwIfAborted();
   const child = spawn('/usr/bin/prlimit', [
     '--as=4294967296:4294967296', '--core=0:0', '--cpu=1800:1800', '--nofile=256:256',
-    ENGINE, '--host', HOST, '--port', String(PORT), '--cpu_num_threads', '4',
+    ENGINE, '--host', HOST, '--port', String(PORT), '--cpu_num_threads', THREADS,
   ], {
     cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, CUDA_VISIBLE_DEVICES: '', OMP_NUM_THREADS: '4', OPENBLAS_NUM_THREADS: '4',
+    env: { ...process.env, CUDA_VISIBLE_DEVICES: '', OMP_NUM_THREADS: THREADS, OPENBLAS_NUM_THREADS: THREADS,
       MALLOC_ARENA_MAX: '2', WEB_CONCURRENCY: '1', XDG_DATA_HOME: join(cache, 'data'),
       XDG_CONFIG_HOME: join(cache, 'config'), XDG_CACHE_HOME: join(cache, 'cache') },
   });
