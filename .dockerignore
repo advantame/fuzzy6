@@ -1,0 +1,22 @@
+# Only inputs used by Vite and the production server enter the build context.
+**
+!package.json
+!package-lock.json
+!.nvmrc
+!vite.config.js
+!index.html
+!src/
+!src/**
+!decks/
+!decks/**
+!public/
+!public/**
+!server/
+!server/**
+# Also exclude local-only art and synthesis originals in a working-tree build.
+decks/*/figures/
+decks/*/voice/**/*.wav
+**/node_modules/
+**/.*/
+**/.*
+!.nvmrc
