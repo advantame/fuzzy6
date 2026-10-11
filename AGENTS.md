@@ -65,7 +65,7 @@ npm run capture -- …   # 使い方は tools/capture.mjs の先頭（dev サー
 
 ## 公開（2026-10-10 から）
 
-- 公開のリポジトリは `kouign-amann/fuzzy6`、公開版は <https://kouign-amann.github.io/fuzzy6/>（GitHub Pages）。
+- 公開のリポジトリは `advantame/fuzzy6`、公開版は <https://advantame.github.io/fuzzy6/>（GitHub Pages）。2026-10-11 に `kouign-amann/fuzzy6` から移管した。リポジトリの旧 URL は GitHub が新しい方へ転送するが、公開版の旧 URL（`kouign-amann.github.io/fuzzy6/`）は転送されない。
 - リモートの `main` に push すると、`.github/workflows/pages.yml` が unit テストとビルドを走らせ、`dist/` を Pages に配る。push したものはそのまま公開されるので、作りかけのクリップを `deck.js` に載せたまま push しない。
 - Pages は `/fuzzy6/` の下で配る。そのため `vite.config.js` の `base` を `'./'` にしてあり、ページどうしのリンクも `decks/llm/` のように相対パスで書く。自分で書く `href` や iframe の `src` を `/` で始めると、公開版で切れる（HTML の `<script src>` のように Vite がビルドで書き換えるものは別）。
-- この機械の gh には二つのアカウントが入っている。操作するアカウントを切り替えずに済ませるには、`GH_TOKEN=$(gh auth token --user kouign-amann)` を付けて `gh` や `git push` を呼ぶ。
+- この機械の gh には二つのアカウントが入っている。操作するアカウントを切り替えずに済ませるには、`GH_TOKEN=$(gh auth token --user advantame)` を付けて `gh` や `git push` を呼ぶ。
