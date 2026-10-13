@@ -1,4 +1,4 @@
-// The tool-use diagram that chapters 4–6 are drawn on (README「ツールの図」): the LLM on the
+// The tool-use diagram that chapters 5–7 are drawn on (README「ツールの図」): the LLM on the
 // left, the app holding the document in the middle, the tool on the right, and four channels
 // between them. Chapter 4 runs the flow on it with an abstract tool; later clips put concrete
 // things into the tool's place. Every function draws one frame and keeps no state.

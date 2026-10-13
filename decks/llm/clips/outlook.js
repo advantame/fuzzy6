@@ -1,6 +1,6 @@
-// Outlook. The rings of 6-10 (LLM inside the chatbot inside the agent) come back, and the view
+// Outlook. The rings of 7-10 (LLM inside the chatbot inside the agent) come back, and the view
 // pulls out to a fourth ring — what drives harnesses from outside and gathers many threads
-// (app-server, ACP, 10-8 to 10-11) — and to a dashed fifth ring for onorca.dev. The onorca.dev
+// (app-server, ACP, 11-8 to 11-11) — and to a dashed fifth ring for onorca.dev. The onorca.dev
 // part is a placeholder: the Boss asked (2026-10-10) for it to stay an outlook, not researched yet.
 
 import { clip } from '../lib/clip.js';

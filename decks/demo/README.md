@@ -32,3 +32,25 @@ The new narration chapter follows Timing; `short` still advances to `cues`.
 - `?c=duet&sound=0` で通常再生、`?c=duet&t=0.5` で同じ時刻の静止画を確認する。
 - `&cast=0` または `window.__mx.setCast(false)` で隠し、`setCast(true)` で戻す。
 - 二人の文は「左の語り手から話します。」「次は、右の語り手です。」「録りがない文でも、口が動きます。」。動作確認用の例であり、事実や数値を説明する原稿ではない。
+
+2026-10-14: Added the spec 0.6 dive example. `sweep` opens “時刻で何が決まる？”
+at 3 seconds, including its final frame. Its `detail` dive shows a position determined
+only by time, with the caption “同じ時刻なら、同じ位置に描きます。” No narration is
+synthesized. Returning resumes the saved sweep time; opening `?c=detail` directly
+returns to sweep at 3 seconds. Main-line numbering and navigation remain unchanged.
+
+2026-10-14: Added the spec 0.7 join example using the existing `short` → `cues`
+pair. `short` fills an orange bar; `cues` (`join: 'cut'`) starts with that same full
+bar. Both use `lib/bar.js`
+so `short` at 1.5 seconds and `cues` at 0 seconds have identical stage pixels.
+Open `?c=short&auto=1&sound=0` to see the join after the hold, or advance from its
+final frame with ↓ / →. Advancing partway through `short`, or entering `cues` via
+the index, still uses the ordinary transition. No clips or voice files were added.
+
+2026-10-14: The spec 0.8 bridge confines that retraction to the first 0.6 seconds
+of `cues`. At its head the bar is already one third full, representing the first
+caption. It fills to two thirds and then fully at the next caption boundaries.
+Only a join from `short` plays the retraction; ↑, the index, R and `go('cues')`
+start at 0.6. The existing cues remain absolute (0, 2, 5 seconds); the cue at 0
+is not a stop, and the first stop is 0.6. `?c=cues&t=0` still shows the exact
+joining picture. Duration remains 9 seconds including the bridge. No synthesis.

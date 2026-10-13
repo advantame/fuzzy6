@@ -890,3 +890,33 @@
 }
 .mx[data-cast] .mx-time { right: calc(var(--mx-cast-w) + var(--mx-cast-gap) * 2 + 8px); }
 .mx[data-clean] .mx-gutter { display: none; }
+
+/* Deep dives (spec 0.6). Themes may restyle these without changing the stage. */
+.mx-doors {
+  position: absolute;
+  right: 40px;
+  bottom: 40px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+.mx .mx-door {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 16px 24px;
+  border: 1px solid var(--mx-accent);
+  border-radius: 8px;
+  background: var(--mx-bg);
+  font-size: 26px;
+}
+.mx-door-hint { font-size: 16px; color: var(--mx-accent); }
+.mx-door[data-state='in'] { animation: mx-cue-in 0.45s var(--mx-ease) both; }
+.mx-no-dive { margin-left: 0.6em; font: 500 16px var(--mx-font); }
+.mx-no-dive:first-child { margin-left: 0; }
+.mx-crumb[data-level='back'] { flex-basis: 100%; text-align: left; }
+.mx-tick[data-dive] { flex: 0.5; }
+.mx-tick[data-dive] > button::before { right: 8px; width: 6px; }
+.mx-index-clips > li[data-dive] { padding-left: 24px; }

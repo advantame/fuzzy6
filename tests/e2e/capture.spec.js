@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readdir, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 const exec = promisify(execFile);
 
@@ -19,8 +19,21 @@ test('capture supports computed durations, named posters, and all stops/ground f
   expect(paths.some(p => p.endsWith('-ground-b_t3.4.png'))).toBe(true);
   expect(paths.some(p => p.endsWith('-ground-spin_t6.8.png'))).toBe(true);
   for (const path of paths) expect((await stat(path)).size).toBeGreaterThan(100);
-  await run(['--posters']);
-  expect(await readdir('test-output/demo/posters')).toContain('06-script.png');
+  const posters = await run(['--posters']);
+  const ordered = posters.stdout.trim().split('\n').map(p => p.split('/').at(-1));
+  expect(ordered.slice(0, 4)).toEqual(['01-opening.png', '02-sweep.png', '03-detail.png', '04-dom.png']);
+  expect(ordered).toContain('07-script.png');
+  await run(['detail', '--stops']);
+  await run(['detail', '--sheet', '--every', '1']);
+  await run(['detail', '1']);
+  expect((await stat('test-output/demo/detail_sheet.png')).size).toBeGreaterThan(100);
+  expect((await stat('test-output/demo/detail_t1.png')).size).toBeGreaterThan(100);
   await run(['script', '--sheet', '--every', '2']);
   expect((await stat('test-output/demo/script_sheet.png')).size).toBeGreaterThan(100);
+  const bridgeStops = (await run(['cues', '--stops'])).stdout.trim().split('\n');
+  expect(bridgeStops).toHaveLength(4);
+  expect(bridgeStops[0].endsWith('_t0.6.png')).toBe(true);
+  expect(bridgeStops.some(p => p.endsWith('_t0.png'))).toBe(false);
+  await run(['cues', '0']);
+  expect((await stat('test-output/demo/cues_t0.png')).size).toBeGreaterThan(100);
 });

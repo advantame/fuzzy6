@@ -8,7 +8,7 @@ import { text, rr, circle, line, measure } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
 import { BASE } from './rig.js';
 
-// the rig with the tool's place widened for the folder (as in 6-7)
+// the rig with the tool's place widened for the folder (as in 7-7)
 export const WIDE = {
   llm: BASE.llm,
   app: { x: 386, y: 100, w: 560, h: 712 },

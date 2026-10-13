@@ -18,7 +18,7 @@ export function createChrome(root, deck, model, retire, frame) {
         <header class="mx-heading" aria-live="polite"></header>
         <ol class="mx-axis" aria-label="クリップの並び"></ol>
       </aside>
-      <main class="mx-stage"></main>
+      <main class="mx-stage"><div class="mx-doors"></div></main>
       <div class="mx-corner">
         <button class="mx-prev" aria-label="前のクリップ（↑）"><span class="mx-icon"></span></button>
         <div class="mx-count">
@@ -98,12 +98,13 @@ export function createChrome(root, deck, model, retire, frame) {
     const list = element('ol', 'mx-index-clips');
     section.append(title, list);
     q('index-chapters').append(section);
-    for (const clip of chapter.clips) {
-      const entry = model.ids.get(clip.id);
+    for (const entry of model.all.filter(e => e.indexChapter === chapter)) {
+      const { clip } = entry;
       const tick = element('li', 'mx-tick');
       const jump = element('button');
       tick.dataset.chapter = chapter.id;
-      tick.toggleAttribute('data-chapter-start', entry.row === 0);
+      tick.toggleAttribute('data-chapter-start', !entry.dive && entry.row === 0);
+      tick.toggleAttribute('data-dive', entry.dive);
       jump.tabIndex = -1;
       jump.dataset.clip = clip.id;
       jump.dataset.label = `${entry.label} ${clip.title}`.trim();
@@ -112,16 +113,35 @@ export function createChrome(root, deck, model, retire, frame) {
       q('axis').append(tick);
       ticks.push(tick);
       const li = element('li');
+      li.toggleAttribute('data-dive', entry.dive);
       const button = element('button', 'mx-index-clip');
       button.dataset.clip = clip.id;
       button.append(
         element('canvas', 'mx-index-thumb'),
-        element('span', 'mx-index-no', entry.label),
+        element('span', 'mx-index-no', entry.dive ? '↳' : entry.label),
         element('span', 'mx-index-name', clip.title),
       );
       li.append(button);
       list.append(li);
       buttons.push(button);
+    }
+  }
+  const activeDoors = new Map();
+  function doors(open, instant) {
+    for (const [door, node] of activeDoors) {
+      if (!open.includes(door)) { node.remove(); activeDoors.delete(door); }
+      else if (instant) { node.removeAttribute('data-state'); node.getAnimations().forEach(a => a.cancel()); }
+    }
+    for (const [i, door] of open.entries()) {
+      if (activeDoors.has(door)) continue;
+      const node = element('button', 'mx-door');
+      node.dataset.to = door.to;
+      if (door.by !== undefined) node.dataset.by = door.by;
+      if (!instant) node.dataset.state = 'in';
+      node.append(element('span', 'mx-door-label', door.label), element('span', 'mx-door-hint', '深掘り'));
+      const following = open.slice(i + 1).find(d => activeDoors.has(d));
+      q('doors').insertBefore(node, activeDoors.get(following) ?? null);
+      activeDoors.set(door, node);
     }
   }
   const active = new Map();
@@ -163,12 +183,21 @@ export function createChrome(root, deck, model, retire, frame) {
   return {
     q,
     timing,
+    doors,
     ticks,
     buttons,
     change(entry, still) {
       const { clip, chapter, index } = entry;
       q('crumb-no').textContent = entry.chapterNumber;
       q('crumb-name').textContent = chapter.title;
+      root.querySelector('.mx-crumb[data-level="back"]')?.remove();
+      const numbered = entry.main ?? entry;
+      if (entry.dive) {
+        const back = element('button', 'mx-crumb');
+        back.dataset.level = 'back';
+        back.append(element('span', 'mx-crumb-no', numbered.label), element('span', 'mx-crumb-name', entry.parent.clip.title));
+        q('crumbs').append(back);
+      }
       const heading = q('heading');
       if (still) heading.replaceChildren();
       else {
@@ -179,13 +208,14 @@ export function createChrome(root, deck, model, retire, frame) {
         }
       }
       const body = element('div', 'mx-heading-body');
-      if (entry.number !== null) {
+      if (numbered.number !== null || entry.dive) {
         const no = element('p', 'mx-no');
-        no.append(
-          element('span', 'mx-no-chapter', entry.chapterNumber),
+        if (numbered.number !== null) no.append(
+          element('span', 'mx-no-chapter', numbered.chapterNumber),
           element('span', 'mx-no-sep', '-'),
-          element('span', 'mx-no-clip', entry.number),
+          element('span', 'mx-no-clip', numbered.number),
         );
+        if (entry.dive) no.append(element('span', 'mx-no-dive', '深掘り'));
         body.append(no);
       }
       body.append(element('h1', 'mx-title', clip.title));
@@ -193,13 +223,15 @@ export function createChrome(root, deck, model, retire, frame) {
       heading.append(body);
       if (still) body.getAnimations().forEach(a => a.cancel());
       q('stage').setAttribute('aria-label', clip.title);
-      q('count-now').textContent = String(entry.global).padStart(width, '0');
-      q('prev').disabled = index === 0;
-      q('next').disabled = index === model.clips.length - 1;
+      q('count-now').textContent = String(numbered.global).padStart(width, '0');
+      q('prev').disabled = !entry.dive && index === 0;
+      q('next').disabled = !entry.dive && index === model.clips.length - 1;
       ticks.forEach((tick, i) => {
-        tick.dataset.state = i < index ? 'past' : i === index ? 'current' : 'future';
+        const item = model.all[i];
+        const position = item.index;
+        tick.dataset.state = item.clip.id === clip.id ? 'current' : position < index ? 'past' : position === index ? 'current' : 'future';
       });
-      buttons.forEach((b, i) => b.setAttribute('aria-current', String(i === index)));
+      buttons.forEach((b, i) => b.setAttribute('aria-current', String(model.all[i].clip.id === clip.id)));
       timing(clip);
     },
     render(clip, t, instant, still = false, target = null) {

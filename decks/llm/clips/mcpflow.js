@@ -1,5 +1,5 @@
 // MCP on the chapter's diagram: the tool's place holds an MCP server. The harness asks it which
-// tools it has (tools/list) and writes their descriptions into the document, as in 4-2; when the
+// tools it has (tools/list) and writes their descriptions into the document, as in 5-2; when the
 // model calls one, the harness sends tools/call and writes back what the server returns. The
 // server, the issue and the messages are an example; names follow the MCP specification.
 

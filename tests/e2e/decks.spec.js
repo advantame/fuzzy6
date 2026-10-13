@@ -9,7 +9,8 @@ test('LLM deck clips retain finite timelines and render through the still-mode c
   await page.waitForFunction(() => window.__ready);
   const clips = await page.evaluate(async () => {
     const { default: deck } = await import('/decks/llm/deck.js');
-    return deck.chapters.flatMap(chapter => chapter.clips.map(c => ({ id: c.id, duration: c.duration, script: !!c.script })));
+    const { orderedClips } = await import('/src/explorer/model.js');
+    return orderedClips(deck).map(c => ({ id: c.id, duration: c.duration, script: !!c.script }));
   });
   expect(clips.length).toBeGreaterThanOrEqual(79);
   for (const clip of clips) {

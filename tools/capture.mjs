@@ -8,7 +8,7 @@
  * npm run capture -- <deck> <clipId> --sheet [--every S] [--cols N] [--clean]
  *   -> test-output/<deck>/<clipId>_sheet.png (480px tiles, up to 60 frames)
  * npm run capture -- <deck> <clipId> --stops [--clean] [--size WxH]
- *   -> test-output/<deck>/<clipId>_stops/ (stops and line.start + pace.ground)
+ *   -> test-output/<deck>/<clipId>_stops/ (head onward; stops and line.start + pace.ground)
  * --timeout seconds bounds the entire run (default 240). A separate supervisor
  * terminates the worker and its browser process group if graceful cleanup stalls.
  * Viewports are limited to 8 million pixels; sheet image data to 64 MiB.
@@ -107,7 +107,8 @@ async function capture() {
       const entries = await step(page.evaluate(async deck => {
         const { default: data } = await import(`/decks/${deck}/deck.js`);
         const { buildTimeline, mergePace, posterTime } = await import('/src/explorer/timeline.js');
-        return data.chapters.flatMap(c => c.clips.map(clip => ({ id: clip.id, t: posterTime(clip, buildTimeline(clip, mergePace(data.pace), data.voice)) })));
+        const { normalizeDeck } = await import('/src/explorer/model.js');
+        return normalizeDeck(data).all.map(({ clip }) => ({ id: clip.id, t: posterTime(clip, buildTimeline(clip, mergePace(data.pace), data.voice)) }));
       }, deck));
       await mkdir(resolve(root, 'posters'), { recursive: true });
       for (const [i, entry] of entries.entries()) {
@@ -118,7 +119,7 @@ async function capture() {
     } else if (stops) {
       const entries = await step(page.evaluate(async ({ deck, clipId }) => {
         const { default: data } = await import(`/decks/${deck}/deck.js`);
-        const clip = data.chapters.flatMap(c => c.clips).find(c => c.id === clipId);
+        const clip = data.chapters.flatMap(c => [...c.clips, ...(c.dives ?? [])]).find(c => c.id === clipId);
         const { buildTimeline } = await import('/src/explorer/timeline.js');
         const pace = window.__mx.pace();
         const timeline = buildTimeline(clip, pace, data.voice);

@@ -176,3 +176,16 @@ it('resolves engine style IDs once per narrator and records per-line mouth and i
   }
   expect((await inspectAssets(voiceDir, lines, castVoice)).plan.every(p => p.status === 'ready')).toBe(true);
 });
+
+it('plans and records dives in parent-first order with the fake engine', async () => {
+  const make = (id, speed) => ({ id, script: [{ id: 'a', text: 'アイ', speed }] });
+  const parent = { ...make('parent', 'fast'), doors: [{ to: 'detail', label: 'detail' }] };
+  const deck = { voice, chapters: [{ clips: [parent, make('next')], dives: [make('detail', 'slow')] }] };
+  const lines = collectLines(deck);
+  const state = await inspectAssets(voiceDir, lines, voice);
+  expect(state.plan.map(p => [p.line.clipId, p.speed])).toEqual([['parent', '1.5'], ['detail', '1.1'], ['next', '1.3']]);
+  await generate(root, voiceDir, state, voice, new AbortController().signal, { tools: {}, encodeAudio });
+  expect(Object.keys(state.manifest.clips)).toEqual(['parent', 'detail', 'next']);
+  expect(state.manifest.clips.detail.a.takes['1.1'].file).toBe('detail/a@1.1.opus');
+  expect((await inspectAssets(voiceDir, collectLines(deck, ['detail']), voice)).plan.map(p => p.status)).toEqual(['ready']);
+});

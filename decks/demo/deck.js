@@ -1,3 +1,4 @@
+import detail from './clips/detail.js';
 import duet from './clips/duet.js';
 import { puppet } from './lib/puppet.js';
 import opening from './clips/opening.js';
@@ -33,7 +34,7 @@ export default {
     manifest: { version: 2, clips: { script: records, duet: duetRecords } }, url: () => undefined,
   },
   chapters: [
-    { id: 'basics', title: 'Basics', clips: [opening, sweep, dom] },
+    { id: 'basics', title: 'Basics', clips: [opening, sweep, dom], dives: [detail] },
     { id: 'timing', title: 'Timing', clips: [short, cues] },
     { id: 'narration', title: '語り', clips: [script, duet] },
   ],

@@ -1,3 +1,5 @@
+import { resolveDoors } from './dive.js';
+import { validateBridge } from './model.js';
 import { readCast, lineBy, clipCast, recordMatches } from './cast.js';
 import { PACE } from './pace.js';
 import { parseLine, isName } from './script.js';
@@ -40,14 +42,14 @@ export function takeSpeeds(clip, voice) {
     .map(line => voice?.manifest?.clips?.[clip.id]?.[line.id]).filter(Boolean)
     .flatMap(line => Object.keys(line.takes ?? {}).map(Number)))].filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
 }
-function mergeStops(stops, duration) {
+function mergeStops(stops, duration, head = 0) {
   const result = [];
   let previousAt;
-  for (const stop of stops.filter(s => s.at >= 0 && s.at <= duration).sort((a, b) => a.at - b.at)) {
+  for (const stop of stops.filter(s => s.at >= head && s.at <= duration).sort((a, b) => a.at - b.at)) {
     const last = result.at(-1);
     if (last && Math.round((stop.at - previousAt) * 1000) < 50) {
       // Keep the actual still's time/identity when a line head almost coincides with it.
-      if (stop.kind === 'still') Object.assign(last, stop);
+      if (stop.kind === 'still' && !(head > 0 && last.at === head)) Object.assign(last, stop);
       last.kind = 'still';
     } else result.push({ ...stop });
     previousAt = stop.at;
@@ -55,6 +57,8 @@ function mergeStops(stops, duration) {
   return result;
 }
 export function buildTimeline(clip, pace = mergePace(), voice) {
+  validateBridge(clip);
+  const head = roundTime(clip.bridge ?? 0);
   const actors = readCast(voice);
   const cast = clipCast(clip, actors);
   const times = new Map();
@@ -67,10 +71,10 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
   };
   if (clip.script === undefined) {
     const duration = clip.duration;
-    for (const mark of [{ at: 0 }, ...(clip.marks ?? clip.cues ?? [])])
+    for (const mark of [{ at: head }, ...(clip.marks ?? clip.cues ?? []).filter(mark => mark.at >= head)])
       stops.push({ at: roundTime(mark.at), kind: 'line', line: null, label: mark.label ?? mark.text?.replace(/\*\*/g, '').slice(0, 12) ?? '' });
     stops.push({ at: duration, kind: 'still', line: null, label: '' });
-    return { cast, duration, lines, cues: clip.cues ?? [], stops: mergeStops(stops, duration), at };
+    return { cast, duration, head, lines, cues: clip.cues ?? [], stops: mergeStops(stops, duration, head), at, doors: resolveDoors(clip, { at }) };
   }
   if (clip.duration !== undefined || clip.cues !== undefined) throw new Error('script cannot be combined with duration or cues');
   if (!Array.isArray(clip.script) || !clip.script.length) throw new Error('script must contain a line');
@@ -83,7 +87,7 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     if (!Number.isFinite(n) || n < 0) throw new Error(`Invalid ${label}`);
     return n;
   };
-  let start = 0;
+  let start = head;
   for (const source of clip.script) {
     name(source.id);
     const speed = lineSpeed(source, pace);
@@ -128,15 +132,17 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     if (line.spoken) cues.push({ at: line.voice, to: Infinity, text: line.parsed.caption, by: line.by });
   }
   cues.forEach((cue, i) => { cue.to = cues[i + 1]?.at ?? Infinity; });
-  return { cast, duration, lines, cues, stops: mergeStops(stops, duration), at };
+  return { cast, duration, head, lines, cues, stops: mergeStops(stops, duration, head), at, doors: resolveDoors(clip, { at }) };
 }
 export function nextTarget(timeline, t, pace) {
+  if (t < timeline.head) return { at: timeline.head, kind: 'stop' };
   if (t >= timeline.duration) return null;
   const stop = timeline.stops.find(s => s.at - t >= 0.05 - 1e-9);
   const at = stop?.at ?? timeline.duration;
   return at - t > pace.skip ? { at: roundTime(t + pace.skip), kind: 'skip' } : { at, kind: 'stop' };
 }
 export function previousTarget(timeline, t, pace) {
+  if (t < timeline.head) return null;
   const i = timeline.stops.findLastIndex(s => s.at <= t + 0.05 + 1e-9);
   const current = timeline.stops[i];
   const stop = current && t - current.at > pace.again + 1e-9 ? current : timeline.stops[i - 1];
@@ -152,6 +158,7 @@ export function positionAt(timeline, t) {
   return { line: line.id, section: interval[0], offset: Math.max(0, t - interval[1]) };
 }
 export function preservePosition(before, after, t) {
+  if (t < before.head) return t;
   const pos = positionAt(before, t);
   if (!pos) return Math.min(t, after.duration);
   const line = after.lines.find(line => line.id === pos.line);

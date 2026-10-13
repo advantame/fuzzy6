@@ -127,7 +127,7 @@ function managedFiles(manifest) {
   return records;
 }
 
-export async function inspectAssets(voiceDir, lines, voice = {}, speeds = null, { clips = [...new Set(lines.map(l => l.clipId))], encodeSpeeds = null } = {}) {
+export async function inspectAssets(voiceDir, lines, voice = {}, speeds = null, { clips = [...new Set(lines.map(l => l.clipId))], encodeSpeeds = null, clipOrder = [...new Set(lines.map(l => l.clipId))] } = {}) {
   await directory(dirname(voiceDir));
   const present = await directory(voiceDir);
   const raw = present ? await readOptional(join(voiceDir, 'manifest.json')) : null;
@@ -238,6 +238,10 @@ export async function inspectAssets(voiceDir, lines, voice = {}, speeds = null, 
     }
   }
 
+  // Follow today's parent-first deck order, retaining removed clips after it in
+  // manifest order. Encoding old/silent lines must keep their original records.
+  const order = new Map(clipOrder.map((id, i) => [id, i]));
+  encodePlan.sort((a, b) => (order.get(a.clipId) ?? clipOrder.length) - (order.get(b.clipId) ?? clipOrder.length));
   return { manifest, raw, plan, encodePlan, unused, needsRecovery };
 }
 

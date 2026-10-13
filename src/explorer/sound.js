@@ -103,20 +103,28 @@ export function createSound(voice, { context: supplied, fetch: fetcher = globalT
   }
   function clock(clipId, timeline, t, dt) {
     const previousTime = t;
+    // A quantized audio timestamp must not move the picture backwards or leave
+    // it unchanged. Use only a floating-point step, not dt, to avoid audio drift.
+    const minimumTime = t + (dt > 0 ? Number.EPSILON * Math.max(1, t) : 0);
     const ctx = context;
-    if (!ctx || ctx.state !== 'running') { stop(); return Math.min(timeline.duration, t + dt); }
+    if (!ctx || ctx.state !== 'running') { stop(); return Math.min(timeline.duration, Math.max(minimumTime, t + dt)); }
     if (active) {
       // Use the audio clock even after a delayed frame; never accumulate rAF drift.
-      t = Math.min(active.end, active.t + ctx.currentTime - active.when);
+      t = Math.min(active.end, Math.max(minimumTime, active.t + (ctx.currentTime - active.when)));
       if (t >= active.end) stop();
       else return t;
-    } else t = Math.min(timeline.duration, t + dt);
+    } else t = Math.min(timeline.duration, Math.max(minimumTime, t + dt));
     const line = timeline.lines.find(l => l.voice <= t && t < l.end && l.take);
     const buffer = line && cache.get(`${clipId}/${line.id}@${line.speed}`)?.buffer;
     if (!buffer || t - line.voice >= buffer.duration) return t;
     // Crossing a voice boundary during ordinary playback starts at the head. A seek,
     // resume or late download keeps its explicit offset instead.
     if (previousTime < line.voice) t = line.voice;
+    const offset = Math.max(0, t - line.voice);
+    const remaining = Math.min(line.end - t, buffer.duration - offset);
+    // Seeks and late loads near the buffer end can leave only rounding noise.
+    // There is no playable audio in less than one sample; use the silent clock.
+    if (remaining < 1 / buffer.sampleRate) return t;
     if (stopPageVoice && stopPageVoice !== stop) stopPageVoice();
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
@@ -124,14 +132,14 @@ export function createSound(voice, { context: supplied, fetch: fetcher = globalT
     source.connect(gain);
     gain.connect(ctx.destination);
     const when = ctx.currentTime;
-    const offset = Math.max(0, t - line.voice);
     if (offset > 0) {
       gain.gain.setValueAtTime(0, when);
       gain.gain.linearRampToValueAtTime(1, when + 0.02);
     }
-    const remaining = Math.min(line.end - t, buffer.duration - offset);
     source.start(when, offset, remaining);
-    active = { source, gain, when, t, end: t + remaining };
+    // A shorter decoded buffer leaves a silent remainder of the recorded voice
+    // interval. Keep its exact endpoint so finishing cannot restart this line.
+    active = { source, gain, when, t, end: line.end };
     stopPageVoice = stop;
     return t;
   }

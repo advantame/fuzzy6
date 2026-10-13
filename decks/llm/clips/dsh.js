@@ -2,7 +2,7 @@
 // Plugin". The model connection, the tool registry, the session log and the agent loop are
 // plugins too — "There is no privileged core to patch" (docs/architecture.md). The harness's
 // parts come apart onto the framework that joins them; the model connection is swapped (the
-// cost study of 10-5 ran dsh with Claude Sonnet 5); presets pick a set of parts. The README
+// cost study of 11-5 ran dsh with Claude Sonnet 5); presets pick a set of parts. The README
 // warns: "THERE WILL BE COMPATIBILITY-BREAKING CHANGES."
 
 import { clip } from '../lib/clip.js';

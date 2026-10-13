@@ -1,4 +1,4 @@
-// Calling tools from code. One call at a time (4-5), every result lands in the document and the
+// Calling tools from code. One call at a time (5-5), every result lands in the document and the
 // model rereads all of it, large intermediate results included. Let the model write code that
 // calls the tools instead: the code runs in a sandbox, the intermediate work stays in the code,
 // and only the final result comes back. Cloudflare's Code Mode (2025-09-26), Anthropic's code
@@ -55,7 +55,7 @@ export default clip({
   ],
 
   draw(ctx, t) {
-    lane(ctx, t, 0, '一つずつ呼ぶ', '4-5 のループ', ONE, 0.4);
+    lane(ctx, t, 0, '一つずつ呼ぶ', '5-5 のループ', ONE, 0.4);
     lane(ctx, t, 1, 'コードで呼ぶ', 'まとめて実行', BY_CODE, 6.0);
 
     // ——— where the idea came from

@@ -1,5 +1,6 @@
 export default {
   id: 'sweep', title: 'Canvas clock', kicker: 'A pure function of time', duration: 12, poster: 6,
+  doors: [{ to: 'detail', from: 3, label: '時刻で何が決まる？', by: 'zunda' }],
   fonts: [['400 64px "IBM Plex Sans JP"', '時刻']],
   cues: [{ at: 0, to: 12, text: '時刻だけで、同じ絵を描きます。' }],
   setup(stage) {

@@ -6,7 +6,7 @@ function fixture(options = {}) {
   const context = {
     state: 'running', currentTime: 10, destination: {},
     resume: vi.fn(async () => { context.state = 'running'; }),
-    decodeAudioData: vi.fn(async () => ({ duration: 2 })),
+    decodeAudioData: vi.fn(async () => ({ duration: 2, sampleRate: 48000 })),
     createBufferSource() {
       const source = { connect: vi.fn(), disconnect: vi.fn(), start: vi.fn(), stop: vi.fn() };
       sources.push(source); return source;
@@ -27,7 +27,7 @@ afterEach(() => vi.useRealTimers());
 describe('audio clock and ownership', () => {
   it.each([1.949, 1.95, 2.05, 2.051, NaN])('silences a mismatched decoded duration (%s), warns once, and preserves the timeline', async duration => {
     const f = fixture();
-    f.context.decodeAudioData.mockResolvedValue({ duration });
+    f.context.decodeAudioData.mockResolvedValue({ duration, sampleRate: 48000 });
     try {
       await f.sound.waitFirst('clip', f.timeline);
       await f.sound.waitFirst('clip', f.timeline);
@@ -40,7 +40,7 @@ describe('audio clock and ownership', () => {
   });
   it.each([1.951, 2.049])('accepts a decoded duration within 50ms (%s)', async duration => {
     const f = fixture();
-    f.context.decodeAudioData.mockResolvedValue({ duration });
+    f.context.decodeAudioData.mockResolvedValue({ duration, sampleRate: 48000 });
     try {
       await f.sound.waitFirst('clip', f.timeline);
       f.sound.clock('clip', f.timeline, 1, 0);

@@ -13,7 +13,7 @@ import llm from '../../decks/llm/deck.js';
 import demo from '../../decks/demo/deck.js';
 import { buildTimeline, mergePace } from '../explorer/timeline.js';
 
-const DECKS = [
+export const DECKS = [
   { deck: llm, href: 'decks/llm/', cover: 'opening', size: 'large' },
   { deck: demo, href: 'decks/demo/', cover: 'opening', size: 'small', note: 'engine の契約の見本。テストにも使う。' },
 ];

@@ -172,3 +172,14 @@ it('returns an empty JSON array without starting an engine for a clip with no sp
   expect(engine.start).not.toHaveBeenCalled();
   expect(await readdir(root)).toEqual([]);
 });
+
+it('inspection accepts a dive ID through the CLI using only the mocked engine', async () => {
+  const d = deck(), detail = { ...d.chapters[0].clips[0], id: 'detail' };
+  d.chapters[0].clips = [{ id: 'parent', script: [{ id: 'a', lead: 1 }], doors: [{ to: 'detail', label: 'detail' }] }];
+  d.chapters[0].dives = [detail];
+  await main(['test', 'detail', '--inspect', '--json'], { root, load: async () => d });
+  expect(JSON.parse(output()).map(r => [r.clipId, r.lineId])).toEqual([['detail', 'a'], ['detail', 'b']]);
+  expect(engine.request.mock.calls.some(([path]) => path === '/synthesis')).toBe(false);
+  expect(engine.stop).toHaveBeenCalledOnce();
+  expect(await readdir(root)).toEqual(['.cache']);
+});

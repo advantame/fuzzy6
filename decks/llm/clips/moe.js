@@ -1,7 +1,7 @@
 // Mixture of experts: a layer holds several small feed-forward "experts", and a router sends
 // each token to a few of them. The picture uses Mixtral 8x7B's shape (8 experts, 2 per token);
 // which experts each token gets is an example. Squares compare total and per-token parameters by
-// area, as in 1-6.
+// area, as in 2-6.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';

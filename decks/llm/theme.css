@@ -172,6 +172,62 @@
 
 .mx-credits { padding-bottom: 30px; }
 
+/* the opening's title is one six-character word: a size at which it stays on one line */
+.mx[data-clip='opening'] .mx-title { font-size: 36px; }
+
+/* ——— dives (spec §5.3) ————————————————————————————————————————— */
+
+/* the door is ずんだもん's question: a balloon at the foot of the stage beside her (clear of
+   her ear, which stands 146px into the corner), with its tail towards her */
+.mx-doors { right: 164px; bottom: 26px; }
+.mx .mx-door {
+  align-items: center;
+  gap: 16px;
+  padding: 15px 18px 15px 26px;
+  border: 3px solid var(--mx-accent);
+  border-radius: 24px 24px 6px 24px;
+  background: #fff;
+  color: #151412;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 28px rgba(21, 20, 18, 0.16);
+  transition: background 0.2s, transform 0.2s var(--mx-ease);
+}
+.mx .mx-door:hover { background: #fff3ec; transform: translateY(-2px); }
+.mx-door-hint {
+  padding: 8px 14px 9px;
+  border-radius: 999px;
+  background: var(--mx-accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.mx .mx-door::after {
+  content: 'Enter';
+  padding: 4px 8px;
+  border: 1.5px solid #d5cec0;
+  border-radius: 6px;
+  font: 500 14px/1 var(--mx-font-mono);
+  color: #7d776c;
+}
+
+/* inside a dive: where it hangs, and the way back */
+.mx-no-dive {
+  align-self: center;
+  margin-left: 14px;
+  padding: 6px 11px 7px;
+  border: 1.5px solid var(--mx-accent);
+  border-radius: 999px;
+  font: 700 15px/1 var(--mx-font);
+  letter-spacing: 0.08em;
+  color: var(--mx-accent);
+}
+.mx-crumb[data-level='back'] { margin-top: 14px; color: var(--mx-ink); }
+.mx-crumb + .mx-crumb[data-level='back']::before { content: '↩'; margin: 0 10px 0 0; color: var(--mx-accent); }
+.mx-index-clips > li[data-dive] .mx-index-no { color: var(--mx-accent); }
+
 /* ——— index: a printed contents page on the stage ——————————————————— */
 
 .mx-index { background: var(--mx-stage-bg); color: #151412; padding: 64px 80px; }

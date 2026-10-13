@@ -1,7 +1,7 @@
 // KV cache: writing one token at a time, a model without a cache would recompute every earlier
 // token at each step. Instead each token's key and value are computed once and kept; the new
 // token's query compares itself with every stored key and takes in the values. The sentence is
-// the one from 2-2; the attention weights are an example; the token counts are arithmetic.
+// the one from 3-2; the attention weights are an example; the token counts are arithmetic.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';

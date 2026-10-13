@@ -1,5 +1,6 @@
-// The LLM deck: history → concepts → chatbots → tools → what tools connect to → harnesses →
-// growing knowledge → compute and price → improving and measuring harnesses → open harnesses
+// The LLM deck: an introduction (agents, the LLM at their core, what a language model is) →
+// history → concepts → chatbots → tools → what tools connect to → harnesses → growing
+// knowledge → compute and price → improving and measuring harnesses → open harnesses
 // (README.md has the plan and sources).
 
 import { FONTS } from './lib/theme.js';
@@ -7,6 +8,10 @@ import manifest from './voice/manifest.json';
 import lexicon from './voice/lexicon.js';
 import { standing, hasFigures } from './lib/figures.js';
 import opening from './clips/opening.js';
+import core from './clips/core.js';
+import langmodel from './clips/langmodel.js';
+import whyai from './clips/whyai.js';
+import route from './clips/route.js';
 import timeline from './clips/timeline.js';
 import shannon from './clips/shannon.js';
 import turing from './clips/turing.js';
@@ -95,6 +100,8 @@ export default {
   id: 'llm',
   title: 'LLM',
   subtitle: '次の一語から、エージェントまで',
+  // plays on from clip to clip unless the viewer turns it off (A); the wait is pace.end
+  autoAdvance: true,
   fonts: FONTS,
   // 17:9. The column on the right gives ずんだもん room beside the stage (spec §2).
   frame: { gutter: 120 },
@@ -102,8 +109,8 @@ export default {
     // The cast (spec §7.2). The first speaker reads every line that names no one.
     cast: {
       metan: { name: '四国めたん', speaker: '四国めたん', style: 'ノーマル', credit: 'VOICEVOX:四国めたん', ...standing('metan', 'left') },
-      // ずんだもん has no line yet. Add `credit: 'VOICEVOX:ずんだもん'` with her first line.
-      zunda: { name: 'ずんだもん', speaker: 'ずんだもん', style: 'ノーマル', ...standing('zunda', 'right') },
+      // ずんだもん asks the questions (1-2 and its dive).
+      zunda: { name: 'ずんだもん', speaker: 'ずんだもん', style: 'ノーマル', credit: 'VOICEVOX:ずんだもん', ...standing('zunda', 'right') },
     },
     lexicon,
     manifest,
@@ -112,7 +119,9 @@ export default {
   // The figures are akihiyo's standing-picture materials, used locally (AGENTS.md).
   credits: hasFigures ? ['立ち絵:akihiyo'] : [],
   chapters: [
-    { id: 'history', title: '歴史', clips: [opening, timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
+    // whyai is a dive (spec §5.3): off the main line, entered from ずんだもん's question in 1-2.
+    { id: 'intro', title: 'はじめに', clips: [opening, core, langmodel, route], dives: [whyai] },
+    { id: 'history', title: '歴史', clips: [timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
     { id: 'concepts', title: '基本概念', clips: [tokens, predict, embedding, attention, pretrain, context] },
     { id: 'chat', title: 'チャットボット', clips: [base, rlhf, template, memory, hallucination] },
     { id: 'tools', title: 'ツール', clips: [tools, toolspec, toolcall, toolresult, toolloop] },

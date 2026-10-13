@@ -36,7 +36,7 @@
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'vite';
-import { parseArgs, collectLines, narrator, SETTINGS, CORE_VERSION, generationHash,
+import { parseArgs, collectClips, collectLines, narrator, SETTINGS, CORE_VERSION, generationHash,
   prefixMoraCount, anchorSeconds, queryTiming, checkDuration, validateWav, millis, MAX_WAV_BYTES } from './narrate/core.mjs';
 import { inspectAssets, openWriter, readOptional } from './narrate/assets.mjs';
 import { encodeOpus, opusTools } from './narrate/opus.mjs';
@@ -203,7 +203,7 @@ export async function main(args = process.argv.slice(2), { root = ROOT, load = l
     }
     if (!lines.length && !options.encode) { print(`${options.deck}: 対象なし（合成用の話者・スタイル、または読み上げる script がありません）`); return; }
     const voiceDir = join(root, 'decks', options.deck, 'voice');
-    const state = await inspectAssets(voiceDir, lines, deck.voice, options.speeds, { clips: options.clips, encodeSpeeds: options.speeds });
+    const state = await inspectAssets(voiceDir, lines, deck.voice, options.speeds, { clips: options.clips, encodeSpeeds: options.speeds, clipOrder: collectClips(deck).map(clip => clip.id) });
     print(options.generate ? '生成計画' : options.encode ? 'Opus 変換計画（エンジン起動なし）' : options.prune ? '片づけ計画（エンジン起動なし）' : 'DRY RUN（起動・書込みなし）');
     for (const line of lines) {
       const takes = state.plan.filter((item) => item.line === line);

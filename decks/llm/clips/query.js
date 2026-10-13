@@ -1,4 +1,4 @@
-// Query: the same question as 7-2, asked of the wiki. The model reads index.md first, opens only
+// Query: the same question as 8-2, asked of the wiki. The model reads index.md first, opens only
 // the pages it needs, answers with those pages as its sources, and files the good answer back as
 // a new page — so the next question can start from it. The index, pages and answer are an
 // example; the "about 100 articles" scale is Karpathy's own report.
@@ -25,7 +25,7 @@ const ENTRIES = [
 const T = { user: 0.4, read1: 1.0, call1: 1.6, out1: 2.0, back1: 2.6, res1: 3.0, read2: 3.4, call2: 4.2, out2: 4.6, back2: 5.2, res2: 5.6, read3: 6.2, answer: 7.0, call3: 9.0, out3: 9.4, page: 9.9, log: 10.3, end: 11.0 };
 const OPENED = [P['RAG'], P['コンテキスト']];
 const NEW_LINKS = [13, 14]; // the new page's links in LINKS
-const RAG_LINKS = [9, 10, 11, 12]; // written by ingest (7-5)
+const RAG_LINKS = [9, 10, 11, 12]; // written by ingest (8-5)
 
 export default clip({
   id: 'query',

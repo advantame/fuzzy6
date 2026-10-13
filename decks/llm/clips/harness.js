@@ -1,4 +1,4 @@
-// The app of chapter 4, renamed: in an agent, the program around the model is its harness.
+// The app of chapter 5, renamed: in an agent, the program around the model is its harness.
 // Its jobs fill the frame, each pointing back (or ahead) to the clip that shows it; then the
 // equation agent = model + harness, and the 2025 renaming of Anthropic's SDK in those words.
 
@@ -20,12 +20,12 @@ const ENTRIES = [
 ];
 // the harness's jobs: name, what, the clip that shows it
 const JOBS = [
-  ['文書を組み立てる', '指示とツールの説明書を、\n文書の頭に置く', '4-2'],
-  ['ループを回す', '呼び出しがなくなるまで、\nモデルを呼び続ける', '4-5'],
-  ['ツールを実行する', '呼び出しを読み取って実行し、\n結果を文書に足す', '4-4'],
-  ['権限を確かめる', '消す・送るなどの操作は、\n人の承認を待つ', '6-8'],
-  ['文脈を整える', 'あふれる前に、\n古い結果を消して要約する', '6-6'],
-  ['記録して再開する', 'やりとりをファイルに残し、\n続きから始める', '6-5'],
+  ['文書を組み立てる', '指示とツールの説明書を、\n文書の頭に置く', '5-2'],
+  ['ループを回す', '呼び出しがなくなるまで、\nモデルを呼び続ける', '5-5'],
+  ['ツールを実行する', '呼び出しを読み取って実行し、\n結果を文書に足す', '5-4'],
+  ['権限を確かめる', '消す・送るなどの操作は、\n人の承認を待つ', '7-8'],
+  ['文脈を整える', 'あふれる前に、\n古い結果を消して要約する', '7-6'],
+  ['記録して再開する', 'やりとりをファイルに残し、\n続きから始める', '7-5'],
 ];
 // which part of the diagram each job is about: 'doc' | 'loop' | 'tool' | 'gate' | 'file'
 const PART = ['doc', 'loop', 'tool', 'gate', 'doc', 'file'];

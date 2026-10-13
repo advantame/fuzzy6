@@ -1,7 +1,7 @@
 // Tool use, abstractly: the model can only write text, so the app stands between it and the
 // tool. The model writes a request, the app runs the tool and writes the result back into the
 // document. The tool is anything that takes an input and returns a result. This picture is
-// the axis of chapters 4–6 (lib/rig.js). The question and the result are an example.
+// the axis of chapters 5–7 (lib/rig.js). The question and the result are an example.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M } from '../lib/theme.js';

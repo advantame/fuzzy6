@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { parseLine, isName } from '../../src/explorer/script.js';
 import { readCast, lineBy, clipCast } from '../../src/explorer/cast.js';
 import { mergePace, lineSpeed } from '../../src/explorer/timeline.js';
+import { orderedClips } from '../../src/explorer/model.js';
 import { readLexicon, lineLexicon } from './lexicon.mjs';
 
 export const ENGINE_INFO = { name: 'VOICEVOX', version: '0.25.2' };
@@ -58,14 +59,20 @@ export function parseArgs(args) {
   return result;
 }
 
-export function collectLines(deck, selected = []) {
-  readLexicon(deck.voice?.lexicon);
-  const clips = deck.chapters.flatMap((chapter) => chapter.clips);
+export function collectClips(deck) {
+  const clips = deck.chapters.flatMap(chapter => [...chapter.clips, ...(chapter.dives ?? [])]);
   const ids = new Set();
   for (const clip of clips) {
     if (!isName(clip.id) || clip.id.length > 100 || ids.has(clip.id)) throw new Error(`不正または重複したclip ID: ${clip.id}`);
     ids.add(clip.id);
   }
+  return orderedClips(deck);
+}
+
+export function collectLines(deck, selected = []) {
+  readLexicon(deck.voice?.lexicon);
+  const clips = collectClips(deck);
+  const ids = new Set(clips.map(clip => clip.id));
   for (const id of selected) if (!ids.has(id)) throw new Error(`クリップがありません: ${id}`);
   const cast = readCast(deck.voice);
   const lines = [];
@@ -93,6 +100,7 @@ export function collectLines(deck, selected = []) {
       if (!actor || (actor.speaker === undefined && actor.style === undefined)) continue;
       if (![actor.speaker, actor.style].every(s => typeof s === 'string' && s.trim()))
         throw new Error(`語り手 ${by} の speaker と style が必要です。`);
+      // bridge shifts playback only; keep synthesis input and recording hashes unchanged.
       lines.push({ by, speaker: actor.speaker, style: actor.style, clipId: clip.id, lineId: line.id, source: parsed.speech, anchors: parsed.anchors, speed });
       if (lines.length > 2000) throw new Error('一度の処理は2000文以内にしてください。');
     }

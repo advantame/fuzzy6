@@ -9,7 +9,7 @@ export const PACE = {
   land: 1.0,
   skip: 5,
   again: 1.0,
-  end: 2.5,
+  end: 1.5,
 
   enter: 0.5,
   stagger: 0.08,

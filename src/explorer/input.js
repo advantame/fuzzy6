@@ -28,7 +28,11 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
     else if (button.matches('.mx-sound')) api.setSound(api.state().sound === 'off');
     else if (button.matches('.mx-unlock')) unlock();
     else if (button.matches('.mx-auto')) toggleAuto();
-    else if (button.matches('.mx-crumb')) api.openIndex(button.dataset.level === 'chapter');
+    else if (button.matches('.mx-door')) void api.descend(button.dataset.to);
+    else if (button.matches('.mx-crumb')) {
+      if (button.dataset.level === 'back') void api.ascend();
+      else api.openIndex(button.dataset.level === 'chapter');
+    }
     else if (button.matches('.mx-seek-mark')) api.seek(Number(button.dataset.seconds));
     else if (button.dataset.clip) void api.go(button.dataset.clip);
   });
@@ -145,22 +149,21 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
       }
       if (key.startsWith('arrow')) {
         e.preventDefault();
-        const chapter = at.chapterNumber - 1;
+        const chapter = model.clips.find(e => e.chapter === at.indexChapter).chapterNumber - 1;
         let target;
         if (key === 'arrowup' || key === 'arrowdown') {
-          const row = at.row + (key === 'arrowup' ? -1 : 1);
-          target = model.ids.get(
-            at.chapter.clips[Math.max(0, Math.min(at.chapter.clips.length - 1, row))].id,
-          );
+          const row = at.indexRow + (key === 'arrowup' ? -1 : 1);
+          const candidates = model.all.filter(e => e.indexChapter === at.indexChapter);
+          target = candidates[Math.max(0, Math.min(candidates.length - 1, row))];
         } else {
           const ci = Math.max(
             0,
             Math.min(model.clips.at(-1).chapterNumber - 1, chapter + (key === 'arrowleft' ? -1 : 1)),
           );
-          const candidates = model.clips.filter(c => c.chapterNumber === ci + 1);
-          target = candidates[Math.min(at.row, candidates.length - 1)];
+          const candidates = model.all.filter(c => (c.main ?? c).chapterNumber === ci + 1);
+          target = candidates[Math.min(at.indexRow, candidates.length - 1)];
         }
-        if (target) buttons[target.index].focus();
+        if (target) buttons[target.order].focus();
         return;
       }
       return;
@@ -169,7 +172,7 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
       e.preventDefault();
       api.seek(
         key === 'home'
-          ? 0
+          ? state.head
           : key === 'end'
             ? state.duration
             : state.t + (key === 'arrowleft' ? -1 : 1) * (e.shiftKey ? 5 : 1),
@@ -182,13 +185,15 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
       return;
     }
     const navigation =
-      ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'pageup', 'pagedown', 'home', 'end'].includes(key) || /^[1-9]$/.test(key);
+      ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'pageup', 'pagedown', 'home', 'end', 'enter', 'escape', 'backspace'].includes(key) || /^[1-9]$/.test(key);
     if (navigation && e.repeat) {
       e.preventDefault();
       return;
     }
     let action;
-    if (key === 'arrowright') action = api.nextStop;
+    if (key === 'enter') action = () => api.descend();
+    else if (['escape', 'backspace'].includes(key) && state.dive) action = api.ascend;
+    else if (key === 'arrowright') action = api.nextStop;
     else if (key === 'arrowleft') action = api.prevStop;
     else if (['arrowdown', 'pagedown'].includes(key)) action = api.next;
     else if (['arrowup', 'pageup'].includes(key)) action = api.prev;
@@ -202,7 +207,7 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
     else if (key === ' ' || key === 'k') action = toggle;
     else if (key === 'r')
       action = () => {
-        api.seek(0);
+        api.seek(state.head);
         api.play();
       };
     else if (key === 'i') action = () => api.openIndex();

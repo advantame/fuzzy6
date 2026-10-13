@@ -1,5 +1,6 @@
+import { doorsAt, descentTarget, ascentTarget } from './dive.js';
 import { createCastView } from './cast-view.js';
-import { normalizeDeck, clampTime, advanceTime, seekState } from './model.js';
+import { normalizeDeck, clampTime, advanceTime, seekState, canCutJoin } from './model.js';
 import { createChrome } from './chrome.js';
 import { createLayer } from './layer.js';
 import { bindInput } from './input.js';
@@ -25,7 +26,9 @@ export function createExplorer(host, deck, options = {}) {
   const retirements = new Map();
   let destroyed = false;
   let generation = 0;
-  let pending = model.ids.get(params.get('c'))?.index ?? 0;
+  let pending = model.ids.get(params.get('c')) ?? model.clips[0];
+  let diveStack = [];
+  let openDoors = [];
   let current = null;
   let layer = null;
   let outgoing = null;
@@ -116,6 +119,7 @@ export function createExplorer(host, deck, options = {}) {
       count: model.clips.length,
       t,
       duration: timing?.value.duration ?? 0,
+      head: timing?.value.head ?? 0,
       state: status,
       auto,
       indexOpen,
@@ -123,6 +127,8 @@ export function createExplorer(host, deck, options = {}) {
       line: timing ? positionAt(timing.value, t)?.line ?? null : null,
       stops: timing ? timing.value.stops.map(s => ({ ...s })) : [],
       target: timing ? nextTarget(timing.value, t, pace) : null,
+      dive: current?.dive ? { parent: current.parent.clip.id, depth: diveStack.length } : null,
+      doors: timing ? doorsAt(timing.value.doors, t).map(({ to, label, by }) => ({ to, label, by })) : [],
     };
   }
   function emit(name) {
@@ -162,12 +168,19 @@ export function createExplorer(host, deck, options = {}) {
     layer.render(t);
     chrome.render(view(), t, instant || still, still, nextTarget(timing.value, t, pace));
     castView.render(current.clip.id, timing.value, t, castOn);
+    const doors = doorsAt(timing.value.doors, t);
+    chrome.doors(doors, instant || still || status !== 'playing');
+    if (doors.length !== openDoors.length || doors.some((door, i) => door !== openDoors[i])) {
+      openDoors = doors;
+      for (const door of doors) void loadFonts(model.ids.get(door.to).clip.fonts);
+      prepareSound(current, timing.value, t);
+    }
     emit('time');
   }
   function ended(natural = false) {
     setState('ended');
     cancelHold();
-    if (natural && auto && !still && !indexOpen && current.index < model.clips.length - 1)
+    if (natural && auto && !still && !indexOpen && (current.dive || current.index < model.clips.length - 1))
       holdTimer = later(() => next(), Math.max(0, current.clip.hold ?? pace.end) * 1000);
   }
   function startClock() {
@@ -209,10 +222,15 @@ export function createExplorer(host, deck, options = {}) {
     const source = box.value.error ? { ...clip, setup() { throw box.value.error; } } : clip;
     return createLayer(source, root, { k, still, thumb, report, timing: () => box.value, pace: () => pace });
   }
-  function prepareSound(entry, timeline) {
+  function prepareSound(entry, timeline, seconds = 0, stack = diveStack) {
     if (!sound) return;
-    sound.prepare([entry, model.clips[entry.index - 1], model.clips[entry.index + 1]].filter(Boolean)
-      .map(e => ({ id: e.clip.id, timeline: e === entry ? timeline : compute(e.clip) })), soundOn);
+    // Retain only the current neighborhood and the currently open destinations.
+    const neighbors = entry.dive
+      ? [model.ids.get(stack.at(-1)?.id) ?? entry.parent]
+      : [model.clips[entry.index - 1], model.clips[entry.index + 1]];
+    const entries = [...new Set([entry, ...neighbors,
+      ...doorsAt(timeline.doors, seconds).map(d => model.ids.get(d.to))].filter(Boolean))];
+    sound.prepare(entries.map(e => ({ id: e.clip.id, timeline: e === entry ? timeline : compute(e.clip) })), soundOn);
   }
   function syncSound() {
     if (root.dataset.sound !== soundState) root.dataset.sound = soundState;
@@ -252,7 +270,7 @@ export function createExplorer(host, deck, options = {}) {
     soundState = soundOn ? 'on' : 'off';
     syncSound();
     if (current && soundOn && sound) {
-      prepareSound(current, timing.value);
+      prepareSound(current, timing.value, t);
       const resume = status === 'playing' || wasBlocked;
       const ticket = generation;
       void sound.unlock().then(() => {
@@ -285,7 +303,7 @@ export function createExplorer(host, deck, options = {}) {
     t = preservePosition(before, timing.value, t);
     lastStamp = undefined;
     chrome.timing(view());
-    prepareSound(current, timing.value);
+    prepareSound(current, timing.value, t);
     thumbDone.clear();
     render(true);
     if (t >= timing.value.duration) ended();
@@ -293,12 +311,13 @@ export function createExplorer(host, deck, options = {}) {
     emit('timeline');
     thumbnails();
   }
-  async function navigate(index, seconds = 0, dir = 'jump') {
+  async function navigate(entry, seconds, dir = 'jump', stack = [], returning = false) {
     if (destroyed) return;
+    const requestedJoin = canCutJoin(current, entry, t, timing?.value.duration, dir);
+    const joins = () => requestedJoin && canCutJoin(current, entry, t, timing?.value.duration, dir);
     cancelHold();
-    pending = Math.max(0, Math.min(model.clips.length - 1, index));
+    pending = entry;
     // Only the last destination may set up a layer after asynchronous font loads.
-    const entry = model.clips[pending];
     const ticket = ++generation;
     setState('loading');
     await bootFonts;
@@ -306,16 +325,20 @@ export function createExplorer(host, deck, options = {}) {
     await loadFonts(entry.clip.fonts);
     if (ticket !== generation || destroyed) return;
     const nextTimeline = compute(entry.clip);
-    prepareSound(entry, nextTimeline);
+    const entryTime = () => clampTime(seconds ?? (joins() ? 0 : nextTimeline.head), nextTimeline.duration);
+    prepareSound(entry, nextTimeline, entryTime(), stack);
     if (sound && soundOn) await sound.waitFirst(entry.clip.id, nextTimeline);
     if (ticket !== generation || destroyed) return;
     if (indexOpen) closeIndex(false);
+    const start = entryTime();
+    const cut = !still && joins();
+    const joinedLayer = cut ? layer : null;
     // Retire the previous exit before adding an entrance: at most two live layers.
     if (outgoing) {
       remove(outgoing.el);
       outgoing = null;
     }
-    if (layer) {
+    if (layer && !cut) {
       if (still) layer.dispose();
       else {
         outgoing = layer;
@@ -328,19 +351,23 @@ export function createExplorer(host, deck, options = {}) {
       }
     }
     current = entry;
+    diveStack = stack;
+    openDoors = [];
+    chrome.doors([], true);
     timing = { value: nextTimeline };
-    t = clampTime(seconds, timing.value.duration);
+    t = start;
     root.dataset.chapter = entry.chapter.id;
     root.dataset.clip = entry.clip.id;
     root.dataset.dir = dir;
-    root.toggleAttribute('data-first', entry.index === 0);
-    root.toggleAttribute('data-last', entry.index === model.clips.length - 1);
+    root.toggleAttribute('data-dive', entry.dive);
+    root.toggleAttribute('data-first', !entry.dive && entry.index === 0);
+    root.toggleAttribute('data-last', !entry.dive && entry.index === model.clips.length - 1);
     root.style.setProperty(
       '--mx-deck-progress',
       model.clips.length === 1 ? 0 : entry.index / (model.clips.length - 1),
     );
     layer = newLayer(entry.clip);
-    layer.el.dataset.role = still ? 'current' : 'in';
+    layer.el.dataset.role = still || cut ? 'current' : 'in';
     q('stage').append(layer.el);
     layer.setup();
     chrome.change({ ...entry, clip: view() }, still);
@@ -351,18 +378,21 @@ export function createExplorer(host, deck, options = {}) {
       history.replaceState(null, '', url);
     }
     render(true);
+    // Paint the replacement before retiring the last picture, without yielding
+    // to a browser frame or putting either layer into an entrance/exit state.
+    joinedLayer?.dispose();
     if (still) {
       await castView.wait();
       if (ticket !== generation || destroyed) return;
     }
-    if (!still) {
+    if (!still && !cut) {
       const incoming = layer;
       void incoming.el.offsetWidth;
       frame(() => {
         if (incoming === layer) incoming.el.dataset.role = 'current';
       });
     }
-    if (t >= timing.value.duration) ended();
+    if (t >= timing.value.duration) ended(returning);
     else setState(still || blocked() ? 'paused' : 'playing');
     emit('timeline');
     emit('change');
@@ -370,24 +400,38 @@ export function createExplorer(host, deck, options = {}) {
       if (model.clips[i]) void loadFonts(model.clips[i].clip.fonts);
     if (still) window.__ready = true;
   }
-  function go(id, { t = 0 } = {}) {
+  function go(id, { t } = {}) {
     const entry = model.ids.get(id);
     if (!entry) return Promise.reject(new Error(`Unknown clip id: ${id}`));
-    return navigate(entry.index, t);
+    return navigate(entry, t);
   }
   function next() {
     cancelHold();
-    if (pending < model.clips.length - 1) return navigate(pending + 1, 0, 'next');
+    if (pending.dive) return ascend();
+    if (pending.index < model.clips.length - 1) return navigate(model.clips[pending.index + 1], undefined, 'next');
   }
   function prev() {
     cancelHold();
-    if (pending > 0) return navigate(pending - 1, 0, 'prev');
+    if (pending.dive) return ascend();
+    if (pending.index > 0) return navigate(model.clips[pending.index - 1], undefined, 'prev');
+  }
+  function descend(to) {
+    if (!current || destroyed || status === 'loading' || indexOpen || diveStack.length >= 8) return;
+    const door = descentTarget(timing.value.doors, t, to);
+    if (!door) return;
+    return navigate(model.ids.get(door.to), 0, 'jump', [...diveStack, { id: current.clip.id, t }]);
+  }
+  function ascend() {
+    if (destroyed || status === 'loading') return;
+    const target = ascentTarget(current, diveStack, compute);
+    if (!target) return;
+    return navigate(model.ids.get(target.id), target.t, 'jump', diveStack.slice(0, -1), true);
   }
   function play() {
     cancelHold();
     if (!current || destroyed || status === 'loading' || indexOpen) return;
     if (t >= timing.value.duration) {
-      t = 0;
+      t = timing.value.head;
       render(true);
     }
     if (!still && blocked()) { setState('paused'); unlock(); return; }
@@ -414,7 +458,8 @@ export function createExplorer(host, deck, options = {}) {
     const wasPlaying = status === 'playing' || status === 'ended';
     const target = backward ? previousTarget(timing.value, t, pace) : nextTarget(timing.value, t, pace);
     if (!target) {
-      if (backward && current.index > 0) return navigate(current.index - 1, Infinity, 'prev');
+      if (backward && current.dive) return ascend();
+      if (backward && current.index > 0) return navigate(model.clips[current.index - 1], Infinity, 'prev');
       if (!backward && status === 'ended') return next();
       return;
     }
@@ -451,7 +496,7 @@ export function createExplorer(host, deck, options = {}) {
   const thumbDone = new Set();
   function thumbnails() {
     if (!indexOpen || thumbnailBusy || thumbnailFrame || destroyed) return;
-    const entry = model.clips.find(e => !thumbDone.has(e.clip.id));
+    const entry = model.all.find(e => !thumbDone.has(e.clip.id));
     if (!entry) return;
     const run = thumbnailRun;
     thumbnailFrame = frame(async () => {
@@ -465,7 +510,7 @@ export function createExplorer(host, deck, options = {}) {
         try {
           preview.setup();
           preview.render(posterTime(entry.clip, box.value));
-          const thumb = chrome.buttons[entry.index].querySelector('canvas');
+          const thumb = chrome.buttons[entry.order].querySelector('canvas');
           thumb.width = Math.max(1, Math.floor(112 * k * devicePixelRatio));
           thumb.height = Math.max(1, Math.floor(63 * k * devicePixelRatio));
           const ctx = thumb.getContext('2d');
@@ -494,8 +539,8 @@ export function createExplorer(host, deck, options = {}) {
     indexOpen = true;
     root.setAttribute('data-index', '');
     q('index').hidden = false;
-    const target = chapterHead ? model.clips.find(e => e.chapter === current.chapter) : current;
-    chrome.buttons[target.index].focus();
+    const target = chapterHead ? model.all.find(e => e.indexChapter === current.chapter) ?? current : current;
+    chrome.buttons[target.order].focus();
     thumbnails();
   }
   function closeIndex(restore = true) {
@@ -560,6 +605,8 @@ export function createExplorer(host, deck, options = {}) {
     nextStop: () => moveStop(false),
     prevStop: () => moveStop(true),
     go,
+    descend,
+    ascend,
     next,
     prev,
     play,
@@ -603,7 +650,7 @@ export function createExplorer(host, deck, options = {}) {
       tune = createTune(root, deck, api, () => timing ? positionAt(timing.value, t) : null);
       resize();
     }
-    if (!destroyed) await navigate(pending, still ? Number(params.get('t')) : 0);
+    if (!destroyed) await navigate(pending, still ? Number(params.get('t')) : undefined);
   })();
   return api;
 }
