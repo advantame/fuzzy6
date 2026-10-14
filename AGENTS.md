@@ -72,7 +72,7 @@ npm run narrate -- <deck> [clipId …]   # 語りの原稿と記録を比べる�
 
 1. デッキの `README.md` に、クリップの狙い、中身、語りの文、出典を書く。数値や出力が作り物なら「例」の札を付けると決めておく。
 2. クリップを書く。canvas のクリップは `decks/llm/lib/clip.js` の `clip({ prepare, draw })` の形が楽で、`prepare` に時刻によらない配置の計算を置く。語りの原稿 `script` を先に書き、文ごとに地、答え、動きを割り振ってから描く（手本は `decks/llm/clips/timeline.js`）。
-3. `npm run narrate -- <deck> <id>` で読み上げの文を確かめ、合成する（`--generate`。ボスの承認を得てから）。合成の前でも、クリップは見積もった長さで無音のまま再生できる。聞き比べのために `--speeds` でほかの話速を足したときは、決まったあとに `--prune` で片づける。置いてある音声は、すべて公開版に入る。
+3. `npm run narrate -- <deck> <id>` で読み上げの文を確かめ、`--generate` で合成する。合成の前でも、クリップは見積もった長さで無音のまま再生できる。聞き比べのために `--speeds` でほかの話速を足したときは、決まったあとに `--prune` で片づける。置いてある音声は、すべて公開版に入る。
 4. `npm run capture -- <deck> --posters` で全クリップの最後の絵を、`npm run capture -- <deck> <id> --stops` で止まりごとの絵と、各文の頭から 1 秒後の絵を撮る。重なり、はみ出し、折り返しを見て、静止点の絵が一枚の図版として読めるまで直す。
 5. `npm run capture -- <deck> <id> --sheet --every 0.75` で動きの一覧を撮り、途中の重なりを見る。静止フレームは動きの確認にならないので、区切りごとに実際に再生する。
 6. 合成したら、通常のモードで、声つきのまま頭から最後まで実時間で再生し、`ended` に着くことと、かかった時間がクリップの長さと合うことを確かめる。数秒の区間を見るだけでは、声の終わりで時計が止まる不具合は見つからない。
@@ -99,7 +99,6 @@ npm run narrate -- <deck> [clipId …]   # 語りの原稿と記録を比べる�
 - Playwright は `@playwright/test` 1.62.1 に固定し、キャッシュ済みの chromium-1234 を使う。`playwright install-deps` は sudo apt を呼ぶので使わない。
 - ツールとテストは、ブラウザの各操作に timeout を付け、全体にも上限の時間を設ける。子プロセスは終了時に必ず閉じる。
 - 語りの音声は、`tools/narrate.mjs` が VOICEVOX Engine 0.25.2（CPU 版）を一時起動して合成する。エンジンのデータは、プロジェクトの中の `.cache/voicevox/` に持つ。この機械のほかの VOICEVOX（`~/.local/share/voicevox-engine`）には触れない。
-- **合成（`--generate`）と `--inspect` は、エンジンを起動するので、ボスの承認を得てから行う。** 承認されたのは、そのとき挙げたクリップと文だけ。ほかの文は、あらためて承認を得る。
 - エンジンのスレッドの数（`tools/narrate/engine.mjs`）を変えると、同じ原稿を合成し直しても、聞いて決めた録りとは別のファイルになる。
 - リポジトリに入れるのは、配る音声（Ogg Opus）と語りの記録。合成した原本の WAV と、立ち絵の画像（`decks/*/figures/`）は入れない（`.gitignore` で除いてある）。デッキは、画像がなければ立ち絵なしで動く。
 - 通常のモード（静止フレームでないモード）では、ブラウザが操作の前の音を止める。Playwright で確かめるときは、Chromium を `--autoplay-policy=no-user-gesture-required` で起動するか、`.mx-unlock` を押す。
