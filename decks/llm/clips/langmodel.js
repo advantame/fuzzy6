@@ -3,6 +3,9 @@
 // what the language model imitates. Words do not come in any order; the candidates for the
 // next word are bars of different lengths before they are numbers, the rules that sort them
 // are stacked as the structure of language, and only then the numbers get their name.
+// The dashed slot is named a hole: a language model predicts what goes into a hole in the text,
+// and the next word is the case where the hole is at the end. That keeps the clip true of
+// masked and diffusion models too; 1-3 (compose) shows the ways of building text from holes.
 // ずんだもん's question at the end is the door to the dive (whyai).
 
 import { clip } from '../lib/clip.js';
@@ -38,7 +41,7 @@ const SIDE = 1290; // what the rules make of them, to the right of the numbers
 const CAND = [
   { w: '飲んだ', p: 0.6, label: '60%' },
   { w: '買った', p: 0.2, label: '20%' },
-  { w: '読んだ', p: 0.004, label: '0.01%' },
+  { w: '読んだ', p: 0.0001, label: '0.01%' },
 ];
 const REST = { w: 'そのほか', p: 0.2, label: '約 20%' };
 
@@ -68,13 +71,13 @@ export default clip({
     {
       id: 'g',
       still: true,
-      text: 'この決まりの重なりが、{st}**言語の構造**。\n言語モデルは、それをまねて、{nw}次の言葉を予測するのよ。',
+      text: 'この決まりの重なりが、{st}**言語の構造**。言語モデルは、\nそれをまねて、{nw}文章の穴に入る言葉を予測するのよ。',
     },
     { id: 'h', text: '{notone}予測は、一つに言い切らないわ。\n天気予報が{rain}「降水確率 70%」と言うのと同じ。' },
-    { id: 'i', rest: 'short', text: '{read}ここまでの言葉を見て、{each}次に来る言葉のそれぞれに、\nありそうな度合いを{num}数字で付けるの。' },
+    { id: 'i', rest: 'short', text: '{read}手がかりになる言葉を見て、{each}穴に入る候補のそれぞれに、\nありそうな度合いを{num}数字で付けるの。' },
     { id: 'i2', still: true, text: 'この数字が、{prob}**確率**よ。' },
-    { id: 'j', still: true, text: 'LLM の{that}「次の一語を予測する」は、このことなの。' },
-    { id: 'q', by: 'zunda', text: '次の言葉を予測するもの、というのはわかったのだ。\n{ask}でも、それがどうして AI の話になるのだ？' },
+    { id: 'j', still: true, text: '{end}穴が、書きかけの文のすぐ先にあれば、\nそれが{that}「次の言葉の予測」になるわ。' },
+    { id: 'q', by: 'zunda', text: '言葉の穴埋めをする、というのはわかったのだ。\n{ask}でも、それがどうして AI の話になるのだ？' },
     { id: 'k', text: '短く言うと、言葉の並び方の中に、\n{know}人の知識や考えが入っているからよ。' },
   ],
 
@@ -132,7 +135,7 @@ export default clip({
     row(ctx, ROW_Y[1], frame2, {
       a: { s: '言葉の並び方', al: pop('order'), sub: '＝ 言語の構造', subAl: st },
       m: { s: '言語モデル', al: 1, note: '文章のデータから学ぶ', noteAl: frame2 },
-      b: { s: '次の言葉', al: pop('nw'), open: 1 - pop('nw'), sub: '＝ LLM の「次の一語の予測」', subAl: pop('that') },
+      b: { s: '穴に入る言葉', al: pop('nw'), open: 1 - pop('nw') },
     });
     tag(ctx, CB.x + CB.w - 18, ROW_Y[1] + 22, 'それぞれの確率', { font: F.jp(700, 20), h: 40, padX: 14, fill: C.accent, color: '#fff', alpha: pop('prob'), align: 'right' });
     ctx.restore();
@@ -164,6 +167,20 @@ export default clip({
     const e = at('e');
     const asked = enter(t, e, pace);
     slot(ctx, slotX, SENT_Y, SLOT_W, WORD.h, { alpha: asked, lit: asked, blink: Math.floor(t * 2.5) % 2 === 0 });
+    // sentence g names the slot a hole; sentence j says where this one is, and what that makes
+    // of the prediction
+    tag(ctx, slotX + SLOT_W / 2, SENT_Y - 40, '穴', { font: F.jp(700, 20), h: 32, padX: 14, fill: C.accent, color: '#fff', align: 'center', alpha: pop('nw') });
+    const endA = pop('end');
+    if (endA > 0) {
+      const x = slotX + SLOT_W + 22;
+      const y = SENT_Y + WORD.h / 2;
+      ctx.strokeStyle = C.accent;
+      ctx.fillStyle = C.accent;
+      ctx.lineWidth = 3;
+      arrow(ctx, x + 40, y, x, y, tw(t, at('end') - lead, 0.5, outCubic), 12);
+      const w = text(ctx, 'すぐ先の穴', x + 54, y + 9, { font: F.jp(700, 26), color: C.accent, alpha: endA });
+      text(ctx, '＝「次の言葉の予測」', x + 54 + w + 12, y + 9, { font: F.jp(700, 26), color: C.ink, alpha: pop('that') });
+    }
     const prob = pop('prob');
     const titleW = text(ctx, '次に来る言葉', PX, ROW0 - 22, { font: F.jp(700, 22), color: C.ink2, alpha: asked });
     text(ctx, 'と、その確率', PX + titleW + 6, ROW0 - 22, { font: F.jp(700, 22), color: C.accent, alpha: prob });
@@ -194,8 +211,7 @@ export default clip({
 
     // not one answer: the whole set is the prediction
     const h = focus(t, [at('notone')], at('rain'), cue);
-    const j = focus(t, [at('that')], at('j.end') - cue.fall, cue);
-    ring(ctx, PX, ROW0, ODDS.chipW + 18 + ODDS.barW, 2 * RSTEP + ODDS.h, Math.max(h.level[0], j.level[0]), C.accent);
+    ring(ctx, PX, ROW0, ODDS.chipW + 18 + ODDS.barW, 2 * RSTEP + ODDS.h, h.level[0], C.accent);
 
     // ——— the rules that sort the candidates, stacked
     const f = at('f');

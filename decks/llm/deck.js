@@ -10,6 +10,7 @@ import { standing, hasFigures } from './lib/figures.js';
 import opening from './clips/opening.js';
 import core from './clips/core.js';
 import langmodel from './clips/langmodel.js';
+import compose from './clips/compose.js';
 import whyai from './clips/whyai.js';
 import route from './clips/route.js';
 import timeline from './clips/timeline.js';
@@ -120,7 +121,7 @@ export default {
   credits: hasFigures ? ['立ち絵:akihiyo'] : [],
   chapters: [
     // whyai is a dive (spec §5.3): off the main line, entered from ずんだもん's question in 1-2.
-    { id: 'intro', title: 'はじめに', clips: [opening, core, langmodel, route], dives: [whyai] },
+    { id: 'intro', title: 'はじめに', clips: [opening, core, langmodel, compose, route], dives: [whyai] },
     { id: 'history', title: '歴史', clips: [timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
     { id: 'concepts', title: '基本概念', clips: [tokens, predict, embedding, attention, pretrain, context] },
     { id: 'chat', title: 'チャットボット', clips: [base, rlhf, template, memory, hallucination] },

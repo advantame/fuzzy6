@@ -3,17 +3,18 @@
 // lets the cover leave. The clip's own head is the agent's box alone — where it starts when
 // entered from anywhere else. The box opens into the agent's parts — the model, the program
 // around it, the tools (the same three parts chapters 5–7 are drawn on) — and the model is
-// lit as the core. Its name unfolds, and the one thing it does is shown: the next word,
-// appended again and again. The clip ends on the half of the name the next clip takes.
+// lit as the core. Its name unfolds, and the clip ends on the half of the name the next clip
+// takes. What the model does is left to 1-2: "the next word" is only one kind of language
+// model, and the clip does not say it of LLMs as a whole.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M } from '../lib/theme.js';
-import { tag, example, chip, chipWidth } from '../lib/parts.js';
+import { tag } from '../lib/parts.js';
 import { layout, llmBlock, appFrame, toolBox } from '../lib/rig.js';
 import { BOX, DONE, coverLayout, coverTitle, coverBox, coverSides, coverAsk } from '../lib/cover.js';
-import { text, measure, rr, arrow, line, wipe } from '../../../src/kit/draw.js';
+import { text, measure, arrow, line, wipe } from '../../../src/kit/draw.js';
 import { tw, seg, lerp, outExpo, outCubic, inOutCubic } from '../../../src/kit/ease.js';
-import { enter, focus, dimmed, ring } from '../../../src/kit/cue.js';
+import { enter, focus, dimmed } from '../../../src/kit/cue.js';
 
 // the agent, opened (closed, it is the cover's BOX)
 const OPEN = { x: M.l, y: 96, w: 1408, h: 262 };
@@ -25,20 +26,13 @@ const L = layout({
 
 const WORDS = ['Large', 'Language', 'Model'];
 const BIG = 180; // "LLM" before it unfolds
-const NAME_W = 1190; // the unfolded name stays clear of the arrow on the right
-const Y0 = 548; // baseline of "LLM"
-const Y1 = 520; // baseline of the unfolded words
+const NAME_W = 1190;
+// the name sits in the middle of the room the opened box leaves below it
+const Y0 = 618; // baseline of "LLM"
+const Y1 = 590; // baseline of the unfolded words
 const JA = ['大規模', '言語モデル'];
 const JA_FONT = F.jp(700, 56);
-const JA_Y = 606;
-
-const GIVEN = ['むかし', 'むかし', '、', 'ある', 'ところ', 'に', '、'];
-const NEXT = ['おじいさん', 'と', 'おばあさん', 'が'];
-const CHIP = { font: F.jp(500, 34), h: 60, padX: 14 };
-const GAP = 8;
-const STRIP_Y = 716;
-const STEP = 0.6; // seconds per appended word
-const ASK_X = 1420; // the question's arrow, from the strip up to the agent
+const JA_Y = 676;
 
 export default clip({
   id: 'core',
@@ -56,16 +50,7 @@ export default clip({
       still: true,
       text: 'LLM は {full}[Large Language Model|ラージ・ランゲージ・モデル] の略。\n日本語では、{ja}大規模言語モデルと呼ぶわ。',
     },
-    {
-      id: 'd',
-      speed: 'slow',
-      still: true,
-      tail: 1.4,
-      text: 'LLM がしていることの基本は、{one}一つだけ。\n文章の、{next}**次の一語**を予測することなの。',
-    },
-    { id: 'e', text: '{only}次の一語を予測する仕組みが、\n{how}どうして仕事をこなす力につながるのかしら。' },
-    { id: 'f', rest: 'short', text: 'それを、これから順に追っていくわ。' },
-    { id: 'g', text: '最初は、名前の中の{lm}「言語モデル」からよ。' },
+    { id: 'g', tail: 0.6, text: 'まずは、名前の後ろ半分、{lm}「言語モデル」からよ。' },
   ],
 
   prepare(ctx) {
@@ -79,17 +64,10 @@ export default clip({
       x += out.full + gapEm * size;
       return out;
     });
-    let sx = M.l;
-    const strip = [...GIVEN, ...NEXT].map((s) => {
-      const w = chipWidth(ctx, s, CHIP);
-      const out = { s, x: sx, w };
-      sx += w + GAP;
-      return out;
-    });
-    return { size, words, strip, jaSplit: measure(ctx, JA_FONT, JA[0]), cover: coverLayout(ctx) };
+    return { size, words, jaSplit: measure(ctx, JA_FONT, JA[0]), cover: coverLayout(ctx) };
   },
 
-  draw(ctx, t, { size, words, strip, jaSplit, cover }, { at, pace }) {
+  draw(ctx, t, { size, words, jaSplit, cover }, { at, pace }) {
     const cue = pace.cue;
     const a = at('a');
 
@@ -195,60 +173,5 @@ export default clip({
       text(ctx, JA[1], M.l + jaSplit, JA_Y, { font: JA_FONT, color: C.ink });
       text(ctx, JA[1], M.l + jaSplit, JA_Y, { font: JA_FONT, color: C.accent, alpha: lm });
     });
-
-    // ——— the one thing it does: the next word, again and again
-    const d = at('d');
-    const next = at('next');
-    text(ctx, 'LLM がしていること', M.l, STRIP_Y - 22, { font: F.jp(500, 20), color: C.muted, alpha: enter(t, d, pace) });
-    const landed = (j) => next + 0.45 + j * STEP; // when the j-th predicted word lands
-    strip.forEach((tk, i) => {
-      const j = i - GIVEN.length;
-      if (j < 0) {
-        chip(ctx, tk.x, STRIP_Y, tk.s, { ...CHIP, fill: C.tints[i % C.tints.length], alpha: enter(t, d + 0.1, pace, i) });
-        return;
-      }
-      if (t < landed(j)) return;
-      const flash = 1 - seg(t, landed(j) + 0.1, landed(j) + 0.7);
-      chip(ctx, tk.x, STRIP_Y, tk.s, { ...CHIP, fill: flash > 0.5 ? C.accent : flash > 0 ? C.accentSoft : C.tints[i % C.tints.length], color: flash > 0.5 ? '#fff' : C.ink });
-    });
-    // the slot where the next word goes: it steps to the right as words land
-    const done = NEXT.filter((_, j) => t >= landed(j)).length;
-    const at0 = strip[Math.min(strip.length - 1, GIVEN.length + done)];
-    const slotX = done < NEXT.length ? at0.x : at0.x + at0.w + GAP;
-    const slotA = tw(t, at('one') - cue.lead, pace.enter);
-    const lit = tw(t, next - cue.lead, cue.rise, outCubic);
-    if (slotA > 0) {
-      ctx.save();
-      ctx.globalAlpha = slotA;
-      rr(ctx, slotX, STRIP_Y, 120, CHIP.h, 10);
-      ctx.setLineDash([9, 7]);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = lit > 0.5 ? C.accent : C.ink2;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      if (Math.floor(t * 2.5) % 2 === 0) {
-        ctx.fillStyle = C.accent;
-        ctx.fillRect(slotX + 14, STRIP_Y + 10, 4, CHIP.h - 20);
-      }
-      ctx.restore();
-      text(ctx, '次の一語', slotX + 60, STRIP_Y + CHIP.h + 30, { font: F.jp(700, 20), color: C.accent, align: 'center', alpha: slotA * lit });
-    }
-    example(ctx, M.l + 220, STRIP_Y - 44, enter(t, d, pace), '文は説明のための例。実際に予測する単位は「トークン」（3 章）');
-
-    // ——— the question the deck is about: only this, and yet it gets work done
-    const e = focus(t, [at('only')], at('how'), cue);
-    const last = strip[strip.length - 1];
-    ring(ctx, M.l, STRIP_Y, last.x + last.w + GAP + 120 - M.l, CHIP.h, e.level[0], C.accent);
-    const how = tw(t, at('how') - cue.lead, 0.7, outCubic);
-    if (how > 0) {
-      ctx.strokeStyle = C.accent;
-      ctx.fillStyle = C.accent;
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 8]);
-      line(ctx, ASK_X, STRIP_Y - 16, ASK_X, OPEN.y + OPEN.h + 30, how);
-      ctx.setLineDash([]);
-      if (how > 0.9) arrow(ctx, ASK_X, OPEN.y + OPEN.h + 60, ASK_X, OPEN.y + OPEN.h + 12, 1, 16);
-      tag(ctx, ASK_X, 520, 'どうして？', { font: F.jp(700, 22), h: 44, padX: 18, fill: C.accent, color: '#fff', alpha: how, align: 'center' });
-    }
   },
 });
