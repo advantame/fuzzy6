@@ -117,8 +117,9 @@ export default {
     manifest,
     url: (file) => audio[`./voice/${file}`],
   },
-  // The figures are akihiyo's standing-picture materials, used locally (AGENTS.md).
-  credits: hasFigures ? ['立ち絵:akihiyo'] : [],
+  // The figures are akihiyo's standing-picture materials, used locally (AGENTS.md). The intro
+  // draws ChatGPT's mark (lib/chat.js), which belongs to OpenAI.
+  credits: [...(hasFigures ? ['立ち絵:akihiyo'] : []), 'ChatGPT のロゴ:OpenAI'],
   chapters: [
     // whyai is a dive (spec §5.3): off the main line, entered from ずんだもん's question in 1-2.
     { id: 'intro', title: 'はじめに', clips: [opening, core, langmodel, compose, route], dives: [whyai] },

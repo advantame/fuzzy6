@@ -6,15 +6,18 @@
 // The dashed slot is named a hole: a language model predicts what goes into a hole in the text,
 // and the next word is the case where the hole is at the end. That keeps the clip true of
 // masked and diffusion models too; 1-3 (compose) shows the ways of building text from holes.
-// ずんだもん's question at the end is the door to the dive (whyai).
+// At the end ずんだもん sets ChatGPT, as 1-1 showed it, against the hole-filling: the window comes
+// in as what ずんだもん has in mind, and the question is the door to the dive (whyai). metan
+// answers that they are joined: the window's answer is written again, hole by hole.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
 import { tag, example, chip, chipWidth } from '../lib/parts.js';
 import { oddsRow, slot } from '../lib/odds.js';
-import { text, rr, arrow, path } from '../../../src/kit/draw.js';
-import { tw, seg, lerp, outCubic, inOutCubic } from '../../../src/kit/ease.js';
+import { text, rr, arrow, path, circle } from '../../../src/kit/draw.js';
+import { tw, seg, lerp, clamp, outCubic, inOutCubic } from '../../../src/kit/ease.js';
 import { enter, focus, ring } from '../../../src/kit/cue.js';
+import { chatCard, cardHeight, CARD_W, ANSWER_PIECES } from '../lib/chat.js';
 
 // ——— the two models: what is imitated → the model → what it predicts
 const CA = { x: M.l, w: 430 };
@@ -51,12 +54,18 @@ const LAYERS = ['文法', '言い回し', '意味'];
 const DEEP = '知識・考え';
 const layerY = (i) => ST.y + i * (ST.h + ST.gap);
 
+// ——— ChatGPT, as ずんだもん has it in mind: at the bottom right, below the first candidate's
+// number, where the labels of the candidates were
+const CHAT_K = 1;
+const CHAT = { x: W - M.r - CARD_W * CHAT_K, y: 566 };
+const STEP_W = 0.38; // seconds between the pieces of the answer as it is written again (at most)
+
 export default clip({
   id: 'langmodel',
   title: '言語モデル',
   kicker: '言葉の並び方をまねる',
   cast: ['metan', 'zunda'],
-  doors: [{ to: 'whyai', from: 'ask', label: 'なぜ AI の話になる？', by: 'zunda' }],
+  doors: [{ to: 'whyai', from: 'ask', label: 'ChatGPT とつながる？', by: 'zunda' }],
   script: [
     { id: 'a', text: 'ここで言う「モデル」は、{real}本物のふるまいをまねて、\n{pred}予測に使うものよ。' },
     { id: 'b', still: true, text: '天気のモデルは、{air}空気の動きをまねて、\n{tom}あしたの天気を予測するわね。' },
@@ -77,8 +86,10 @@ export default clip({
     { id: 'i', rest: 'short', text: '{read}手がかりになる言葉を見て、{each}穴に入る候補のそれぞれに、\nありそうな度合いを{num}数字で付けるの。' },
     { id: 'i2', still: true, text: 'この数字が、{prob}**確率**よ。' },
     { id: 'j', still: true, text: '{end}穴が、書きかけの文のすぐ先にあれば、\nそれが{that}「次の言葉の予測」になるわ。' },
-    { id: 'q', by: 'zunda', text: '言葉の穴埋めをする、というのはわかったのだ。\n{ask}でも、それがどうして AI の話になるのだ？' },
-    { id: 'k', text: '短く言うと、言葉の並び方の中に、\n{know}人の知識や考えが入っているからよ。' },
+    { id: 'q', by: 'zunda', rest: 'short', text: '穴埋めは、わかったのだ。\nでも、{gpt}ChatGPT は、人みたいに答えて、問題も解くのだ。' },
+    { id: 'q2', by: 'zunda', rest: 'short', text: '{ask}あれと、この穴埋めが、つながっているのだ？' },
+    { id: 'k', text: 'つながっているわ。{reply}ChatGPT の LLM も、\n穴埋めを重ねて、答えの文を書いているの。' },
+    { id: 'k2', text: '言葉の並び方には、{know}人の知識や考えが入っている。実際、\n穴埋めを鍛えたモデルは、多くの問題で成績を上げてきたの。' },
   ],
 
   prepare(ctx) {
@@ -101,6 +112,8 @@ export default clip({
     const cue = pace.cue;
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
+    const gpt = at('gpt') - lead;
+    const thought = enter(t, gpt, pace); // ChatGPT, as ずんだもん has it in mind
 
     // ——— the two models. The table moves up, out of the way, as sentence d begins.
     const d = at('d');
@@ -228,7 +241,7 @@ export default clip({
       ctx.fillStyle = C.ink2;
       ctx.lineWidth = 2.5;
       arrow(ctx, ST.x + ST.w + 40, cut, PX - 16, cut, seg(split, 0, 0.6), 12);
-      const p2 = seg(split, 0.5, 1);
+      const p2 = seg(split, 0.5, 1) * (1 - thought); // the window takes their place
       const likely = ROW0 + RSTEP / 2 + ODDS.h / 2;
       const unlikely = ROW0 + 2 * RSTEP + ODDS.h / 2;
       ctx.globalAlpha = p2;
@@ -250,6 +263,37 @@ export default clip({
       ctx.globalAlpha = 1;
       text(ctx, '言語の構造', x + 14, ST.y + 34, { font: F.jp(700, 28), color: C.accent, alpha: st });
     }
+
+    // ——— ChatGPT, as ずんだもん has it in mind. While ずんだもん asks, it is set against this
+    // hole; as metan answers, its answer is written again, hole by hole.
+    const cw = CARD_W * CHAT_K;
+    const chH = cardHeight() * CHAT_K;
+    if (thought > 0) {
+      ctx.save();
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = C.rule;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = thought;
+      [[cw - 44, chH + 18, 9], [cw - 20, chH + 40, 5.5]].forEach(([dx, dy, r]) => {
+        circle(ctx, CHAT.x + dx, CHAT.y + dy, r);
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.restore();
+      const reply = at('reply') - lead;
+      const step = Math.min(STEP_W, (at('k.end') - reply - 0.2) / ANSWER_PIECES);
+      chatCard(ctx, CHAT.x, CHAT.y, {
+        alpha: thought,
+        scale: CHAT_K,
+        parts: [0, 1, 2].map((i) => enter(t, gpt, pace, i)),
+        written: t < reply ? undefined : clamp((t - reply) / step, 0, ANSWER_PIECES),
+        blink: Math.floor(t * 2.5) % 2 === 0,
+      });
+    }
+    // "あれと、この穴埋め": both are ringed while ずんだもん asks
+    const asked2 = focus(t, [at('ask')], at('q2.end') - cue.fall, cue).level[0];
+    ring(ctx, slotX, SENT_Y, SLOT_W, WORD.h, asked2, C.accent);
+    ring(ctx, CHAT.x, CHAT.y, cw, chH, asked2, C.accent, 16);
   },
 });
 

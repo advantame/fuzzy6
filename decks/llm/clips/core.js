@@ -3,15 +3,17 @@
 // lets the cover leave. The clip's own head is the agent's box alone — where it starts when
 // entered from anywhere else. The box opens into the agent's parts — the model, the program
 // around it, the tools (the same three parts chapters 5–7 are drawn on) — and the model is
-// lit as the core. Its name unfolds, and the clip ends on the half of the name the next clip
-// takes. What the model does is left to 1-2: "the next word" is only one kind of language
-// model, and the clip does not say it of LLMs as a whole.
+// lit as the core. ずんだもん knows the name from ChatGPT: the chat window the viewer has used
+// comes in on the right, and it has the same core. Its name unfolds, and the clip ends on the
+// half of the name the next clip takes. What the model does is left to 1-2: "the next word" is
+// only one kind of language model, and the clip does not say it of LLMs as a whole.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M } from '../lib/theme.js';
 import { tag } from '../lib/parts.js';
 import { layout, llmBlock, appFrame, toolBox } from '../lib/rig.js';
 import { BOX, DONE, coverLayout, coverTitle, coverBox, coverSides, coverAsk } from '../lib/cover.js';
+import { chatCard } from '../lib/chat.js';
 import { text, measure, arrow, line, wipe } from '../../../src/kit/draw.js';
 import { tw, seg, lerp, outExpo, outCubic, inOutCubic } from '../../../src/kit/ease.js';
 import { enter, focus, dimmed } from '../../../src/kit/cue.js';
@@ -26,7 +28,8 @@ const L = layout({
 
 const WORDS = ['Large', 'Language', 'Model'];
 const BIG = 180; // "LLM" before it unfolds
-const NAME_W = 1190;
+const NAME_W = 940; // leaves the right for the chat window
+const CHAT = { x: 1080, y: 404 };
 // the name sits in the middle of the room the opened box leaves below it
 const Y0 = 618; // baseline of "LLM"
 const Y1 = 590; // baseline of the unfolded words
@@ -44,6 +47,8 @@ export default clip({
   script: [
     { id: 'a', lead: 0.9, text: 'エージェントは、{parts}いくつかの部品を\n組み合わせて作られているの。' },
     { id: 'b', still: true, text: 'その中核にあるのが、{llm}LLM という技術よ。' },
+    { id: 'b2', by: 'zunda', text: 'LLM、聞いたことがあるのだ。\n{gpt}ChatGPT みたいな AI のことなのだ？' },
+    { id: 'b3', still: true, text: 'おしいわね。ChatGPT のような対話型 AI サービスも、\n{core}中核にあるのが LLM なの。' },
     {
       id: 'c',
       lead: 0.8,
@@ -129,6 +134,18 @@ export default clip({
     arrow(ctx, L.tool.x - 14, midY + 16, L.app.x + L.app.w + 14, midY + 16, links, 12);
     ctx.restore();
     tag(ctx, L.llm.x + L.llm.w / 2, L.llm.y + L.llm.h + 16, '中核', { font: F.jp(700, 20), h: 36, padX: 16, fill: C.accent, color: '#fff', alpha: marked, align: 'center' });
+
+    // ——— the AI the viewer has used: it comes in as ずんだもん names it, and opens on the same
+    // core as metan answers
+    const gpt = at('gpt') - cue.lead;
+    const inside = tw(t, at('core') - cue.lead, 0.6, inOutCubic);
+    text(ctx, '対話型 AI サービス', CHAT.x, CHAT.y - 16, { font: F.jp(700, 20), color: C.ink2, alpha: enter(t, at('b3'), pace) });
+    chatCard(ctx, CHAT.x, CHAT.y, {
+      alpha: enter(t, gpt, pace),
+      parts: [0, 1, 2].map((i) => enter(t, gpt, pace, i)),
+      core: inside,
+      coreLit: tw(t, at('core') - cue.lead, cue.rise, outCubic),
+    });
 
     // ——— the name: the capitals travel to where their words start, then each word opens
     const c = at('c');
