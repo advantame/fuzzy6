@@ -1,160 +1,299 @@
-// Pre-training: at every position of a text the model guesses the next token, the answer is
-// revealed, and every parameter is nudged — harder when the guess was wrong. Then how much
-// text this is done over. The sentence is split by o200k_base; the guesses are an example.
+// 3-6: where the numbers come from. The table, the looking back and the scoring are all made of
+// numbers — the parameters, 175 billion in GPT-3's largest model — and they start out random,
+// so the chances they give mean nothing. Training reads real text with what comes next hidden,
+// lets the model guess, and nudges every parameter a little so that the right token's chance
+// goes up: the lower its chance was, the bigger the miss. Done at every position of a great deal
+// of text, this is pre-training. ずんだもん asks whether the model keeps learning while it is
+// used: it does not, the parameters are fixed. The result writes continuations well, and is not
+// yet a chatbot (chapter 4).
+// The guesses and the parameters' values are an example; the counts are published figures.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
-import { chip, chipWidth, example, source } from '../lib/parts.js';
-import { text, rr } from '../../../src/kit/draw.js';
-import { tw, seg, outExpo } from '../../../src/kit/ease.js';
+import { tag, chip, chipWidth, example, source, SOURCE_RIGHT } from '../lib/parts.js';
+import { oddsRow, slot } from '../lib/odds.js';
+import { strip } from '../lib/inside.js';
+import { text, rr, line, arrow } from '../../../src/kit/draw.js';
+import { tw, seg, lerp, clamp, inOutCubic, outCubic, outExpo } from '../../../src/kit/ease.js';
+import { enter, focus, dimmed, ring } from '../../../src/kit/cue.js';
 import { hash2 } from '../../../src/kit/random.js';
 
-const TOKENS = ['雨', 'が', '降', 'った', 'ので', '、', '試', '合', 'は', '中', '止', 'にな', 'った', '。'];
-// the model's guess for each next token (index 1…13)
-const GUESS = [null, 'が', '降', 'った', '。', '、', '外', '合', 'は', '中', '止', 'にな', 'った', '。'];
-const FONT = F.jp(500, 38);
-const ROW_Y = 196;
-const H = 64;
-const T0 = 1.0;
-const STEP = 0.62;
-const GRID = { x: M.l, y: 404, cols: 48, rows: 5, cell: 24, gap: 5 };
-const DATA = 10.8;
+// ——— the parameters, as a grid of numbers
+const GRID = { x: M.l, y: 168, cols: 20, rows: 8, cell: 21, gap: 4 };
+const gridW = GRID.cols * (GRID.cell + GRID.gap) - GRID.gap;
+const gridH = GRID.rows * (GRID.cell + GRID.gap) - GRID.gap;
 
-const stepAt = (i) => T0 + (i - 1) * STEP; // when position i is guessed
+// ——— one practice step on 1-2's sentence (o200k_base tokens)
+const TOKS = ['の', 'ど', 'が', 'かわ', 'いた', 'ので', '、水', 'を', '飲', 'ん', 'だ', '。'];
+const AT = 8; // the position after 「を」: the answer is 飲
+const TX = 700;
+const TOK = { font: F.jp(500, 28), h: 48, padX: 10, gap: 6 };
+const SENT_Y = 168;
+const GUESS = [
+  // [token, chance before the step, after]
+  ['読', 0.06, 0.058],
+  ['山', 0.05, 0.049],
+  ['飲', 0.02, 0.03],
+  ['青', 0.04, 0.039],
+];
+const ODDS = { chipW: 70, h: 40, barW: 330, font: F.jp(500, 22) };
+const OY = 300;
+const OSTEP = 52;
+
+// ——— how much text
+const DATA = [
+  { name: 'GPT-3（2020 年）', n: 300e9, label: '3000 億', at: 'g3' },
+  { name: 'Llama 3（2024 年）', n: 15e12, label: '15 兆超', at: 'l3' },
+  { name: 'Nemotron-H-56B（2025 年）', n: 20e12, label: '20 兆', at: 'y25' },
+  { name: 'Qwen3（2025 年）', n: 36e12, label: '約 36 兆', at: 'y25' },
+];
+const DMAX = 36e12;
+const DY = 652;
 
 export default clip({
   id: 'pretrain',
   title: '予測を練習する',
   kicker: '事前学習',
-  duration: 17,
-  cues: [
-    { at: 0.4, to: 5.4, text: '**事前学習**では、大量の文章の各位置で、\n次のトークンを当てる練習をさせる。' },
-    { at: 5.6, to: 10.6, text: '外れた分だけ、パラメータを少しずつ直す。\nこれを、文章の全体にわたってくり返す。' },
-    { at: 10.8, to: 18, text: '使う文章の量は増え続けている。\nGPT-3 は 3000 億トークン、Llama 3 は 15 兆トークン以上。' },
+  cast: ['metan', 'zunda'],
+  script: [
+    { id: 'a', text: 'では、確率を出すための計算は、{how}どうやって決まったのかしら。' },
+    { id: 'b', text: 'ここまでに見た、{t1}数の並びの表や、{t2}前を見る計算、\n{t3}確率を出す計算には、たくさんの数が使われているの。' },
+    { id: 'c', still: true, text: '計算のしかたを決める、この数を、{param}パラメータと呼ぶわ。\n[GPT-3|ジーピーティースリー] の最大のモデルには、{count}1750 億個あるのよ。' },
+    { id: 'd', text: '{rand}はじめは、多くのパラメータを、乱数で決めておくの。\nまだ、文章の続きを予測するようには、学んでいないわ。' },
+    { id: 'e', text: 'そこで、{text}たくさんの文章を読ませて、\n{guess}先を隠したまま、次のトークンを当てさせるのよ。' },
+    { id: 'f', text: 'たとえば、この文では、\n{ans}「水を」の次に、[「飲」|「のむ」]の字が続いているわね。' },
+    { id: 'g', text: '{low}モデルが[「飲」|「のむ」]の字に付けた確率が低いほど、\n外れが大きかったと考えるの。' },
+    { id: 'h', text: '{many}いろいろな位置での外れをまとめて、\n{nudge}それが小さくなるように、パラメータを少しずつ調整するわ。' },
+    { id: 'h2', still: true, text: 'どう変えると外れが減るかは、{grad}計算で求められるのよ。' },
+    { id: 'i', text: '{every}これを、たくさんの文章で、何度もくり返すの。\n学習のあいだも、先の答えは見せないようにしているわ。' },
+    { id: 'j', text: '大量の文章でこの練習をして、モデルの土台を作る段階を、\n{pre}事前学習と呼ぶのよ。' },
+    { id: 'k', text: '使われる文章の量は、{g3}2020 年の [GPT-3|ジーピーティースリー] で 3000 億トークン、\n{l3}2024 年の [Llama 3|ラマスリー] では、15 兆トークンを超えたわ。' },
+    { id: 'k2', still: true, text: '{y25}2025 年には、20 兆や 36 兆トークンで学習したモデルも、\n公表されているの。' },
+    { id: 'l', by: 'zunda', text: '{q}使っているうちに、どんどん覚えていったりはしないのだ？' },
+    { id: 'm', text: 'ふつうに答えを作るあいだは、{fix}パラメータは変わらないわ。\nでも、会話や保存した情報を、答えの手がかりにはできるの。' },
+    { id: 'm2', text: 'パラメータを変える{more}追加の学習は、また別の仕組みよ。' },
+    { id: 'n', text: 'こうして、{base}文章の続きを予測する力が育つわ。' },
+    { id: 'n2', tail: 0.6, text: '相手の頼みに沿って答える力を整えるために、\n{yet}さらに学習を重ねるのよ。それは、次の章で見ていきましょう。' },
   ],
 
   prepare(ctx) {
-    let x = M.l;
-    const pos = TOKENS.map((s) => {
-      const w = chipWidth(ctx, s, { font: FONT, padX: 14 });
-      const out = { x, w };
-      x += w + 10;
+    let x = TX;
+    const toks = TOKS.map((s) => {
+      const w = chipWidth(ctx, s, TOK);
+      const out = { s, x, w };
+      x += w + TOK.gap;
       return out;
     });
-    return { pos };
+    return { toks };
   },
 
-  draw(ctx, t, { pos }) {
-    example(ctx, M.l, 64, tw(t, 0.5, 0.5), '予測は説明のための例');
+  draw(ctx, t, { toks }, { at, pace }) {
+    const cue = pace.cue;
+    const lead = cue.lead;
+    const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-    // ——— the sentence, one guess per position
-    TOKENS.forEach((s, i) => {
-      const { x, w } = pos[i];
-      const a = tw(t, 0.3 + i * 0.03, 0.4);
-      const shown = i === 0 || t >= stepAt(i) + 0.32;
-      if (!shown) {
-        // not yet seen: an empty card
-        ctx.save();
-        ctx.globalAlpha = a;
-        ctx.setLineDash([6, 6]);
-        ctx.strokeStyle = C.rule;
-        ctx.lineWidth = 2;
-        rr(ctx, x, ROW_Y, w, H, 10);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-        if (i === TOKENS.length - 1 || t < stepAt(i)) return;
-        text(ctx, '?', x + w / 2, ROW_Y + H / 2 + 2, { font: F.sans(600, 34), color: C.accent, align: 'center', base: 'middle' });
-        return;
+    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [1, 2, 3] });
+
+    // ——— the parameters
+    const named = focus(t, [at('t1'), at('t2'), at('t3')], at('b.end') - cue.fall, cue);
+    const ga = Math.max(tw(t, at('t1') - lead, pace.enter), 0);
+    const nudge = at('nudge');
+    const every = at('every');
+    text(ctx, 'パラメータ（学習で決まる数）', GRID.x, GRID.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: pop('param') });
+    // sentence a asks where the numbers come from: the grid stands empty until b fills it
+    const ask = enter(t, at('a'), pace) * (1 - ga);
+    if (ask > 0) {
+      ctx.save();
+      ctx.globalAlpha = ask;
+      ctx.strokeStyle = C.rule;
+      ctx.lineWidth = 1.5;
+      for (let r = 0; r < GRID.rows; r++) {
+        for (let c = 0; c < GRID.cols; c++) ctx.strokeRect(GRID.x + c * (GRID.cell + GRID.gap) + 0.5, GRID.y + r * (GRID.cell + GRID.gap) + 0.5, GRID.cell - 1, GRID.cell - 1);
       }
-      chip(ctx, x, ROW_Y, s, { font: FONT, padX: 14, h: H, fill: C.tints[i % C.tints.length], alpha: a });
-    });
-
-    // the current guess, above its position
-    for (let i = 1; i < TOKENS.length; i++) {
-      const at = stepAt(i);
-      const vis = seg(t, at - 0.05, at + 0.1) * (1 - seg(t, at + STEP * 0.95, at + STEP * 1.2));
-      if (vis <= 0) continue;
-      const right = GUESS[i] === TOKENS[i];
-      const judged = t >= at + 0.32;
-      const { x, w } = pos[i];
-      const gw = chipWidth(ctx, GUESS[i], { font: F.jp(500, 26), padX: 10 });
-      const gx = x + w / 2 - gw / 2;
-      chip(ctx, gx, ROW_Y - 66, GUESS[i], { font: F.jp(500, 26), padX: 10, h: 44, fill: judged ? (right ? C.greenSoft : '#ffd6d2') : C.panel, alpha: vis });
-      if (judged) {
-        text(ctx, right ? '○' : '×', gx + gw + 8, ROW_Y - 32, { font: F.sans(700, 24), color: right ? C.green : C.red, alpha: vis });
-      }
+      ctx.restore();
+      text(ctx, '？', GRID.x + gridW / 2, GRID.y + gridH / 2 + 30, { font: F.jp(700, 84), color: C.muted, align: 'center', alpha: ask });
     }
-    // how far the reading has got
-    const read = Math.max(0, Math.min(TOKENS.length - 1, Math.floor((t - T0) / STEP) + 1));
-    if (t > T0) {
-      const end = pos[Math.min(read, TOKENS.length - 1)];
-      ctx.fillStyle = C.ink;
-      ctx.fillRect(M.l, ROW_Y + H + 12, end.x - 10 - M.l, 4);
-      text(ctx, '読んだ範囲', M.l, ROW_Y + H + 42, { font: F.jp(500, 18), color: C.muted });
-    }
-
-    // ——— the parameters, nudged after every guess (wrong guesses nudge harder)
-    const ga = tw(t, 0.8, 0.6);
     if (ga > 0) {
-      const g = GRID;
-      text(ctx, 'パラメータ', g.x, g.y - 22, { font: F.jp(700, 22), color: C.ink2, alpha: ga });
-      text(ctx, 'GPT-3 では 1750 億個', g.x + 130, g.y - 23, { font: F.jp(400, 18), color: C.muted, alpha: ga });
-      let done = 0;
-      for (let i = 1; i < TOKENS.length; i++) if (t >= stepAt(i) + 0.32) done = i;
-      for (let r = 0; r < g.rows; r++) {
-        for (let c = 0; c < g.cols; c++) {
-          const id = r * g.cols + c;
-          let v = 0.25 + 0.6 * hash2(id, 0);
-          let flash = 0;
-          for (let i = 1; i <= done; i++) {
-            const wrong = GUESS[i] !== TOKENS[i];
-            v += (hash2(id, i) - 0.5) * (wrong ? 0.5 : 0.08);
-            // a ripple runs left to right through the grid after each judgement
-            const at = stepAt(i) + 0.32 + (c / g.cols) * 0.35;
-            const d = t - at;
-            if (d >= 0 && d < 0.3) flash = Math.max(flash, (wrong ? 1 : 0.35) * (1 - d / 0.3));
-          }
-          v = Math.min(0.95, Math.max(0.08, v));
-          const x = g.x + c * (g.cell + g.gap);
-          const y = g.y + r * (g.cell + g.gap);
-          ctx.globalAlpha = ga;
+      for (let r = 0; r < GRID.rows; r++) {
+        for (let c = 0; c < GRID.cols; c++) {
+          // the grid fills in part by part as sentence b names them
+          const part = c < 7 ? 0 : c < 14 ? 1 : 2;
+          const a = tw(t, at(['t1', 't2', 't3'][part]) - lead + (r + c % 7) * 0.012, pace.enter);
+          if (a <= 0) continue;
+          const id = r * GRID.cols + c;
+          // random to begin with; each nudge moves it a little, many nudges move it more
+          let v = 0.2 + 0.7 * hash2(id, 1);
+          const k1 = seg(t, nudge, nudge + 0.4);
+          const k2 = seg(t, every, every + 3);
+          v += (hash2(id, 2) - 0.5) * 0.18 * k1 + (hash2(id, 3) - 0.5) * 0.5 * k2;
+          v = clamp(v, 0.06, 0.95);
+          const x = GRID.x + c * (GRID.cell + GRID.gap);
+          const y = GRID.y + r * (GRID.cell + GRID.gap);
+          const lit = named.level[part];
+          ctx.globalAlpha = a * v * dimmed(lit, named.any, cue);
           ctx.fillStyle = C.ink;
-          ctx.globalAlpha = ga * v;
-          ctx.fillRect(x, y, g.cell, g.cell);
+          ctx.fillRect(x, y, GRID.cell, GRID.cell);
+          // a ripple runs through the grid with each nudge
+          const d1 = t - (nudge + (c / GRID.cols) * 0.4);
+          let flash = d1 >= 0 && d1 < 0.35 ? 1 - d1 / 0.35 : 0;
+          if (t >= every && t < every + 3) flash = Math.max(flash, 0.5 * (hash2(id, Math.floor((t - every) * 6)) > 0.8 ? 1 : 0));
           if (flash > 0) {
-            ctx.globalAlpha = ga * flash;
+            ctx.globalAlpha = a * flash;
             ctx.fillStyle = C.accent;
-            ctx.fillRect(x, y, g.cell, g.cell);
+            ctx.fillRect(x, y, GRID.cell, GRID.cell);
           }
           ctx.globalAlpha = 1;
         }
       }
+      ['数の並びの表', '前を見る計算', '確率を出す計算'].forEach((s, part) => {
+        const x = GRID.x + part * 7 * (GRID.cell + GRID.gap);
+        const w = (part === 2 ? 6 : 7) * (GRID.cell + GRID.gap) - GRID.gap;
+        const a = tw(t, at(['t1', 't2', 't3'][part]) - lead, pace.enter);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = named.level[part] > 0.5 ? C.accent : C.muted;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, GRID.y + gridH + 8);
+        ctx.lineTo(x, GRID.y + gridH + 14);
+        ctx.lineTo(x + w, GRID.y + gridH + 14);
+        ctx.lineTo(x + w, GRID.y + gridH + 8);
+        ctx.stroke();
+        ctx.restore();
+        text(ctx, s, x + w / 2, GRID.y + gridH + 38, { font: F.jp(700, 16), color: named.level[part] > 0.5 ? C.accent : C.ink2, align: 'center', alpha: a });
+      });
     }
+    const big = pop('count');
+    const bw = text(ctx, '1750 億', GRID.x, GRID.y + gridH + 128, { font: F.cond(700, 76), color: C.ink, alpha: big, ls: -1 });
+    text(ctx, '個（GPT-3 のいちばん大きなモデル）', GRID.x + bw + 10, GRID.y + gridH + 126, { font: F.jp(700, 19), color: C.ink2, alpha: big });
+    tag(ctx, GRID.x + gridW - 4, GRID.y - 44, 'はじめは、乱数', { font: F.jp(700, 17), h: 32, padX: 12, fill: '#fff', stroke: C.ink2, color: C.ink2, align: 'right', alpha: pop('rand') * (1 - tw(t, at('fix') - lead, pace.enter)) });
+    const fix = focus(t, [at('fix')], at('m.end') - cue.fall, cue).level[0];
+    ring(ctx, GRID.x, GRID.y, gridW, gridH, fix, C.accent, 8);
+
+    // ——— practice on a sentence: what comes next is hidden
+    const pa = enter(t, at('text') - lead, pace);
+    text(ctx, '学習に使う文章の一つ（GPT-4o の切り方）', TX, SENT_Y - 18, { font: F.jp(700, 19), color: C.ink2, alpha: pa });
+    const reveal = pop('ans');
+    const sweep = seg(t, every, every + 3); // sentence i: the hidden position moves along
+    const cur = sweep > 0 ? Math.min(TOKS.length - 1, 1 + Math.floor(sweep * (TOKS.length - 1))) : AT;
+    toks.forEach((c, k) => {
+      // after sentence h's first words every position's answer is in view: the misses are worked out together
+      const together = t >= at('many') - lead && t < every;
+      const hidden = k >= cur && !together && !(k === AT && sweep === 0 && reveal > 0.5 && t < every);
+      const a = pa * tw(t, at('text') - lead + k * 0.03, pace.enter);
+      if (k === cur && t >= at('guess') - lead) {
+        slot(ctx, c.x, SENT_Y, c.w, TOK.h, { alpha: a * (1 - (k === AT && sweep === 0 ? reveal : 0)), lit: 1 });
+        if (k === AT && sweep === 0) chip(ctx, c.x, SENT_Y, c.s, { ...TOK, fill: C.green, color: '#fff', alpha: a * reveal });
+        return;
+      }
+      chip(ctx, c.x, SENT_Y, c.s, { ...TOK, fill: hidden && t >= at('guess') - lead ? C.panel : C.tints[k % C.tints.length], color: hidden && t >= at('guess') - lead ? C.panel : C.ink, alpha: a });
+    });
+    // sentence h: the misses at many positions are put together
+    const manyA = pop('many') * (1 - seg(t, every - 0.2, every));
+    if (manyA > 0) {
+      const shrink = lerp(1, 0.75, inOutCubic(seg(t, nudge, nudge + 0.8)));
+      toks.forEach((c, k) => {
+        if (k === 0) return;
+        const h = (8 + 22 * hash2(k, 9)) * shrink;
+        const a = manyA * tw(t, at('many') - lead + k * 0.04, 0.3);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = C.red;
+        ctx.fillRect(c.x + c.w / 2 - 5, SENT_Y + TOK.h + 40 - h, 10, h);
+        ctx.globalAlpha = 1;
+      });
+      text(ctx, '位置ごとの外れ（例）', W - M.r, SENT_Y + TOK.h + 64, { font: F.jp(700, 15), color: C.red, align: 'right', alpha: manyA });
+    }
+    if (t >= at('guess') - lead && sweep === 0 && t < at('many') - lead) text(ctx, '隠す', toks[AT].x + toks[AT].w / 2, SENT_Y + TOK.h + 24, { font: F.jp(700, 16), color: C.accent, align: 'center', alpha: pop('guess') * (1 - reveal) });
+    if (sweep > 0 && sweep < 1) text(ctx, 'あらゆる位置で', toks[cur].x + toks[cur].w / 2, SENT_Y + TOK.h + 24, { font: F.jp(700, 16), color: C.accent, align: 'center' });
+
+    // the model's guess for the hidden token, before and after the nudge
+    const oa = pop('guess');
+    const after = inOutCubic(seg(t, nudge, nudge + 0.8));
+    const lowLit = focus(t, [at('low')], at('g.end') - cue.fall, cue).level[0];
+    if (oa > 0) {
+      text(ctx, 'モデルの予測（「水を」の次）', TX, OY - 22, { font: F.jp(700, 19), color: C.ink2, alpha: oa });
+      GUESS.forEach(([s, p0, p1], i) => {
+        const p = lerp(p0, p1, after);
+        const right = s === '飲';
+        oddsRow(ctx, TX, OY + i * OSTEP, s, {
+          ...ODDS,
+          p: p / 0.1,
+          alpha: oa * (right ? 1 : dimmed(0, Math.max(lowLit, reveal * 0.6), cue)),
+          grow: tw(t, at('guess') + i * pace.stagger, 0.5, outCubic),
+          hot: right ? reveal : 0,
+          num: tw(t, at('guess') + 0.3 + i * pace.stagger, 0.4),
+          label: `${(p * 100).toFixed(1)}%`,
+        });
+      });
+      text(ctx, 'そのほか 約 20 万種類', TX, OY + 4 * OSTEP + 24, { font: F.jp(500, 17), color: C.muted, alpha: oa });
+    }
+    // how big the miss was
+    const ma = pop('low');
+    if (ma > 0) {
+      const x = TX + 560;
+      const y = OY + 2 * OSTEP;
+      text(ctx, '正解の確率が低いほど', x, y - 8, { font: F.jp(700, 17), color: C.ink2, alpha: ma });
+      text(ctx, '外れが大きい', x, y + 18, { font: F.jp(700, 22), color: C.red, alpha: ma });
+      tag(ctx, x, y + 34, '→ 外れが小さくなるように直す', { font: F.jp(700, 16), h: 30, padX: 10, fill: C.accent, color: '#fff', alpha: pop('nudge') });
+    }
+    ring(ctx, TX - 4, OY + 2 * OSTEP - 4, ODDS.chipW + 18 + ODDS.barW + 70, ODDS.h + 8, lowLit, C.accent, 10);
+    // the nudge travels back into the parameters
+    const back = tw(t, nudge - lead, 0.6, outCubic) * (1 - seg(t, at('h.end'), at('h.end') + 0.5));
+    if (back > 0) {
+      ctx.save();
+      ctx.globalAlpha = back;
+      ctx.strokeStyle = C.accent;
+      ctx.fillStyle = C.accent;
+      ctx.lineWidth = 3;
+      arrow(ctx, TX - 20, OY + 2 * OSTEP + 20, GRID.x + gridW + 20, GRID.y + gridH / 2, back, 12);
+      ctx.restore();
+    }
+    tag(ctx, W - M.r, 104, '事前学習', { font: F.jp(700, 22), h: 40, padX: 16, fill: C.accent, color: '#fff', align: 'right', alpha: pop('pre') });
 
     // ——— how much text
-    const d = tw(t, DATA, 0.6);
-    if (d <= 0) return;
-    text(ctx, '学習に使った文章の量', M.l, 640, { font: F.jp(700, 26), color: C.ink, alpha: d });
-    const full = W - M.l - M.r - 240;
-    const bars = [
-      { name: 'GPT-3（2020）', n: 300e9, y: 700, label: '3000 億トークン' },
-      { name: 'Llama 3（2024）', n: 15e12, y: 786, label: '15 兆トークン以上' },
-    ];
-    bars.forEach((b, i) => {
-      const a = tw(t, DATA + 0.4 + i * 0.6, 0.5);
-      const g = outExpo(seg(t, DATA + 0.5 + i * 0.6, DATA + 1.7 + i * 0.6));
-      text(ctx, b.name, M.l, b.y - 8, { font: F.jp(500, 22), color: C.ink2, alpha: a });
-      const w = Math.max(3, full * (b.n / 15e12) * g);
-      ctx.fillStyle = i === 1 ? C.accent : C.ink;
+    const da = pop('g3');
+    if (da > 0) {
+      ctx.fillStyle = C.rule;
+      ctx.fillRect(M.l, DY - 54, (W - M.l - M.r) * outCubic(da), 2);
+      text(ctx, '事前学習に使った文章の量（トークン）', M.l, DY - 18, { font: F.jp(700, 20), color: C.ink2, alpha: da });
+    }
+    const full = 470;
+    DATA.forEach((d, i) => {
+      const when = at(d.at) + (d.at === 'y25' && i === 3 ? 0.5 : 0);
+      const a = tw(t, when - lead, pace.enter);
+      if (a <= 0) return;
+      const y = DY + 6 + i * 42;
+      text(ctx, d.name, M.l, y + 24, { font: F.jp(500, 18), color: C.ink2, alpha: a });
+      const w = Math.max(3, full * (d.n / DMAX) * outExpo(seg(t, when, when + 1.2)));
       ctx.globalAlpha = a;
-      ctx.fillRect(M.l + 210, b.y - 34, w, 40);
+      ctx.fillStyle = i === 0 ? C.accent : C.ink;
+      ctx.fillRect(M.l + 260, y + 2, w, 30);
       ctx.globalAlpha = 1;
-      const inside = i === 1;
-      text(ctx, b.label, inside ? M.l + 210 + w - 16 : M.l + 210 + w + 14, b.y - 4, {
-        font: F.cond(700, 34), color: inside ? '#fff' : C.ink, align: inside ? 'right' : 'left', alpha: tw(t, DATA + 1.0 + i * 0.6, 0.5),
-      });
+      text(ctx, d.label, M.l + 260 + w + 12, y + 27, { font: F.cond(700, 24), color: C.ink, alpha: a });
     });
-    source(ctx, 'Brown ほか（2020）、Meta（2024）', tw(t, DATA + 0.8, 0.6));
+    text(ctx, '各社が公表した量。切り方も数え方も、そろってはいない', M.l, DY + 6 + 4 * 42 + 14, { font: F.jp(500, 15), color: C.muted, alpha: pop('y25') });
+
+    // ——— using it, and what comes next
+    const RX = 960;
+    const ua = pop('fix');
+    if (ua > 0) {
+      text(ctx, '使うとき', RX, DY - 18, { font: F.jp(700, 20), color: C.ink2, alpha: ua });
+      tag(ctx, RX, DY + 2, '答えを作るあいだ、パラメータは変わらない', { font: F.jp(700, 18), h: 36, padX: 14, fill: C.ink, color: C.paper, alpha: ua });
+      text(ctx, '会話や保存した情報は、手がかりにできる', RX + 4, DY + 68, { font: F.jp(500, 18), color: C.ink, alpha: tw(t, at('m.voice') + 2.0, pace.enter) });
+      text(ctx, 'パラメータを変えるのは、追加の学習', RX + 4, DY + 100, { font: F.jp(500, 18), color: C.ink, alpha: pop('more') });
+    }
+    const na = pop('base');
+    if (na > 0) {
+      const y = DY + 128;
+      const w1 = tag(ctx, RX, y, '続きを予測する力', { font: F.jp(700, 18), h: 36, padX: 14, fill: '#fff', stroke: C.ink2, color: C.ink, alpha: na });
+      ctx.strokeStyle = C.ink2;
+      ctx.fillStyle = C.ink2;
+      ctx.lineWidth = 2.5;
+      const ya = pop('yet');
+      arrow(ctx, RX + w1 + 8, y + 18, RX + w1 + 44, y + 18, ya, 10);
+      tag(ctx, RX + w1 + 52, y, '頼みに沿って答える学習（4 章）', { font: F.jp(700, 18), h: 36, padX: 14, fill: C.accent, color: '#fff', alpha: ya });
+    }
+    example(ctx, TX, OY + 4 * OSTEP + 44, oa, '予測とパラメータの値は説明のための例');
+    source(ctx, 'Brown ほか（2020）、Meta（2024）、NVIDIA と Qwen（2025）', da, SOURCE_RIGHT);
   },
 });

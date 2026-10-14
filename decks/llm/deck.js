@@ -20,6 +20,7 @@ import eliza from './clips/eliza.js';
 import transformer from './clips/transformer.js';
 import scale from './clips/scale.js';
 import chatgpt from './clips/chatgpt.js';
+import inside from './clips/inside.js';
 import tokens from './clips/tokens.js';
 import predict from './clips/predict.js';
 import embedding from './clips/embedding.js';
@@ -124,7 +125,7 @@ export default {
     // whyai is a dive (spec §5.3): off the main line, entered from ずんだもん's question in 1-2.
     { id: 'intro', title: 'はじめに', clips: [opening, core, langmodel, compose, route], dives: [whyai] },
     { id: 'history', title: '歴史', clips: [timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
-    { id: 'concepts', title: '基本概念', clips: [tokens, predict, embedding, attention, pretrain, context] },
+    { id: 'concepts', title: '基本概念', clips: [inside, tokens, embedding, attention, predict, pretrain, context] },
     { id: 'chat', title: 'チャットボット', clips: [base, rlhf, template, memory, hallucination] },
     { id: 'tools', title: 'ツール', clips: [tools, toolspec, toolcall, toolresult, toolloop] },
     { id: 'connect', title: 'つなぐ先', clips: [rag, search, shell, agent, coding, gui] },

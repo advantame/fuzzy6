@@ -83,10 +83,14 @@ export function example(ctx, x, y, a = 1, note = '数値は説明のための例
   if (note) text(ctx, note, x + w + 10, y + 21, { font: F.jp(400, 17), color: C.muted, alpha: a });
 }
 
-// Source line at the bottom right of the stage.
-export function source(ctx, s, a = 1) {
-  text(ctx, s, W - M.r, H - 34, { font: F.jp(400, 17), color: C.muted, align: 'right', alpha: a });
+// Source line at the bottom right of the stage. Clips that show ずんだもん pass `right` to keep
+// the line clear of the ear that reaches into the stage's bottom right corner.
+export function source(ctx, s, a = 1, right = W - M.r) {
+  text(ctx, s, right, H - 34, { font: F.jp(400, 17), color: C.muted, align: 'right', alpha: a });
 }
+
+// Where the right end of a source line goes when ずんだもん is on screen.
+export const SOURCE_RIGHT = W - M.r - 130;
 
 // Mono caption in small caps style, e.g. section labels inside a picture.
 export function caption(ctx, s, x, y, o = {}) {
