@@ -25,10 +25,10 @@ export default clip({
       id: 'b',
       still: true,
       tail: 0.9,
-      text: '{ask}頼んだ仕事を、{look}自分で調べ、{tool}道具を使いながら、\n{done}最後まで進めようとする AI のことよ。',
+      text: 'AI エージェントは、{ask}頼んだ仕事を、{look}自分で調べたり、\n{tool}道具を使ったりして、{done}最後まで進めようとする AI のことよ。',
     },
-    { id: 'c', text: 'いまでは、{use}仕事のあちこちで使われるようになったわね。' },
-    { id: 'd', tail: 0.8, text: '{inside}その中がどうなっているのかを、\n{base}土台から順に見ていくわ。' },
+    { id: 'c', text: 'いまでは、{use}さまざまな仕事で使われるようになってきたわね。' },
+    { id: 'd', tail: 0.8, text: '{inside}その中身がどうなっているのかを、\n{base}土台から順番に見ていきましょう。' },
   ],
 
   prepare: coverLayout,

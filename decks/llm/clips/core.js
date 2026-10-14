@@ -47,15 +47,15 @@ export default clip({
   script: [
     { id: 'a', lead: 0.9, text: 'エージェントは、{parts}いくつかの部品を\n組み合わせて作られているの。' },
     { id: 'b', still: true, text: 'その中核にあるのが、{llm}LLM という技術よ。' },
-    { id: 'b2', by: 'zunda', text: 'LLM、聞いたことがあるのだ。\n{gpt}ChatGPT みたいな AI のことなのだ？' },
-    { id: 'b3', still: true, text: 'おしいわね。ChatGPT のような対話型 AI サービスも、\n{core}中核にあるのが LLM なの。' },
+    { id: 'b2', by: 'zunda', text: 'LLM なら、聞いたことがあるのだ。\n{gpt}ChatGPT みたいな AI のことなのだ？' },
+    { id: 'b3', still: true, text: 'おしいわね。ChatGPT のような対話型 AI サービスも、\nその{core}中核に LLM を使っているの。' },
     {
       id: 'c',
       lead: 0.8,
       still: true,
-      text: 'LLM は {full}[Large Language Model|ラージ・ランゲージ・モデル] の略。\n日本語では、{ja}大規模言語モデルと呼ぶわ。',
+      text: 'LLM は、{full}[Large Language Model|ラージ・ランゲージ・モデル] を略した名前で、\n日本語では、{ja}大規模言語モデルと呼ばれているわ。',
     },
-    { id: 'g', tail: 0.6, text: 'まずは、名前の後ろ半分、{lm}「言語モデル」からよ。' },
+    { id: 'g', tail: 0.6, text: 'まずは、名前の後ろ半分にある{lm}「言語モデル」から、\n見ていきましょう。' },
   ],
 
   prepare(ctx) {
