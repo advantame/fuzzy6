@@ -108,9 +108,8 @@ npm run narrate -- <deck> [clipId …]   # 語りの原稿と記録を比べる�
 
 公開版は、ボスの限定公開アプリ基盤（リポジトリは `~/projects/fuzzy2`、アプリの id は `fuzzy6`）に載せ、URL を伝えた人にだけ見せている。GitHub のリポジトリ `advantame/fuzzy6` は非公開。経緯、イメージとサーバの作り、手元での確かめ方は [docs/publishing.md](docs/publishing.md) にある。
 
-- **公開版の URL は秘密にする。** コード、文書、コミットの文面、テストや撮影の記録のどこにも書かない。確かめるときも、URL を出力に出さない。基盤の `show-url.sh` は、`-c` なしで実行しない。
-- 基盤のリポジトリは編集しない。登録、鍵の発行、サーバでの作業は、運用者（ボスか、基盤のセッション）が行う。
-- 公開版への反映は、ボスの指示を受けてから実行する（`bash ~/projects/fuzzy2/platform/scripts/ship-app.sh fuzzy6`。サンドボックスの外で）。届くのは、`~/projects/fuzzy6`（`main` の作業ツリー）の HEAD のコミットだけ。作りかけのクリップを `deck.js` に載せたまま反映しない。
+
+- 公開版への反映は、次のコマンドで行うことができる。`bash ~/projects/fuzzy2/platform/scripts/ship-app.sh fuzzy6`（サンドボックスの外で）　届くのは、`~/projects/fuzzy6`（`main` の作業ツリー）の HEAD のコミットだけ。作りかけのクリップを `deck.js` に載せたまま反映しない。
 - `gh` と `git push` は、`GH_TOKEN=$(gh auth token --user advantame)` を付けて呼ぶ。リモートの `main` に push しても、公開版は変わらない（CI が unit テストとビルドを走らせるだけ）。
 - 自分で書く `href` や iframe の `src` は、`decks/llm/` のように相対パスにする。`/` で始めると、公開版で切れる。
 - `Dockerfile` の `chmod -R a+rX /app` を消さない。消すと、公開版のサーバが自分のファイルを読めず、起動しない。
