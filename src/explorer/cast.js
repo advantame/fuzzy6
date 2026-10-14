@@ -60,14 +60,15 @@ export function mouthShape(shape, images) {
   if (images[shape]) return shape;
   return ({ i: images.e ? 'e' : 'a', e: 'a', u: images.o ? 'o' : 'a', o: 'a', n: 'x' })[shape] ?? 'x';
 }
-// At most 45 blinks for the 90-second clip contract. Recompute from the seed, never
-// from elapsed wall time or the previous frame, including backwards seeks.
+// A minimum 2-second gap allows at most 90 blinks through 180 seconds, plus one
+// lookahead. Recompute from the same seed to preserve the existing sequence prefix,
+// never from elapsed wall time or the previous frame, including backwards seeks.
 export function eyesAt(clipId, actorId, t) {
   let seed = 2166136261;
   for (const ch of `${clipId}/${actorId}`) seed = Math.imul(seed ^ ch.codePointAt(0), 16777619);
   const random = mulberry32(seed);
   let at = 0;
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 91; i++) {
     at += 2 + random() * 4;
     if (t < at) break;
     if (t < at + 0.12) return 'closed';

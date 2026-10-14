@@ -29,8 +29,8 @@ export function normalizeDeck(deck) {
       if (typeof clip.setup !== 'function') throw new Error(`Clip ${clip.id}: missing setup`);
       if (clip.join !== undefined && clip.join !== 'fade' && clip.join !== 'cut')
         throw new Error(`Clip ${clip.id}: join must be 'fade' or 'cut'`);
-      if (clip.script === undefined && (!Number.isFinite(clip.duration) || clip.duration <= 0 || clip.duration > 90))
-        throw new Error(`Clip ${clip.id}: duration must be positive`);
+      if (clip.script === undefined && (!Number.isFinite(clip.duration) || clip.duration <= 0 || clip.duration > 180))
+        throw new Error(`Clip ${clip.id}: duration must be positive and at most 180 seconds`);
       const entry = {
         clip,
         chapter,

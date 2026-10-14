@@ -65,8 +65,11 @@ describe('bridge timeline', () => {
     }
     expect(previousTarget(t, 3, p)).toBeNull();
   });
-  it('counts the bridge toward the 90-second limit', () => {
-    expect(() => buildTimeline({ ...c, bridge: 1, script: [{ id: 'a', lead: 90 }] })).toThrow('90');
+  it('counts the bridge toward the 180-second limit', () => {
+    const make = lead => ({ ...c, bridge: 1, script: [{ id: 'a', lead }] });
+    expect(buildTimeline(make(179))).toMatchObject({ head: 1, duration: 180 });
+    expect(buildTimeline(make(179)).stops.at(-1).at).toBe(180);
+    expect(() => buildTimeline(make(179.001))).toThrow('180 seconds');
   });
   it('leaves narration inputs, hashes and manifest untouched', () => {
     const d = { ...deck(c), voice };

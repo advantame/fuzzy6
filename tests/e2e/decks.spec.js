@@ -24,7 +24,7 @@ test('LLM deck clips retain finite timelines and render through the still-mode c
     });
     expect(result.error, clip.id).toBeNull();
     expect(result.duration, clip.id).toBeGreaterThan(0);
-    expect(result.duration, clip.id).toBeLessThanOrEqual(90);
+    expect(result.duration, clip.id).toBeLessThanOrEqual(180);
     if (!clip.script) expect(result.duration, clip.id).toBe(clip.duration);
     expect(result.t, clip.id).toBe(result.duration);
     expect(result.state, clip.id).toBe('ended');

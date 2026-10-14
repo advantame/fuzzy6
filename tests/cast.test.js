@@ -1,4 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { createHash } from 'node:crypto';
+import * as random from '../src/kit/random.js';
 import { buildTimeline, mergePace } from '../src/explorer/timeline.js';
 import { castAt, eyesAt, mouthShape } from '../src/explorer/cast.js';
 
@@ -68,6 +70,27 @@ describe('cast and narration identities', () => {
 });
 
 describe('figures are functions of clip time', () => {
+  it.each([
+    ['duet', 'metan', '5cda38c87601e7b831281a856b9645ec9d08b7ebf915c2022a2e743f5e64fdcc'],
+    ['duet', 'zunda', '951d73b34796a5d99b1064574e4de1de95b08fbee24ec74baa37252ce2a3f7e4'],
+    ['sample', 'metan', '7928e8f48d66f53fa0422820ce87e3064d72ba689dc51bb940078145e866f957'],
+  ])('preserves the original blink sequence through 90 seconds for %s/%s', (clipId, actorId, digest) => {
+    // Captured from the original 46-iteration implementation at millisecond resolution.
+    const samples = Buffer.alloc(90001);
+    for (let ms = 0; ms <= 90000; ms++) samples[ms] = eyesAt(clipId, actorId, ms / 1000) === 'closed' ? 1 : 0;
+    expect(createHash('sha256').update(samples).digest('hex')).toBe(digest);
+  });
+  it('covers 180 seconds even with the minimum 2-second gap', () => {
+    const stub = vi.spyOn(random, 'mulberry32').mockReturnValue(() => 0);
+    try {
+      for (let at = 2; at <= 180; at += 2) {
+        expect(eyesAt('duet', 'metan', at - 0.001)).toBe('open');
+        expect(eyesAt('duet', 'metan', at)).toBe('closed');
+        expect(eyesAt('duet', 'metan', at + 0.119)).toBe('closed');
+        expect(eyesAt('duet', 'metan', at + 0.12)).toBe('open');
+      }
+    } finally { stub.mockRestore(); }
+  });
   it.each([['i', 'e'], ['u', 'o'], ['n', 'x'], ['e', 'e'], ['a', 'a'], ['x', 'x']])('substitutes %s with %s', (shape, expected) => {
     expect(mouthShape(shape, figure.mouth)).toBe(expected);
   });
@@ -97,7 +120,7 @@ describe('figures are functions of clip time', () => {
   });
   it('has reproducible independent 2–6 second blinks, lasting 0.12 seconds', () => {
     const closed = [], other = [];
-    for (let tick = 0; tick <= 9000; tick++) {
+    for (let tick = 0; tick <= 18000; tick++) {
       const t = tick / 100;
       if (eyesAt('duet', 'metan', t) === 'closed') closed.push(tick);
       if (eyesAt('duet', 'zunda', t) === 'closed') other.push(tick);
@@ -105,6 +128,8 @@ describe('figures are functions of clip time', () => {
     expect(closed.length).toBeGreaterThan(100);
     expect(closed).not.toEqual(other);
     const heads = closed.filter((tick, i) => i === 0 || tick !== closed[i - 1] + 1);
+    expect(heads.some(tick => tick > 9000)).toBe(true);
+    expect(heads.at(-1)).toBeGreaterThanOrEqual(17400);
     expect(heads[0]).toBeGreaterThanOrEqual(200);
     for (let i = 1; i < heads.length; i++) expect(heads[i] - heads[i - 1]).toBeGreaterThanOrEqual(200);
     for (let i = 1; i < heads.length; i++) expect(heads[i] - heads[i - 1]).toBeLessThanOrEqual(600);

@@ -20,6 +20,19 @@ const pace = mergePace();
 const timeline = () => buildTimeline(clip, pace, voice);
 
 describe('timeline', () => {
+  it.each(['silent', 'estimated', 'recorded'])('accepts exactly 180 seconds and rejects longer %s scripts', kind => {
+    const spoken = kind !== 'silent';
+    const make = extra => ({ id: 'limit', script: [{ id: 'a', ...(spoken ? { text: 'ab' } : {}), lead: (spoken ? 178 : 180) + extra }] });
+    const p = mergePace({ pre: 0, voice: { cps: 1, speed: { normal: 1 } } });
+    const recording = kind === 'recorded' ? { cast: { metan: { name: 'Metan' } }, manifest: { clips: {
+      limit: { a: { source: 'ab', takes: { '1': { duration: 2 } } } },
+    } } } : undefined;
+    const t = buildTimeline(make(0), p, recording);
+    expect(t.duration).toBe(180);
+    expect(t.stops.at(-1)).toMatchObject({ at: 180, kind: 'still' });
+    expect(Boolean(t.lines[0].take)).toBe(kind === 'recorded');
+    expect(() => buildTimeline(make(0.001), p, recording)).toThrow('duration must not exceed 180 seconds');
+  });
   it('uses each line speed for its take and keeps line.speed as the recorded speed', () => {
     const script = [undefined, 'normal', 'slow', 'fast'].map((speed, i) => ({ id: `l${i}`, text: 'abc', speed }));
     const takes = Object.fromEntries([1, 1.2, 1.4, 1.6].map(speed => [speed, { duration: 3 / speed, anchors: {}, file: `${speed}.opus` }]));
@@ -126,7 +139,7 @@ describe('timeline', () => {
     { script: [{ id: 'a', text: '{b}x' }, { id: 'c', text: '{b}y' }] },
     { script: [{ id: 'a', lead: -1 }] },
     { script: [{ id: 'a', rest: 'absent' }] },
-    { script: [{ id: 'a', lead: 91 }] },
+    { script: [{ id: 'a', lead: 181 }] },
     { script: [{ id: 'a' }], duration: 3 },
     { script: [{ id: 'a' }], cues: [] },
   ])('rejects invalid script %#', c => expect(() => buildTimeline(c)).toThrow());

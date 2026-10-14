@@ -3,6 +3,14 @@ import { normalizeDeck, cuesAt, cueMarkup, formatTime, clampTime, canvasScale, a
 const clip = (id, extra = {}) => ({ id, duration: 10, setup() {}, ...extra });
 const deck = chapters => ({ chapters });
 describe('deck model', () => {
+  it.each([undefined, 1, 3])('accepts duration 180 including bridge %s, rejects anything longer', bridge => {
+    const make = duration => deck([{ id: 'a', clips: [clip('x', { duration, bridge, join: 'cut' })] }]);
+    expect(normalizeDeck(make(180)).clips[0].clip.duration).toBe(180);
+    expect(() => normalizeDeck(make(180.001))).toThrow('at most 180 seconds');
+  });
+  it('accepts a positive sub-second duration', () => {
+    expect(normalizeDeck(deck([{ id: 'a', clips: [clip('x', { duration: 0.001 })] }])).clips).toHaveLength(1);
+  });
   it.each([undefined, {}, { gutter: undefined }, { gutter: 0 }, { gutter: 120 }, { gutter: 240 }])('normalizes frame %j', frame => {
     expect(normalizeDeck({ ...deck([{ id: 'a', clips: [clip('x')] }]), frame }).gutter).toBe(frame?.gutter ?? 0);
   });

@@ -124,7 +124,7 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     start = line.next;
   }
   const duration = lines.at(-1).done;
-  if (duration > 90) throw new Error('duration must not exceed 90 seconds');
+  if (duration > 180) throw new Error('duration must not exceed 180 seconds');
   lines.at(-1).next = duration;
   for (const line of lines) {
     times.set(line.id, line.start);
