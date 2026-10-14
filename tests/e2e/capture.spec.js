@@ -13,11 +13,11 @@ test('capture supports computed durations, named posters, and all stops/ground f
   });
   const stops = await run(['script', '--stops']);
   const paths = stops.stdout.trim().split('\n');
-  expect(paths).toHaveLength(8);
+  expect(paths).toHaveLength(7); // zero short rest merges a.done with b.start
   expect(paths.some(p => p.endsWith('-still-a_t2.1.png'))).toBe(true);
   expect(paths.some(p => p.endsWith('-ground-a_t1.png'))).toBe(true);
-  expect(paths.some(p => p.endsWith('-ground-b_t3.4.png'))).toBe(true);
-  expect(paths.some(p => p.endsWith('-ground-spin_t6.8.png'))).toBe(true);
+  expect(paths.some(p => p.endsWith('-ground-b_t3.1.png'))).toBe(true);
+  expect(paths.some(p => p.endsWith('-ground-spin_t6.5.png'))).toBe(true);
   for (const path of paths) expect((await stat(path)).size).toBeGreaterThan(100);
   const posters = await run(['--posters']);
   const ordered = posters.stdout.trim().split('\n').map(p => p.split('/').at(-1));

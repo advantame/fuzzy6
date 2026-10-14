@@ -7,6 +7,34 @@ const boot = async page => {
 const select = (page, tier) => page.locator(`.mx-tune-field[data-key="voice.speed.${tier}"] select`);
 const stored = page => page.evaluate(() => JSON.parse(localStorage.getItem('mx-tune:demo')));
 
+test('short-rest controls accept zero and preserve position across a merged stop', async ({ page }) => {
+  await boot(page);
+  const row = page.locator('.mx-tune-field[data-key="rest.short"]');
+  const range = row.locator('input[type="range"]');
+  const number = row.locator('input[type="number"]');
+  await expect(range).toHaveAttribute('min', '0');
+  await expect(number).toHaveAttribute('min', '0');
+  await expect(range).toHaveValue('0');
+  await expect(number).toHaveValue('0');
+  await page.evaluate(() => window.__mx.seek(window.__mx.at('b')));
+  await range.fill('0.5');
+  expect(await page.evaluate(() => window.__mx.state().t)).toBe(2.6);
+  await page.evaluate(() => window.__mx.seek(window.__mx.at('a.done') + 0.25));
+  await number.fill('0');
+  await expect(range).toHaveValue('0');
+  expect(await number.evaluate(input => input.validity.valid)).toBe(true);
+  const state = await page.evaluate(() => window.__mx.state());
+  expect(state.t).toBe(2.1);
+  expect(state.line).toBe('b');
+  expect(state.target).toEqual({ at: 5.5, kind: 'stop' });
+  await expect(page.locator('.mx-seek-mark[data-seconds="2.1"]')).toHaveCount(1);
+  await expect(page.locator('.mx-tune-position')).toContainText('b / lead / 2.100');
+  expect((await stored(page)).pace.rest.short).toBe(0);
+  await page.reload(); await page.waitForFunction(() => window.__ready);
+  await expect(number).toHaveValue('0');
+  expect(await page.evaluate(() => window.__mx.at('b'))).toBe(2.1);
+});
+
 test('three speed selects show recorded choices plus the current value, and follow clip changes', async ({ page }) => {
   await boot(page);
   for (const tier of ['slow', 'normal', 'fast']) await expect(select(page, tier)).toBeEnabled();
@@ -19,7 +47,7 @@ test('three speed selects show recorded choices plus the current value, and foll
   expect(await page.evaluate(() => window.__mx.pace().voice.speed)).toEqual({ slow: 1.5, normal: 1.3, fast: 1.5 });
   const saved = await stored(page);
   expect(saved.defaults.voice.speed).toEqual({ slow: 1.1, normal: 1.3, fast: 1.5 });
-  expect(saved.defaults.rest.long).toBe(1);
+  expect(saved.defaults.rest).toEqual({ short: 0, normal: 0.3, long: 1 });
   expect(saved.pace.voice.speed.slow).toBe(1.5);
   await page.evaluate(() => window.__go('opening', 0));
   for (const tier of ['slow', 'normal', 'fast']) {
@@ -51,7 +79,7 @@ test('saved adjustments restore only with identical complete defaults, independe
   expect((await stored(page)).pace.pre).toBe(0.9);
 });
 
-for (const obsolete of ['legacy', 'missing-defaults', 'changed-speed', 'changed-rest', 'partial-defaults']) {
+for (const obsolete of ['legacy', 'missing-defaults', 'changed-speed', 'changed-rest-short', 'changed-rest-normal', 'partial-defaults']) {
   test(`discards stored adjustments: ${obsolete}`, async ({ page }) => {
     await boot(page);
     await page.evaluate(obsolete => {
@@ -60,7 +88,8 @@ for (const obsolete of ['legacy', 'missing-defaults', 'changed-speed', 'changed-
       if (obsolete === 'legacy') saved = { pre: 1.2, voice: { speed: 1 } };
       if (obsolete === 'missing-defaults') delete saved.defaults;
       if (obsolete === 'changed-speed') saved.defaults.voice.speed.normal = 1;
-      if (obsolete === 'changed-rest') saved.defaults.rest.long = 2;
+      if (obsolete === 'changed-rest-short') saved.defaults.rest.short = 0.3;
+      if (obsolete === 'changed-rest-normal') saved.defaults.rest.normal = 0.8;
       if (obsolete === 'partial-defaults') delete saved.defaults.voice;
       localStorage.setItem('mx-tune:demo', JSON.stringify(saved));
     }, obsolete);
@@ -69,7 +98,7 @@ for (const obsolete of ['legacy', 'missing-defaults', 'changed-speed', 'changed-
     const fresh = await stored(page); // navigation persists the newly resolved defaults
     expect(fresh.pace).toEqual(fresh.defaults);
     expect(fresh.defaults.voice.speed.normal).toBe(1.3);
-    expect(fresh.defaults.rest.long).toBe(1);
+    expect(fresh.defaults.rest).toEqual({ short: 0, normal: 0.3, long: 1 });
   });
 }
 

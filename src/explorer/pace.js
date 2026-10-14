@@ -5,7 +5,7 @@
 export const PACE = {
   voice: { speed: { slow: 1.1, normal: 1.3, fast: 1.5 }, cps: 6.3 },
   pre: 0.3,
-  rest: { short: 0.3, normal: 0.8, long: 1.0 },
+  rest: { short: 0, normal: 0.3, long: 1.0 },
   land: 1.0,
   skip: 5,
   again: 1.0,
@@ -29,7 +29,7 @@ export const PACE_FIELDS = [
   { group: '間' },
   { key: 'rest.short', label: '文の間（小）', min: 0, max: 2, step: 0.05 },
   { key: 'rest.normal', label: '文の間（中）', min: 0, max: 3, step: 0.1 },
-  { key: 'rest.long', label: '文の間（大）', hint: '静止点のあと', min: 0, max: 5, step: 0.1 },
+  { key: 'rest.long', label: '文の間（大）', hint: "図ができたばかりの文に rest: 'long' と書いたとき", min: 0, max: 5, step: 0.1 },
   { key: 'land', label: '着地の間', hint: '静止点へ跳んでから動き出すまで', min: 0, max: 3, step: 0.1 },
   { key: 'end', label: '終わりの間', hint: '自動で次へ進むまで', min: 0, max: 6, step: 0.5 },
   { group: '入り' },

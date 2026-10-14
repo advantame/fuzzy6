@@ -44,12 +44,12 @@ describe('timeline', () => {
   it('builds every boundary, named anchor, caption and stop from the recording', () => {
     const t = timeline();
     expect(t.lines.map(({ start, voice, end, done, next }) => [start, voice, end, done, next]))
-      .toEqual([[0, 0.8, 2.8, 3.2, 4.2], [4.2, 5.2, 5.2, 5.4, 5.65], [5.65, 5.95, 6.95, 6.95, 6.95]]);
-    expect(t.duration).toBe(6.95);
+      .toEqual([[0, 0.8, 2.8, 3.2, 3.5], [3.5, 4.5, 4.5, 4.7, 4.95], [4.95, 5.25, 6.25, 6.25, 6.25]]);
+    expect(t.duration).toBe(6.25);
     expect(['a', 'a.start', 'a.voice', 'a.end', 'a.done', 'a.next', 'mark', 'b.next'].map(t.at))
-      .toEqual([0, 0, 0.8, 2.8, 3.2, 4.2, 1.4, 6.95]);
-    expect(t.cues).toEqual([{ by: 'metan', at: 0.8, to: 5.95, text: 'abcd' }, { by: 'metan', at: 5.95, to: Infinity, text: '**end**' }]);
-    expect(t.stops.map(s => [s.at, s.kind, s.line])).toEqual([[0, 'line', 'a'], [3.2, 'still', 'a'], [4.2, 'line', 'silent'], [5.65, 'line', 'b'], [6.95, 'still', 'b']]);
+      .toEqual([0, 0, 0.8, 2.8, 3.2, 3.5, 1.4, 6.25]);
+    expect(t.cues).toEqual([{ by: 'metan', at: 0.8, to: 5.25, text: 'abcd' }, { by: 'metan', at: 5.25, to: Infinity, text: '**end**' }]);
+    expect(t.stops.map(s => [s.at, s.kind, s.line])).toEqual([[0, 'line', 'a'], [3.2, 'still', 'a'], [3.5, 'line', 'silent'], [4.95, 'line', 'b'], [6.25, 'still', 'b']]);
     expect(() => t.at('absent')).toThrow(/Unknown/);
     expect(posterTime({ poster: 'a.done' }, t)).toBe(3.2);
     expect(posterTime({}, t)).toBe(t.duration);
@@ -77,10 +77,30 @@ describe('timeline', () => {
     expect(t.cues[0].text).toBe(parsed.caption);
     expect(buildTimeline(c, p).duration).toBe(t.duration);
   });
-  it('uses default rest based on explicit still, numeric rest, and ignores final rest', () => {
+  it('uses normal rest by default, zero short rest, and ignores final rest', () => {
     const t = buildTimeline({ script: [{ id: 'a', lead: 1 }, { id: 'b', lead: 1, rest: 'short' }, { id: 'c', lead: 1, rest: 100 }] });
-    expect(t.lines.map(l => l.start)).toEqual([0, 1.8, 3.1]);
-    expect(t.duration).toBe(4.1);
+    expect(t.lines.map(l => l.start)).toEqual([0, 1.3, 2.3]);
+    expect(t.duration).toBe(3.3);
+  });
+  it.each([undefined, 'long'])('uses the selected pace tier for a still line with rest %s', rest => {
+    const c = { script: [{ id: 'a', lead: 1, still: true, rest }, { id: 'b', lead: 1 }] };
+    for (const p of [pace, mergePace({ rest: { normal: 0.6, long: 1.7 } })]) {
+      const t = buildTimeline(c, p);
+      expect(t.at('b')).toBeCloseTo(t.at('a.done') + p.rest[rest ?? 'normal']);
+    }
+  });
+  it('merges zero-rest boundaries into one still stop and navigates past it', () => {
+    const t = buildTimeline({ script: [
+      { id: 'a', lead: 1, still: true, rest: 'short' }, { id: 'b', lead: 2 },
+    ] });
+    expect(t.at('a.done')).toBe(t.at('b'));
+    expect(t.stops.map(s => [s.at, s.kind, s.line])).toEqual([
+      [0, 'line', 'a'], [1, 'still', 'a'], [3, 'still', 'b'],
+    ]);
+    expect(nextTarget(t, 0, pace)).toEqual({ at: 1, kind: 'stop' });
+    expect(nextTarget(t, 1, pace)).toEqual({ at: 3, kind: 'stop' });
+    expect(previousTarget(t, 3, pace)).toEqual({ at: 1, kind: 'stop' });
+    expect(previousTarget(t, 1, pace)).toEqual({ at: 0, kind: 'stop' });
   });
   it('merges nearby stops at a strict 50ms boundary, preserving the still point', () => {
     const make = rest => buildTimeline({ script: [{ id: 'a', lead: 1, still: true, rest }, { id: 'b', lead: 1 }] });
@@ -127,7 +147,7 @@ describe('pace and position', () => {
   it('deeply merges defaults, deck and live values without mutation or unknown keys', () => {
     const deck = { rest: { long: 3 }, voice: { cps: 7 } };
     const p = mergePace(deck, { rest: { short: 0.4 }, cue: { stay: 'phrase' }, unknown: 1 });
-    expect(p.rest).toEqual({ short: 0.4, normal: 0.8, long: 3 });
+    expect(p.rest).toEqual({ short: 0.4, normal: 0.3, long: 3 });
     expect(p.voice).toEqual({ speed: { slow: 1.1, normal: 1.3, fast: 1.5 }, cps: 7 });
     expect(p.cue.stay).toBe('phrase'); expect(p.unknown).toBeUndefined();
     p.rest.long = 9;
@@ -140,14 +160,26 @@ describe('pace and position', () => {
     [0.6, 'pre', 0.1, 0.6],
     [1.3, 'voice', 0.5, 1.8],
     [3, 'tail', 0.2, 3.5],
-    [4, 'rest', 0.8, 4],
-    [4.7, 'lead', 0.5, 4.5],
+    [3.4, 'rest', 0.2, 3.8],
+    [4, 'lead', 0.5, 4.3],
   ])('preserves section seconds at t=%s and clamps shortened sections', (t, section, offset, result) => {
     const before = timeline();
-    const after = buildTimeline(clip, mergePace({ pre: 0.8, rest: { long: 0.3 } }), voice);
+    const after = buildTimeline(clip, mergePace({ pre: 0.8, rest: { normal: 0.1 } }), voice);
     expect(positionAt(before, t).section).toBe(section);
     expect(positionAt(before, t).offset).toBeCloseTo(offset);
     expect(preservePosition(before, after, t)).toBe(result);
+  });
+  it('preserves the next line at a zero-rest boundary and clamps rest when it becomes zero', () => {
+    const c = { script: [
+      { id: 'a', lead: 1, rest: 'short', still: true }, { id: 'b', lead: 2 },
+    ] };
+    const zero = buildTimeline(c);
+    const longer = buildTimeline(c, mergePace({ rest: { short: 0.5 } }));
+    expect(positionAt(zero, 1)).toEqual({ line: 'b', section: 'lead', offset: 0 });
+    expect(preservePosition(zero, longer, 1)).toBe(1.5);
+    expect(positionAt(longer, 1.25)).toEqual({ line: 'a', section: 'rest', offset: 0.25 });
+    expect(preservePosition(longer, zero, 1.25)).toBe(1);
+    expect(preservePosition(longer, zero, longer.duration)).toBe(zero.duration);
   });
   it('preserves the final picture and clamps a shortened voice section', () => {
     const before = timeline();

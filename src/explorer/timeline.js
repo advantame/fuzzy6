@@ -109,7 +109,7 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     const voiceAt = roundTime(leadEnd + (spoken ? pace.pre : 0));
     const end = roundTime(voiceAt + audioLength);
     const done = roundTime(end + seconds(source.tail ?? 0, 'tail'));
-    const restName = source.rest ?? (source.still ? 'long' : 'normal');
+    const restName = source.rest ?? 'normal';
     const rest = seconds(typeof restName === 'number' ? restName : pace.rest[restName], 'rest');
     const line = { id: source.id, by, start, leadEnd, voice: voiceAt, end, done,
       next: roundTime(done + rest), spoken, take, speed: Number(speeds[0]), parsed,

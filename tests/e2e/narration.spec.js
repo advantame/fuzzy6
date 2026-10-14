@@ -9,28 +9,28 @@ const pauseAt = (page, t) => page.evaluate(t => { window.__mx.pause(); window.__
 
 test('recording timeline, live stage API, subtitle persistence, marks and targets', async ({ page }) => {
   await boot(page, '?c=script&t=0');
-  expect((await state(page)).duration).toBe(7.2);
+  expect((await state(page)).duration).toBe(6.9);
   expect((await state(page)).line).toBe('a');
   expect(await page.evaluate(() => ['a', 'a.voice', 'a.end', 'a.done', 'a.next', 'band', 'b', 'spin.done'].map(window.__mx.at)))
-    .toEqual([0, 0.7, 1.9, 2.1, 2.4, 1.5, 2.4, 7.2]);
-  await expect(page.locator('.mx-layer')).toHaveAttribute('data-duration', '7.2');
+    .toEqual([0, 0.7, 1.9, 2.1, 2.1, 1.5, 2.1, 6.9]);
+  await expect(page.locator('.mx-layer')).toHaveAttribute('data-duration', '6.9');
   await expect(page.locator('.mx-layer')).toHaveAttribute('data-anchor', '1.5');
   await expect(page.locator('.mx-cue')).toHaveCount(0);
   expect(await page.locator('.mx-seek-mark').evaluateAll(nodes => nodes.map(n => [Number(n.dataset.seconds), n.dataset.kind])))
-    .toEqual([[0, 'line'], [2.1, 'still'], [2.4, 'line'], [5.8, 'line'], [7.2, 'still']]);
+    .toEqual([[0, 'line'], [2.1, 'still'], [5.5, 'line'], [6.9, 'still']]);
   expect((await state(page)).target).toEqual({ at: 2.1, kind: 'stop' });
   await expect(page.locator('.mx-seek-target')).toHaveAttribute('data-kind', 'stop');
   await pauseAt(page, 0.7);
   await expect(page.locator('.mx-cue strong')).toHaveText('最後の 10 年');
-  await pauseAt(page, 3.299);
+  await pauseAt(page, 2.999);
   await expect(page.locator('.mx-cue strong')).toHaveText('最後の 10 年');
-  await pauseAt(page, 3.3);
+  await pauseAt(page, 3);
   await expect(page.locator('.mx-cue')).toHaveCount(1);
   await expect(page.locator('.mx-cue')).toContainText('ChatGPT');
-  await pauseAt(page, 5.9);
+  await pauseAt(page, 5.6);
   expect((await state(page)).line).toBe('spin');
   await expect(page.locator('.mx-cue')).toContainText('ChatGPT');
-  await pauseAt(page, 7.2);
+  await pauseAt(page, 6.9);
   await expect(page.locator('.mx-cue')).toContainText('ChatGPT');
   await expect(page.locator('.mx-seek-target')).toBeHidden();
   expect((await state(page)).target).toBeNull();
@@ -60,17 +60,17 @@ test('stop navigation preserves paused playback, repeats are ignored, ended back
   await page.keyboard.press('ArrowRight');
   expect((await state(page)).t).toBe(2.1);
   expect((await state(page)).state).toBe('paused');
-  await page.keyboard.press('ArrowRight'); expect((await state(page)).t).toBe(2.4);
+  await page.keyboard.press('ArrowRight'); expect((await state(page)).t).toBe(5.5);
   await page.keyboard.press('ArrowLeft'); expect((await state(page)).t).toBe(2.1);
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', repeat: true })));
   expect((await state(page)).t).toBe(2.1);
-  await pauseAt(page, 3.5); await page.keyboard.press('ArrowLeft'); expect((await state(page)).t).toBe(2.4);
-  await pauseAt(page, 3.4); await page.keyboard.press('ArrowLeft'); expect((await state(page)).t).toBe(2.1);
-  await pauseAt(page, 7.2); await page.keyboard.press('ArrowLeft');
-  expect((await state(page)).t).toBeGreaterThanOrEqual(5.8);
+  await pauseAt(page, 3.2); await page.keyboard.press('ArrowLeft'); expect((await state(page)).t).toBe(2.1);
+  await pauseAt(page, 3.1); await page.keyboard.press('ArrowLeft'); expect((await state(page)).t).toBe(0);
+  await pauseAt(page, 6.9); await page.keyboard.press('ArrowLeft');
+  expect((await state(page)).t).toBeGreaterThanOrEqual(5.5);
   await expect(page.locator('.mx')).toHaveAttribute('data-state', 'playing');
-  await pauseAt(page, 7.2); await page.keyboard.press('Shift+ArrowLeft');
-  expect((await state(page)).t).toBe(5.2);
+  await pauseAt(page, 6.9); await page.keyboard.press('Shift+ArrowLeft');
+  expect((await state(page)).t).toBe(4.9);
   await expect(page.locator('.mx')).toHaveAttribute('data-state', 'paused');
   await pauseAt(page, 0); await page.keyboard.press('ArrowLeft');
   await expect(page.locator('.mx')).toHaveAttribute('data-clip', 'cues');
@@ -84,15 +84,15 @@ test('stop navigation preserves paused playback, repeats are ignored, ended back
 test('skip targets and seek marks keep pointer focus out of the slider', async ({ page }) => {
   await boot(page);
   await page.evaluate(() => window.__mx.setPace({ skip: 2 }));
-  await pauseAt(page, 2.4);
-  expect((await state(page)).target).toEqual({ at: 4.4, kind: 'skip' });
+  await pauseAt(page, 2.1);
+  expect((await state(page)).target).toEqual({ at: 4.1, kind: 'skip' });
   await expect(page.locator('.mx-seek-target')).toHaveAttribute('data-kind', 'skip');
-  await page.keyboard.press('ArrowRight'); expect((await state(page)).t).toBe(4.4);
+  await page.keyboard.press('ArrowRight'); expect((await state(page)).t).toBe(4.1);
   await page.locator('.mx-seek-mark[data-seconds="0"]').click();
   expect((await state(page)).t).toBe(0);
   expect(await page.evaluate(() => document.activeElement?.className)).not.toMatch(/mx-seek/);
   await page.keyboard.press('ArrowRight'); expect((await state(page)).t).toBe(2);
-  await page.mouse.move(320 + 1600 * 1.2 / 7.2, 900);
+  await page.mouse.move(320 + 1600 * 1.2 / 6.9, 900);
   await expect(page.locator('.mx-seek-hover-text')).toContainText('1948 年');
 });
 
@@ -147,17 +147,17 @@ test('horizontal touch navigates stops and index arrows stop at chapter edges', 
 });
 
 test('pace changes preserve line section and update stage values, controls and events', async ({ page }) => {
-  await boot(page, '?c=script&t=3.8&tune');
+  await boot(page, '?c=script&t=3.5&tune');
   await page.evaluate(() => { window.timelineEvents = 0; window.__mx.on('timeline', () => window.timelineEvents++); });
   const pre = page.locator('.mx-tune-field[data-key="pre"] input[type="number"]');
   await pre.fill('0.8'); await pre.dispatchEvent('input');
-  expect((await state(page)).t).toBe(4.8); // b.voice + 0.5; pre grew on both a and b
-  expect((await state(page)).duration).toBe(8.2);
-  await expect(page.locator('.mx-layer')).toHaveAttribute('data-duration', '8.2');
-  await expect(page.locator('.mx-tune-position')).toContainText('b / 声 / 4.800');
-  await expect(page.locator('.mx-seek')).toHaveAttribute('aria-valuemax', '8.2');
+  expect((await state(page)).t).toBe(4.5); // b.voice + 0.5; pre grew on both a and b
+  expect((await state(page)).duration).toBe(7.9);
+  await expect(page.locator('.mx-layer')).toHaveAttribute('data-duration', '7.9');
+  await expect(page.locator('.mx-tune-position')).toContainText('b / 声 / 4.500');
+  await expect(page.locator('.mx-seek')).toHaveAttribute('aria-valuemax', '7.9');
   await page.locator('.mx-tune-field[data-key="voice.speed.normal"] select').selectOption('1.5');
-  expect((await state(page)).t).toBe(4.6);
+  expect((await state(page)).t).toBe(4.3);
   await page.evaluate(() => window.__mx.setPace({ enter: 0.75 }));
   await expect(page.locator('.mx-layer')).toHaveAttribute('data-enter', '0.75');
   expect(await page.evaluate(() => window.timelineEvents)).toBeGreaterThanOrEqual(3);

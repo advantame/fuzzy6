@@ -44,7 +44,7 @@ describe('bridge timeline', () => {
     expect(after.stops.map(s => s.at)).toEqual(before.stops.map(s => roundTime(s.at + 0.6)));
     expect(after.lines[0].take).toBe(before.lines[0].take);
     expect(after.cues[0].at).toBe(roundTime(before.cues[0].at + 0.6));
-    const changed = buildTimeline({ ...c, bridge: 0.6 }, mergePace({ pre: 0.7, rest: { long: 2 } }), recording);
+    const changed = buildTimeline({ ...c, bridge: 0.6 }, mergePace({ pre: 0.7, rest: { normal: 2 } }), recording);
     expect(preservePosition(after, changed, 0.123456)).toBe(0.123456);
     expect(preservePosition(after, changed, after.at('a.voice') + 0.1)).toBe(roundTime(changed.at('a.voice') + 0.1));
   });
