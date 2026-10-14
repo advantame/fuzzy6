@@ -1,108 +1,179 @@
-// From continuing to answering: a pre-trained model writes a plausible continuation of a
-// question (more questions); a tuned model answers it. Then the three stages that make the
-// difference. The model outputs are an example.
+// 4-1: a pre-trained model only continues. Given a question alone, it may go on with more
+// questions — in a page of questions, that is what comes next. ずんだもん expected an answer.
+// Shape the text as question and answer, end it on "答え：", and the likely continuation is an
+// answer; GPT-3's paper showed this with examples in the prompt. A chatbot keeps the shape with
+// fixed marks: the labels turn into the role marks of 4-2.
+// The model's outputs are an example.
 
 import { clip } from '../lib/clip.js';
-import { C, F, M } from '../lib/theme.js';
-import { tag, example, bubbleLayout, bubble } from '../lib/parts.js';
-import { text, rr, arrow, wrap } from '../../../src/kit/draw.js';
-import { tw, seg, inOutCubic, outBack } from '../../../src/kit/ease.js';
+import { C, F, M, W } from '../lib/theme.js';
+import { tag, example, source, SOURCE_RIGHT } from '../lib/parts.js';
+import { slot } from '../lib/odds.js';
+import { trainingStrip } from '../lib/training.js';
+import { ROLE } from '../lib/rig.js';
+import { text, measure, rr, arrow, typed } from '../../../src/kit/draw.js';
+import { tw, seg, outCubic } from '../../../src/kit/ease.js';
+import { enter, focus, ring } from '../../../src/kit/cue.js';
 
-const Q = '日本の首都はどこですか？';
-const BASE_OUT = 'アメリカの首都はどこですか？\nフランスの首都はどこですか？\nイタリアの首都は…';
-const CHAT_OUT = '日本の首都は東京です。';
-const COLS = [
-  { x: M.l, name: '事前学習だけのモデル', kind: 'ベースモデル', out: BASE_OUT, note: '質問の続きを書いた', noteColor: C.accent, at: 0.3, outAt: 1.4 },
-  { x: 840, name: '指示に従うよう調整したモデル', kind: 'チャット向け', out: CHAT_OUT, note: '質問に答えた', noteColor: C.green, at: 0.9, outAt: 3.9 },
+const ASK = '日本の首都はどこですか？';
+const MORE = ['アメリカの首都はどこですか？', 'フランスの首都はどこですか？', 'イタリアの首都は……'];
+const LEFT = { x: M.l, y: 150, w: 650, h: 320 };
+const RIGHT = { x: 830, y: 150, w: W - M.r - 830, h: 420 };
+const BODY = F.jp(500, 28);
+const LH = 46;
+// the shaped text: question and answer by turns, ending on "答え："
+const SHAPED = [
+  ['質問', 'フランスの首都はどこですか？'],
+  ['答え', 'パリです。'],
+  ['質問', 'イタリアの首都はどこですか？'],
+  ['答え', 'ローマです。'],
+  ['質問', ASK],
+  ['答え', ''],
 ];
-const COL_W = 664;
-const STAGES = [
-  { n: '1', name: '事前学習', what: '大量の文章で、次を予測する' },
-  { n: '2', name: '手本で学ぶ', what: '人が書いた良い応答をまねる' },
-  { n: '3', name: '好みで磨く（RLHF）', what: '人が比べて選んだ応答を強める' },
-];
-const STRIP = 5.7;
-const BOX = { y: 584, w: 420, h: 150, gap: 74 };
+const ANSWER = '東京です。';
+const BOOK = { x: M.l, y: 594, w: 300, h: 196 };
 
 export default clip({
   id: 'base',
-  title: '答える機械へ',
-  kicker: '指示チューニングと RLHF',
-  duration: 16.5,
-  cues: [
-    { at: 0.4, to: 5.5, text: '事前学習だけのモデルは、質問に答えるとは限らない。\nそれらしい**続き**を書く。' },
-    { at: 5.7, to: 10.9, text: 'そこで、人が書いた手本の応答で学ばせ、\n人が比べて選んだ応答を強める調整を加える。' },
-    { at: 11.1, to: 18, text: 'この調整で、続きを書く機械が、\n指示に答える**アシスタント**になる。' },
+  title: '続きを書くだけ',
+  kicker: '事前学習だけのモデル',
+  cast: ['metan', 'zunda'],
+  script: [
+    { id: 'a', text: '事前学習を終えたモデルは、{cont}文章の続きを予測することを、\nたくさん学んできたわ。' },
+    { id: 'b', text: 'たとえば、このモデルに、{ask}「[日本|にほん]の首都はどこですか？」\nとだけ書いた場面を考えてみましょう。' },
+    { id: 'c', still: true, text: '答えではなく、{more}「アメリカの首都はどこですか？」のように、\n別の質問を続けることもあるの。' },
+    { id: 'c2', text: '{fig}InstructGPT の論文にも、[GPT-3|ジーピーティースリー] が質問に、\n別の質問で続けた例が載っているわ。' },
+    { id: 'd', by: 'zunda', text: '{q}質問したのに、答えてくれないのだ？' },
+    { id: 'e', text: '事前学習で学んだのは、{why}書かれた文章に、\nどんな続きが来るか、ということなの。' },
+    { id: 'e2', text: '{not}質問に答える形になるとは、限らないのよ。' },
+    { id: 'f', still: true, text: 'たとえば、{book}問題集のような並びなら、\n質問の次に、また質問が来ることもあるわね。' },
+    { id: 'g', text: '逆に、{shape}文章の形を整えてやると、続きも変わるわ。' },
+    { id: 'h', text: '{qa}質問と答えの組をいくつか見せて、\n{last}最後は、新しい質問と「答え：」まで書くの。' },
+    { id: 'h2', still: true, text: 'そうすると、{ans}答えの形で、続きを書きやすくなるわ。' },
+    { id: 'i', text: '2020 年の [GPT-3|ジーピーティースリー] の論文では、{few}質問と答えの例を入力に入れて、\n新しい質問に続きを書かせる方法も、試しているの。' },
+    { id: 'i2', text: 'このとき、{nofix}パラメータは変えていないわ。\n例は、読ませる文章の中にあるだけなの。' },
+    { id: 'j', tail: 0.8, text: 'チャットボットでは、{mark}だれの発言かを、\n決まった印で区切る形式も使われているわ。' },
   ],
 
-  prepare(ctx) {
-    const q = bubbleLayout(ctx, Q, 520, { font: F.jp(500, 28) });
-    const outs = COLS.map((c) => bubbleLayout(ctx, c.out, 560, { font: F.jp(500, 28) }));
-    const what = STAGES.map((s) => wrap(ctx, F.jp(400, 21), s.what, BOX.w - 56));
-    return { q, outs, what };
-  },
+  draw(ctx, t, _, { at, pace }) {
+    const cue = pace.cue;
+    const lead = cue.lead;
+    const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-  draw(ctx, t, { q, outs, what }) {
-    COLS.forEach((c, i) => {
-      const a = tw(t, c.at, 0.6);
-      if (a <= 0) return;
-      const nw = text(ctx, c.name, c.x, 138, { font: F.jp(700, 26), color: C.ink, alpha: a });
-      tag(ctx, c.x + nw + 14, 112, c.kind, { font: F.jp(500, 17), h: 32, fill: i ? C.ink : C.panel, color: i ? C.paper : C.ink2, alpha: a });
-      // the question, on the right like a chat
-      const qa = tw(t, c.at + 0.3, 0.5, (p) => outBack(p, 1.5));
-      bubble(ctx, c.x + COL_W - q.w, 172 + (1 - Math.min(1, qa)) * 12, q, { fill: C.blueSoft, alpha: Math.min(1, qa) });
-      // the model's output, typed
-      const L = outs[i];
-      const oy = 172 + q.h + 22;
-      const oa = tw(t, c.outAt - 0.2, 0.3);
-      const chars = seg(t, c.outAt, c.outAt + (i ? 0.8 : 2.4));
-      bubble(ctx, c.x, oy, L, { fill: i ? '#fff' : C.panel, stroke: i ? C.ink : null, lw: 2, alpha: oa, chars, color: i ? C.ink : C.ink2 });
-      const na = tw(t, 4.9 + i * 0.25, 0.5);
-      text(ctx, `→ ${c.note}`, c.x, oy + L.h + 40, { font: F.jp(700, 22), color: c.noteColor, alpha: na });
+    trainingStrip(ctx, { alpha: enter(t, at('a'), pace), lit: [0] });
+
+    // ——— left: the question alone, and what the model writes after it
+    const la = enter(t, at('a'), pace);
+    text(ctx, '事前学習だけのモデルに、続きを書かせる', LEFT.x, LEFT.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: la });
+    card(ctx, LEFT, la);
+    const asked = pop('ask');
+    text(ctx, ASK, LEFT.x + 28, LEFT.y + 52, { font: BODY, color: C.ink, alpha: asked });
+    const more = seg(t, at('more') - lead, at('c.end'));
+    const nChars = MORE.join('').length;
+    let left = Math.round(nChars * more);
+    MORE.forEach((s, i) => {
+      const n = Math.min(left, s.length);
+      left -= n;
+      if (n <= 0) return;
+      text(ctx, typed(s, n / s.length), LEFT.x + 28, LEFT.y + 52 + (i + 1) * LH, { font: BODY, color: C.blue });
     });
-    example(ctx, M.l, 524, tw(t, 1.0, 0.5), 'モデルの出力は説明のための例');
+    if (more > 0 && more < 1 && Math.floor(t * 2.5) % 2 === 0) {
+      // the caret after the text being written
+      const i = Math.min(MORE.length - 1, MORE.findIndex((_, k) => MORE.slice(0, k + 1).join('').length >= Math.round(nChars * more)));
+      const s = MORE[Math.max(0, i)];
+      const done = Math.round(nChars * more) - MORE.slice(0, Math.max(0, i)).join('').length;
+      const cx = LEFT.x + 28 + measure(ctx, BODY, typed(s, done / s.length)) + 3;
+      ctx.fillStyle = C.accent;
+      ctx.fillRect(cx, LEFT.y + 52 + (i + 1) * LH - 26, 3, 32);
+    }
+    tag(ctx, LEFT.x + 28, LEFT.y + 226, '続き：別の質問が並んだ（例）', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue, alpha: tw(t, at('c.end') - 0.2, pace.enter) });
+    text(ctx, 'InstructGPT の論文（2022）にも、GPT-3 が質問に別の質問で続けた例がある', LEFT.x + 28, LEFT.y + 296, { font: F.jp(500, 16), color: C.ink2, alpha: pop('fig') });
+    // ずんだもん expected an answer; the left card is ringed while the question is asked
+    const qlit = focus(t, [at('q')], at('d.end') - cue.fall, cue).level[0];
+    ring(ctx, LEFT.x, LEFT.y, LEFT.w, LEFT.h, qlit, C.accent, 16);
+    // what it is doing: the likely continuation
+    text(ctx, '学んだのは、書かれた文章に、どんな続きが来るか', LEFT.x, LEFT.y + LEFT.h + 36, { font: F.jp(700, 19), color: C.ink, alpha: pop('why') });
+    text(ctx, '質問に答える形になるとは限らない', LEFT.x, LEFT.y + LEFT.h + 66, { font: F.jp(700, 19), color: C.ink, alpha: pop('not') });
 
-    // ——— the three stages
-    const s = tw(t, STRIP, 0.5);
-    if (s <= 0) return;
-    STAGES.forEach((st, i) => {
-      const x = M.l + i * (BOX.w + BOX.gap);
-      const a = tw(t, STRIP + i * 0.5, 0.5, (p) => outBack(p, 1.4));
-      if (a <= 0) return;
+    // a page of questions: where a question is followed by more questions
+    const ba = pop('book');
+    if (ba > 0) {
       ctx.save();
-      ctx.globalAlpha = Math.min(1, a);
-      rr(ctx, x, BOX.y + (1 - Math.min(1, a)) * 14, BOX.w, BOX.h, 16);
-      ctx.fillStyle = i === 0 ? C.panel : C.accentSoft;
+      ctx.globalAlpha = ba;
+      rr(ctx, BOOK.x, BOOK.y, BOOK.w, BOOK.h, 8);
+      ctx.fillStyle = '#fff';
       ctx.fill();
+      ctx.strokeStyle = C.rule;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = C.ink2;
+      ctx.fillRect(BOOK.x, BOOK.y, 8, BOOK.h);
       ctx.restore();
-      const al = Math.min(1, a);
-      text(ctx, st.n, x + 28, BOX.y + 58, { font: F.cond(700, 44), color: i === 0 ? C.ink2 : C.accent, alpha: al });
-      text(ctx, st.name, x + 66, BOX.y + 54, { font: F.jp(700, 26), color: C.ink, alpha: al });
-      what[i].forEach((l, j) => text(ctx, l, x + 28, BOX.y + 100 + j * 30, { font: F.jp(400, 21), color: C.ink2, alpha: al }));
-      if (i > 0) {
-        ctx.strokeStyle = C.ink;
-        ctx.fillStyle = C.ink;
-        ctx.lineWidth = 3;
-        arrow(ctx, x - BOX.gap + 14, BOX.y + BOX.h / 2, x - 12, BOX.y + BOX.h / 2, tw(t, STRIP + i * 0.5 - 0.1, 0.4, inOutCubic), 12);
+      text(ctx, '問題集', BOOK.x + 26, BOOK.y + 36, { font: F.jp(700, 22), color: C.ink, alpha: ba });
+      ['問 1　……はどこですか？', '問 2　……はどこですか？', '問 3　……はどこですか？'].forEach((s, i) => {
+        text(ctx, s, BOOK.x + 26, BOOK.y + 82 + i * 38, { font: F.jp(500, 19), color: C.ink2, alpha: tw(t, at('book') - lead + 0.2 + i * pace.stagger, pace.enter) });
+      });
+      const ca = tw(t, at('book') + 0.6, pace.enter);
+      text(ctx, 'こういう文章では、', BOOK.x + BOOK.w + 24, BOOK.y + BOOK.h / 2 - 8, { font: F.jp(700, 19), color: C.ink2, alpha: ca });
+      text(ctx, '質問のあとに、また質問が来る', BOOK.x + BOOK.w + 24, BOOK.y + BOOK.h / 2 + 22, { font: F.jp(700, 19), color: C.ink2, alpha: ca });
+    }
+
+    // ——— right: the text shaped as question and answer
+    const ra = pop('shape');
+    text(ctx, '形を整えた文章', RIGHT.x, RIGHT.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: ra });
+    card(ctx, RIGHT, ra);
+    const marks = tw(t, at('mark') - lead, 0.8);
+    const qaA = pop('qa');
+    SHAPED.forEach(([who, s], i) => {
+      const a = i < 4 ? tw(t, at('qa') - lead + i * pace.stagger * 2, pace.enter) : i === 4 ? qaA : pop('last');
+      if (a <= 0) return;
+      const y = RIGHT.y + 38 + i * 56;
+      // the label: 質問／答え, turning into the role marks of 4-2
+      const role = ROLE[who === '質問' ? 'user' : 'assistant'];
+      const lw = tag(ctx, RIGHT.x + 24, y, `${who}：`, { font: F.jp(700, 20), h: 36, padX: 10, fill: who === '質問' ? '#eef2ff' : C.panel, color: C.ink2, alpha: a * (1 - marks), r: 6 });
+      tag(ctx, RIGHT.x + 24, y, role.name, { font: F.jp(700, 17), h: 36, padX: 10, fill: role.fill, color: role.color, alpha: a * marks, r: 6 });
+      const tx = RIGHT.x + 24 + Math.max(lw, 136) + 12;
+      text(ctx, s, tx, y + 27, { font: F.jp(500, 25), color: C.ink, alpha: a });
+      if (i === 5) {
+        const ans = seg(t, at('ans') - lead, at('ans') + 0.8);
+        if (ans < 1) slot(ctx, tx, y - 4, 150, 44, { alpha: a * (1 - ans), lit: a, blink: Math.floor(t * 2.5) % 2 === 0 });
+        if (ans > 0) text(ctx, typed(ANSWER, ans), tx, y + 27, { font: F.jp(700, 25), color: C.blue });
       }
     });
-    // the part that turns it into a chatbot
-    const b = tw(t, STRIP + 2.2, 0.6);
-    if (b > 0) {
-      const x0 = M.l + BOX.w + BOX.gap;
-      const x1 = M.l + 3 * BOX.w + 2 * BOX.gap;
-      const y = BOX.y + BOX.h + 22;
+    const lastLit = focus(t, [at('last')], at('h.end') - cue.fall, cue).level[0];
+    ring(ctx, RIGHT.x + 18, RIGHT.y + 38 + 5 * 56 - 6, 150, 48, lastLit, C.accent, 10);
+    tag(ctx, RIGHT.x + 24, RIGHT.y + RIGHT.h - 56 + 70, '続きは、答えになった', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue, alpha: tw(t, at('ans') + 0.8, pace.enter) });
+    // GPT-3's paper: examples in the text, then the problem
+    const fa = pop('few');
+    text(ctx, 'GPT-3 の論文（2020）：質問と答えの例を入力に入れる（few-shot）', RIGHT.x, RIGHT.y + RIGHT.h + 120, { font: F.jp(700, 18), color: C.ink2, alpha: fa });
+    text(ctx, 'パラメータは変えない。例は、読ませる文章の中にあるだけ', RIGHT.x, RIGHT.y + RIGHT.h + 150, { font: F.jp(500, 17), color: C.ink2, alpha: pop('nofix') });
+    // the marks
+    const ma = pop('mark');
+    if (ma > 0) {
+      ctx.save();
+      ctx.globalAlpha = ma;
       ctx.strokeStyle = C.accent;
-      ctx.lineWidth = 3;
-      ctx.globalAlpha = b;
-      ctx.beginPath();
-      ctx.moveTo(x0, y - 10);
-      ctx.lineTo(x0, y);
-      ctx.lineTo(x1, y);
-      ctx.lineTo(x1, y - 10);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      text(ctx, 'チャットボットにするための調整', (x0 + x1) / 2, y + 36, { font: F.jp(700, 22), color: C.accent, align: 'center', alpha: b });
+      ctx.fillStyle = C.accent;
+      ctx.lineWidth = 2.5;
+      arrow(ctx, RIGHT.x - 10, RIGHT.y + RIGHT.h + 196, RIGHT.x + 60, RIGHT.y + RIGHT.h + 196, outCubic(ma), 10);
+      ctx.restore();
+      text(ctx, 'チャットボットでは、決まった印で区切る（4-2）', RIGHT.x + 76, RIGHT.y + RIGHT.h + 203, { font: F.jp(700, 19), color: C.accent, alpha: ma });
     }
+
+    example(ctx, LEFT.x, 836, la, 'モデルが書いた続きは説明のための例');
+    source(ctx, 'Brown ほか（2020）', fa, SOURCE_RIGHT);
   },
 });
+
+function card(ctx, b, a) {
+  if (a <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha = a;
+  rr(ctx, b.x, b.y, b.w, b.h, 16);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.rule;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}

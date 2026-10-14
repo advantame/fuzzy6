@@ -28,6 +28,7 @@ import attention from './clips/attention.js';
 import pretrain from './clips/pretrain.js';
 import context from './clips/context.js';
 import base from './clips/base.js';
+import sft from './clips/sft.js';
 import rlhf from './clips/rlhf.js';
 import template from './clips/template.js';
 import memory from './clips/memory.js';
@@ -126,7 +127,7 @@ export default {
     { id: 'intro', title: 'はじめに', clips: [opening, core, langmodel, compose, route], dives: [whyai] },
     { id: 'history', title: '歴史', clips: [timeline, shannon, turing, eliza, transformer, scale, chatgpt] },
     { id: 'concepts', title: '基本概念', clips: [inside, tokens, embedding, attention, predict, pretrain, context] },
-    { id: 'chat', title: 'チャットボット', clips: [base, rlhf, template, memory, hallucination] },
+    { id: 'chat', title: 'チャットボット', clips: [base, template, sft, rlhf, memory, hallucination] },
     { id: 'tools', title: 'ツール', clips: [tools, toolspec, toolcall, toolresult, toolloop] },
     { id: 'connect', title: 'つなぐ先', clips: [rag, search, shell, agent, coding, gui] },
     { id: 'harness', title: 'ハーネス', clips: [harness, scaffold, mcp, mcpflow, session, compact, subagent, safety, horizon, nest] },

@@ -1,142 +1,190 @@
-// A chat is one document: the bubbles on screen are lines of a single text, each marked with
-// its role, and the model's reply is the continuation after the last assistant mark. The
-// marks are drawn generically; real formats differ by model.
+// 4-2: a chat is one document. The chat screen shows bubbles; the LLM reads one text, which the
+// app writes from the conversation: every turn after a mark saying whose it is, and at the end
+// an assistant mark alone, with room after it. What the LLM writes there is the reply; it ends
+// with a mark of its own, where the app stops and shows the reply as a bubble. At the head, the
+// app's own instructions under a system mark. The parts and their places are those of the tool
+// diagram of chapters 5–7 (lib/rig.js): the LLM on the left, the app with its document in the
+// middle; the chat screen stands where the tool will. The marks are drawn generically; a real
+// format (gpt-oss's) is shown at the end. The conversation is an example.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
-import { bubbleLayout, bubble, tag } from '../lib/parts.js';
-import { text, rr, wrap, measure, quadPoints, path, typed } from '../../../src/kit/draw.js';
-import { tw, seg, inOutCubic, outBack } from '../../../src/kit/ease.js';
+import { tag, example, bubbleLayout, bubble, chip } from '../lib/parts.js';
+import { layout, llmBlock, appFrame, channel, docLayout, docEntry, docEnd, rowAt, sweep, send } from '../lib/rig.js';
+import { text, measure, rr, arrow } from '../../../src/kit/draw.js';
+import { tw, seg, inOutCubic } from '../../../src/kit/ease.js';
+import { enter, focus, ring } from '../../../src/kit/cue.js';
 
-const SYSTEM = 'あなたは親切なアシスタントです。';
+const L = layout();
+const SCREEN = { x: 1150, y: 150, w: W - M.r - 1150, h: 600 };
 const TURNS = [
-  ['user', 'こんにちは'],
-  ['assistant', 'こんにちは。何をお手伝いしましょう？'],
   ['user', 'おすすめの本を教えて'],
+  ['assistant', 'どんなジャンルが好きですか？'],
+  ['user', '推理小説がいいな'],
 ];
-const REPLY = 'どんなジャンルが好きですか？';
-const ROLE = { system: 'システム', user: 'ユーザー', assistant: 'アシスタント' };
-const CHAT = { x: M.l, y: 112, w: 600, h: 708 };
-const DOC = { x: 800, y: 112, w: W - M.r - 800, h: 708 };
-const DOC_AT = 5.4;
-const REPLY_AT = 10.8;
-const BFONT = F.jp(500, 25);
-const DFONT = F.jp(500, 28);
+const REPLY = 'それなら、まず古典の名作から読むのがおすすめです。';
+const SYSTEM = 'あなたは、ていねいに答えるアシスタントです。';
+const END = '〈答えの終わり〉';
+// gpt-oss's harmony format, the start of the same conversation (one real way to write the marks)
+const REAL = '<|start|>user<|message|>おすすめの本を教えて<|end|>';
 
 export default clip({
   id: 'template',
   title: '会話は一本の文書',
   kicker: 'チャットのしくみ',
-  duration: 16.5,
-  cues: [
-    { at: 0.4, to: 5.2, text: 'チャット画面の吹き出しは、裏では**一本の文書**につながっている。' },
-    { at: 5.4, to: 10.6, text: '発言の前には「システム」「ユーザー」「アシスタント」という\n役割の印が付く。' },
-    { at: 10.8, to: 18, text: 'モデルは、最後の「アシスタント」の印の後ろに続きを書く。\nそれが返事になる。' },
+  cast: ['metan', 'zunda'],
+  script: [
+    { id: 'a', text: 'チャットボットの画面では、{bub}こちらの質問と、\nモデルの答えが、吹き出しで交互に並んでいるわね。' },
+    { id: 'b', text: 'でも、LLM が読んでいるのは、{doc}吹き出しではなく、\n一本につながった文書なの。' },
+    { id: 'c', text: '画面と LLM の間で、{app}会話を受け渡すプログラムを、\nここではアプリと呼ぶわ。' },
+    { id: 'c2', text: '{fmt0}会話を一本の文書に整えるのも、アプリの仕事なの。' },
+    { id: 'd', text: '発言の前には、{marks}だれの発言かを表す印が付くわ。' },
+    { id: 'd2', still: true, text: '{user}この例では、こちらの発言に「ユーザー」、\n{asst}モデルの発言に「アシスタント」の印を付けているの。' },
+    { id: 'e', text: 'そして最後に、{open}アシスタントの発言が始まる印まで、\n書いておくの。' },
+    { id: 'f', text: '{reply}LLM は、その先のトークンを、順に書いていくわ。' },
+    { id: 'g', text: '{eot}答えが終わったことを表す印が出たら、\nアプリがそこで、書くのを止めるの。' },
+    { id: 'g2', still: true, text: '{show}答えの文字は、書いている途中から、\n画面に出していくこともできるわ。' },
+    { id: 'h', text: '会話には、{sys}アプリからの指示を入れることもできるわ。\nこの例では、頭に「システム」という印で置いているの。' },
+    { id: 'i', by: 'zunda', text: '{q}見えないところで、指示されていたのだ？' },
+    { id: 'j', text: 'そうよ。{tone}口調や、答えるときに気をつけてほしいことを、\nここで伝えるの。' },
+    { id: 'j2', still: true, text: 'この指示は、{sp}システムプロンプトと呼ばれているわ。' },
+    { id: 'k', tail: 0.8, text: '印の書き方は、{fmt}使うモデルに合わせる必要があるわ。\nここで描いたのは、説明のための形なの。' },
   ],
 
   prepare(ctx) {
-    const bubbles = TURNS.map(([, s]) => bubbleLayout(ctx, s, 520, { font: BFONT, pad: 18 }));
-    const reply = bubbleLayout(ctx, REPLY, 520, { font: BFONT, pad: 18 });
-    // bubble positions in the chat window
-    let y = CHAT.y + 150;
-    const bpos = TURNS.map(([who], i) => {
-      const L = bubbles[i];
-      const x = who === 'user' ? CHAT.x + CHAT.w - 28 - L.w : CHAT.x + 28;
-      const out = { x, y, L };
-      y += L.h + 18;
-      return out;
+    const E = docLayout(ctx, L, [{ role: 'system', text: SYSTEM }, ...TURNS.map(([role, s]) => ({ role, text: s })), { role: 'assistant', text: REPLY }], {
+      top: 30, gap: 26, font: F.jp(500, 25), lh: 38,
     });
-    const rpos = { x: CHAT.x + 28, y, L: reply };
-    // document lines: role mark, then the text wrapped beside it
-    const entries = [['system', SYSTEM], ...TURNS, ['assistant', '']];
-    let dy = DOC.y + 132;
-    const lines = entries.map(([who, s]) => {
-      const mark = measure(ctx, F.jp(700, 17), ROLE[who]) + 24;
-      const textX = DOC.x + 32 + mark + 12;
-      const rows = s ? wrap(ctx, DFONT, s, DOC.x + DOC.w - 32 - textX) : [''];
-      const out = { who, s, y: dy, textX, rows };
-      dy += Math.max(1, rows.length) * 42 + 40;
-      return out;
+    const bubbles = [...TURNS, ['assistant', REPLY]].map(([role, s]) => ({ role, L: bubbleLayout(ctx, s, SCREEN.w - 64, { font: F.jp(500, 21), pad: 16 }) }));
+    let y = SCREEN.y + 70;
+    bubbles.forEach((b) => {
+      b.x = b.role === 'user' ? SCREEN.x + SCREEN.w - 20 - b.L.w : SCREEN.x + 20;
+      b.y = y;
+      y += b.L.h + 16;
     });
-    return { bpos, rpos, lines };
+    return { E, bubbles };
   },
 
-  draw(ctx, t, { bpos, rpos, lines }) {
-    // ——— the chat window
-    const c = tw(t, 0.2, 0.6);
-    ctx.save();
-    ctx.globalAlpha = c;
-    rr(ctx, CHAT.x, CHAT.y, CHAT.w, CHAT.h, 20);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.strokeStyle = C.rule;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    text(ctx, 'チャット画面', CHAT.x + 28, CHAT.y + 44, { font: F.jp(700, 22), color: C.ink2 });
-    // the hidden instruction, faint and dashed
-    ctx.setLineDash([6, 6]);
-    rr(ctx, CHAT.x + 28, CHAT.y + 66, CHAT.w - 56, 58, 10);
-    ctx.strokeStyle = C.rule;
-    ctx.stroke();
-    ctx.setLineDash([]);
-    text(ctx, `見えない指示：${SYSTEM}`, CHAT.x + 46, CHAT.y + 102, { font: F.jp(400, 19), color: C.muted });
-    ctx.restore();
-    bpos.forEach((b, i) => {
-      const a = tw(t, 0.6 + i * 0.55, 0.5, (p) => outBack(p, 1.5));
-      bubble(ctx, b.x, b.y + (1 - Math.min(1, a)) * 12, b.L, { fill: TURNS[i][0] === 'user' ? C.blueSoft : C.panel, alpha: Math.min(1, a) });
-    });
+  draw(ctx, t, { E, bubbles }, { at, pace }) {
+    const cue = pace.cue;
+    const lead = cue.lead;
+    const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-    // ——— the document the model actually reads
-    const d = tw(t, DOC_AT, 0.6);
-    if (d > 0) {
+    // ——— the chat screen
+    const sa = enter(t, at('a'), pace);
+    if (sa > 0) {
       ctx.save();
-      ctx.globalAlpha = d;
-      rr(ctx, DOC.x, DOC.y, DOC.w, DOC.h, 20);
+      ctx.globalAlpha = sa;
+      rr(ctx, SCREEN.x, SCREEN.y, SCREEN.w, SCREEN.h, 20);
       ctx.fillStyle = '#fff';
       ctx.fill();
-      ctx.strokeStyle = C.ink;
+      ctx.strokeStyle = C.rule;
       ctx.lineWidth = 2;
       ctx.stroke();
-      text(ctx, 'モデルが読む文書', DOC.x + 32, DOC.y + 48, { font: F.jp(700, 24), color: C.ink });
-      text(ctx, '1 本のテキスト', DOC.x + 32 + 204, DOC.y + 47, { font: F.jp(400, 19), color: C.muted });
       ctx.restore();
+      text(ctx, 'チャットの画面', SCREEN.x + 20, SCREEN.y + 40, { font: F.jp(700, 20), color: C.ink2, alpha: sa });
     }
-    lines.forEach((ln, i) => {
-      const at = DOC_AT + 0.5 + i * 0.55;
-      const a = tw(t, at, 0.5);
-      if (a <= 0) return;
-      tag(ctx, DOC.x + 32, ln.y - 26, ROLE[ln.who], { font: F.jp(700, 17), h: 34, padX: 12, r: 6, fill: C.accent, color: '#fff', alpha: a });
-      if (ln.s) ln.rows.forEach((r, j) => text(ctx, r, ln.textX, ln.y + j * 42, { font: DFONT, color: C.ink, alpha: a }));
-      // a thread from each bubble to its line
-      const b = i === 0 ? null : bpos[i - 1];
-      if (b) {
-        const fromX = TURNS[i - 1][0] === 'user' ? b.x + b.L.w : b.x + b.L.w;
-        const fromY = b.y + b.L.h / 2;
-        ctx.strokeStyle = C.accent;
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.6 * (1 - seg(t, DOC_AT + 4.2, DOC_AT + 5.0));
-        path(ctx, quadPoints(fromX + 8, fromY, (fromX + DOC.x) / 2, fromY, DOC.x + 24, ln.y - 9, 30), tw(t, at, 0.6, inOutCubic));
-        ctx.globalAlpha = 1;
-      }
+    // the reply shows in its bubble as it is written
+    const replyP = seg(t, at('reply') + 0.3, at('f.end'));
+    const showAt = at('reply') + 0.3;
+    bubbles.forEach((b, i) => {
+      const a = i < 3 ? enter(t, at('a'), pace, i + 1) : tw(t, showAt, 0.2);
+      bubble(ctx, b.x, b.y, b.L, { fill: b.role === 'user' ? C.blueSoft : C.panel, alpha: a, chars: i < 3 ? 1 : replyP });
     });
+    const shown = focus(t, [at('show')], at('g2.end') - cue.fall, cue).level[0];
+    ring(ctx, bubbles[3].x, bubbles[3].y, bubbles[3].L.w, bubbles[3].L.h, shown, C.accent, 22);
+    const bub = focus(t, [at('bub')], at('a.end') - cue.fall, cue).level[0];
+    ring(ctx, SCREEN.x + 8, bubbles[0].y - 4, SCREEN.w - 16, bubbles[2].y + bubbles[2].L.h - bubbles[0].y + 8, bub, C.accent, 14);
 
-    // ——— the reply is the continuation after the last mark
-    const last = lines[lines.length - 1];
-    if (t >= DOC_AT + 0.5 + (lines.length - 1) * 0.55) {
-      const p = seg(t, REPLY_AT, REPLY_AT + 1.6);
-      const shown = typed(REPLY, p);
-      text(ctx, shown, last.textX, last.y, { font: DFONT, color: C.accent });
-      if (p < 1 && Math.floor(t * 2.5) % 2 === 0) {
-        ctx.fillStyle = C.accent;
-        ctx.fillRect(last.textX + measure(ctx, DFONT, shown) + 3, last.y - 24, 3, 30);
-      }
-      const pa = tw(t, REPLY_AT + 1.8, 0.5);
-      text(ctx, '↑ モデルが書いた続き ＝ 返事', last.textX, last.y + 52, { font: F.jp(700, 21), color: C.accent, alpha: pa });
-      const ra = tw(t, REPLY_AT, 0.4);
-      bubble(ctx, rpos.x, rpos.y, rpos.L, { fill: C.panel, stroke: C.accent, lw: 2, alpha: ra, chars: p });
+    // ——— the LLM and the app with its document
+    const da = pop('doc');
+    const aa = pop('app');
+    appFrame(ctx, L, da, { name: aa > 0.5 ? 'アプリ' : '', note: '会話を一本の文書に整える', noteAlpha: pop('fmt0') });
+    const writing = seg(t, at('reply') + 0.2, at('reply') + 0.5) * (1 - seg(t, at('f.end'), at('f.end') + 0.3));
+    llmBlock(ctx, L, da, { glow: writing });
+    const ch = tw(t, at('doc') - lead, 0.6, inOutCubic);
+    channel(ctx, L.read, ch);
+    channel(ctx, L.write, tw(t, at('reply') - lead, 0.6, inOutCubic));
+    // screen ↔ app
+    const link = tw(t, at('app') - lead, 0.6, inOutCubic);
+    if (link > 0) {
+      const x1 = L.app.x + L.app.w + 12;
+      const x2 = SCREEN.x - 12;
+      ctx.save();
+      ctx.strokeStyle = C.ink2;
+      ctx.fillStyle = C.ink2;
+      ctx.lineWidth = 2.5;
+      arrow(ctx, x2, 300, x1, 300, link, 11);
+      const back = tw(t, showAt - lead, 0.5, inOutCubic);
+      ctx.strokeStyle = back > 0.5 && t < at('g.end') ? C.accent : C.ink2;
+      ctx.fillStyle = ctx.strokeStyle;
+      arrow(ctx, x1, 360, x2, 360, back, 11);
+      ctx.restore();
+      text(ctx, '会話', (x1 + x2) / 2, 286, { font: F.jp(500, 15), color: C.muted, align: 'center', alpha: link });
+      text(ctx, '答え', (x1 + x2) / 2, 388, { font: F.jp(500, 15), color: C.muted, align: 'center', alpha: back });
     }
-    text(ctx, '印の書き方は説明のための例。実際の形式はモデルごとに異なる', DOC.x + 32, DOC.y + DOC.h - 28, {
-      font: F.jp(400, 17), color: C.muted, alpha: tw(t, DOC_AT + 1.0, 0.5),
+
+    // the document: before sentence h, the turns sit where the system entry will go
+    const sysA = pop('sys');
+    const shift = (E[1].y - E[0].y) * (1 - inOutCubic(seg(t, at('sys') - lead, at('sys') - lead + 0.7)));
+    const marks = pop('marks');
+    const roles = focus(t, [at('user'), at('asst')], at('d2.end') - cue.fall, cue);
+    const tone = focus(t, [at('q'), at('tone')], at('j.end') - cue.fall, cue).level;
+    const spA = pop('sp');
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(L.doc.x, L.doc.y, L.doc.w, L.doc.h);
+    ctx.clip();
+    E.forEach((e, i) => {
+      const dy = i === 0 ? 0 : -shift;
+      ctx.save();
+      ctx.translate(0, dy);
+      if (i === 0) {
+        docEntry(ctx, e, sysA, { tagAlpha: 1 });
+        tag(ctx, L.doc.x + L.doc.w - 14, e.y + e.h + 4, 'システムプロンプト', { font: F.jp(700, 14), h: 26, padX: 9, fill: C.ink2, color: '#fff', align: 'right', alpha: spA });
+        if (Math.max(...tone) > 0) {
+          ring(ctx, e.x - 4, e.y - 4, L.doc.w - 28, e.h + 8, Math.max(...tone), C.accent, 10);
+        }
+      } else if (i < 4) {
+        const a = tw(t, at('fmt0') - lead + (i - 1) * 0.3, pace.enter);
+        const role = e.role === 'user' ? 0 : 1;
+        const dim = roles.any > 0 && roles.level[role] < 0.5;
+        docEntry(ctx, e, a, { tagAlpha: marks, dim });
+      } else {
+        // the open assistant mark, and the reply written after it
+        const open = pop('open');
+        docEntry(ctx, { ...e, rows: [''] }, open, { tagAlpha: 1 });
+        const rp = seg(t, at('reply') + 0.3, at('f.end'));
+        if (rp > 0) docEntry(ctx, e, 1, { tagAlpha: 0, chars: rp, color: C.blue });
+        // the end mark
+        const ea = pop('eot');
+        if (ea > 0) {
+          const last = rowAt(e, e.rows.length - 1);
+          const x = last.x + measure(ctx, e.font, e.rows[e.rows.length - 1]) + 10;
+          chip(ctx, x, last.y - 24, END, { font: F.jp(700, 16), h: 32, padX: 10, fill: C.ink, color: C.paper, alpha: ea });
+        }
+        if (open > 0 && rp <= 0 && Math.floor(t * 2.5) % 2 === 0) {
+          const at0 = rowAt(e, 0);
+          ctx.fillStyle = C.accent;
+          ctx.fillRect(at0.x, at0.y - 24, 4, 30);
+        }
+      }
+      ctx.restore();
     });
+    ctx.restore();
+    // the read: the document goes to the LLM, and the reply comes back
+    const readP = seg(t, at('reply') - lead - 0.2, at('reply') + 0.6);
+    sweep(ctx, L, readP, docEnd(E, 4) - shift);
+    send(ctx, L.read, seg(t, at('reply') - lead, at('reply') + 0.5), '', 'doc');
+    tag(ctx, L.llm.x + L.llm.w / 2, L.llm.y + L.llm.h + 24, '文書を読んで、続きを書く', { font: F.jp(700, 17), h: 32, padX: 10, fill: '#fff', stroke: C.ink2, color: C.ink, align: 'center', alpha: pop('reply') });
+
+    // ——— the marks as they are really written (one model's format)
+    const fa = pop('fmt');
+    if (fa > 0) {
+      const y = L.app.y + L.app.h + 30;
+      text(ctx, '印の並べ方の決まり（チャットテンプレート）の一例：gpt-oss', L.app.x, y + 2, { font: F.jp(700, 16), color: C.ink2, alpha: fa });
+      text(ctx, REAL, L.app.x + 470, y + 2, { font: F.mono(500, 16), color: C.ink, alpha: fa });
+    }
+    example(ctx, SCREEN.x, SCREEN.y + SCREEN.h + 22, sa, '会話と印は説明のための例');
   },
 });
