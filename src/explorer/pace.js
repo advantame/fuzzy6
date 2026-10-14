@@ -9,7 +9,7 @@ export const PACE = {
   land: 1.0,
   skip: 5,
   again: 1.0,
-  end: 1.5,
+  end: 0.8,
 
   enter: 0.5,
   stagger: 0.08,
@@ -31,7 +31,7 @@ export const PACE_FIELDS = [
   { key: 'rest.normal', label: '文の間（中）', min: 0, max: 3, step: 0.1 },
   { key: 'rest.long', label: '文の間（大）', hint: "図ができたばかりの文に rest: 'long' と書いたとき", min: 0, max: 5, step: 0.1 },
   { key: 'land', label: '着地の間', hint: '静止点へ跳んでから動き出すまで', min: 0, max: 3, step: 0.1 },
-  { key: 'end', label: '終わりの間', hint: '自動で次へ進むまで', min: 0, max: 6, step: 0.5 },
+  { key: 'end', label: '終わりの間', hint: '自動で次へ進むまで', min: 0, max: 6, step: 0.1 },
   { group: '入り' },
   { key: 'enter', label: '入り', hint: '一つの要素が出る時間', min: 0.1, max: 1.5, step: 0.05 },
   { key: 'stagger', label: 'ずらし', hint: '並んだ要素の時間差', min: 0, max: 0.5, step: 0.01 },
