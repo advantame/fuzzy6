@@ -13,10 +13,12 @@ docs/next-deck.md       次のデッキ（高校数学）の構想
 src/explorer/           engine。spec の実装（index.js が createExplorer、pace.js が歩調の既定値）
 src/kit/                canvas で描くクリップのための道具（緩急、種付き乱数、文字、図形、強調）
 decks/<id>/             一つのデッキ。deck.js, clips/, lib/, voice/, README.md
+decks/<id>/script.md    語りの原稿を、デッキの順に一つにまとめた台本。クリップの script から作る（手で直さない）
 index.html, src/home/   デッキの一覧
 server/, Dockerfile     公開版のサーバとイメージ
 tools/capture.mjs       静止フレーム、各クリップの poster、止まりごとの絵、連続フレームの一覧を撮る
 tools/narrate.mjs       語りの音声を合成し、語りの記録（voice/manifest.json）を書く
+tools/script*.mjs       台本（script.md）を作る。dev サーバのプラグインと、手で作り直すコマンド
 tools/figures/export.py 立ち絵を PSD から書き出す
 research/<題>/          調査の記録（log.md と report.md）
 tests/                  unit（vitest）と e2e（playwright）
@@ -31,7 +33,10 @@ npm test               # unit（vitest）
 npm run test:e2e       # e2e（playwright、port 8082 で自前のサーバを立てる）
 npm run capture -- …   # 使い方は tools/capture.mjs の先頭（dev サーバが起動している前提）
 npm run narrate -- <deck> [clipId …]   # 語りの原稿と記録を比べる。--generate で合成、--prune で使っていない録りの片づけ（spec §7.1）
+npm run script -- [deck …]             # 台本（decks/<id>/script.md）を作り直す。dev サーバの起動中は、クリップや録りの記録を直すたびに書き直される
 ```
+
+台本はコミットに入れる。クリップの script や録りの記録と食い違っていると、unit テストが落ちる。
 
 歩調を動かしながら確かめるときは、デッキのページを `&tune` を付けて開く（例: `http://127.0.0.1:5175/decks/llm/?c=timeline&tune`、spec §8.1）。
 

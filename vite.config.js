@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { scriptDocs } from './tools/script-plugin.mjs';
 
 // Every decks/<id>/index.html is its own page; the root index.html lists the decks.
 const root = import.meta.dirname;
@@ -38,7 +39,7 @@ function deckChars() {
 export default defineConfig({
   // Relative asset paths, so dist/ works under any path (the host serves it below a prefix the app never sees).
   base: './',
-  plugins: [deckChars()],
+  plugins: [deckChars(), scriptDocs()],
   server: { host: '127.0.0.1', port: 5175, strictPort: true },
   preview: { host: '127.0.0.1', port: 5176, strictPort: true },
   build: {
