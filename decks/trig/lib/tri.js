@@ -3,15 +3,16 @@
 // hypotenuse A–B ink. The usual pose puts θ at the bottom left and the right angle at the
 // bottom right, the pose the cursive s, c, t are written on (lib/cursive.js).
 //
-// Labels are never placed by hand-tuned offsets. An angle's label goes out along the bisector
-// and a side's label out from the side (src/kit/place.js), each just far enough to keep clear
+// Labels are never placed by hand-tuned offsets. An angle's label goes out along the bisector,
+// a side's label out from the side and a corner's name out of the corner (src/kit/place.js),
+// each just far enough to keep clear
 // of the triangle's lines and arcs and of anything passed as o.avoid. Every function that
 // draws a label returns its box ({ x, y, w, h }), whether or not it is shown yet, so a ring
 // can go round it (ringBox in src/kit/cue.js) and another label can avoid it.
 
 import { clamp, lerp } from '../../../src/kit/ease.js';
 import { text, measure, rr } from '../../../src/kit/draw.js';
-import { segment, arc as arcShape, rect as rectShape, place, grow } from '../../../src/kit/place.js';
+import { segment, arc as arcShape, rect as rectShape, place, placeAround, grow } from '../../../src/kit/place.js';
 import { C as COL, F } from './theme.js';
 import { math, box as mathBox } from './math.js';
 
@@ -338,7 +339,8 @@ export function sideLabel(ctx, T, side, s, o = {}) {
 // p from P. Its label sits beyond the line, out along n just far enough to clear it and
 // o.avoid. o: { p, alpha, color, size, labelColor, labelAlpha, font, gap, avoid, patch (alpha
 // of a white plate under the label) }. Returns
-// { box, line } — the label's box and the line as a shape (for other labels to avoid).
+// { box, line, shapes } — the label's box, the line, and the line with its end ticks, as
+// shapes for other labels to avoid.
 export function dim(ctx, P, Q, n, off, s, o = {}) {
   const prog = clamp(o.p ?? 1);
   const a = o.alpha ?? 1;
@@ -348,7 +350,8 @@ export function dim(ctx, P, Q, n, off, s, o = {}) {
   const tick = (pt) => segment({ x: pt.x - n.x * 10, y: pt.y - n.y * 10 }, { x: pt.x + n.x * 10, y: pt.y + n.y * 10 }, 2);
   const m = mixPt(p1, p2, 0.5);
   const lo = { size: o.size ?? 30, color: o.labelColor ?? o.color ?? COL.ink, alpha: a * (o.labelAlpha ?? 1) * (prog >= 1 ? 1 : 0), font: o.font, patch: COL.white, patchAlpha: o.patch ?? 0 };
-  const at = s ? place(m, n, labelSize(s, lo), [line, tick(p1), tick(p2), ...(o.avoid ?? [])], { gap: o.gap ?? 10, to: 400 }) : null;
+  const shapes = [line, tick(p1), tick(p2)];
+  const at = s ? place(m, n, labelSize(s, lo), [...shapes, ...(o.avoid ?? [])], { gap: o.gap ?? 10, to: 400 }) : null;
   if (prog > 0 && a > 0.001) {
     const e = mixPt(p1, p2, prog);
     ctx.save();
@@ -366,7 +369,34 @@ export function dim(ctx, P, Q, n, off, s, o = {}) {
     ctx.stroke();
     ctx.restore();
   }
-  return { box: at ? label(ctx, s, at.x, at.y, lo) : null, line };
+  return { box: at ? label(ctx, s, at.x, at.y, lo) : null, line, shapes };
+}
+
+// ——— corners —————————————————————————————————————————————————————————
+
+const OTHERS = { A: ['B', 'C'], B: ['A', 'C'], C: ['A', 'B'] };
+
+// The name of a corner of T ('A', 'B' or 'C'; the name drawn is s, so a second triangle can
+// call its corners D, E, F) outside the triangle: out from the corner, away from both sides,
+// and round the right angle's square and anything in o.avoid (placeAround in
+// src/kit/place.js). Other words nearby (o.text, their boxes) are kept farther off than lines
+// (o.textGap), so that a name sits nearer its corner than to any word and is read as the
+// corner's, not as one more of a row of numbers. Upright capitals in dark ink unless o.font or
+// o.color says otherwise. o: label options and { gap, avoid, text, textGap, sideW }. Returns
+// its box.
+export function vertexLabel(ctx, T, corner, s, o = {}) {
+  const V = T[corner];
+  const [p, q] = OTHERS[corner];
+  const u = unit(T[p], V);
+  const w = unit(T[q], V);
+  const out = unit({ x: 0, y: 0 }, { x: u.x + w.x, y: u.y + w.y });
+  const size = o.size ?? 30;
+  const gap = o.gap ?? 6;
+  const lo = { size, font: F.sans(600, size), color: COL.ink2, ...o };
+  const words = (o.text ?? []).filter(Boolean).map((b) => grow(b, Math.max(0, (o.textGap ?? size * 0.8) - gap)));
+  const shapes = [...triShapes(T, o.sideW), ...(o.avoid ?? []), ...boxes(...words)];
+  const at = placeAround(V, out, labelSize(s, lo), shapes, { gap, to: 200 });
+  return label(ctx, s, at.x, at.y, lo);
 }
 
 // Shapes for a list of boxes (labels drawn earlier that a new one must avoid).

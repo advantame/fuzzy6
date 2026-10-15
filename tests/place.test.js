@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { segment, arc, disc, rect, distance, clearance, place, centred, grow } from '../src/kit/place.js';
+import { segment, arc, disc, rect, distance, clearance, place, placeAround, centred, grow } from '../src/kit/place.js';
 
 const box = (x, y, w, h) => ({ x, y, w, h });
 
@@ -72,5 +72,32 @@ describe('place', () => {
   test('the same figure gives the same spot', () => {
     const args = [{ x: 3, y: 4 }, { x: 0.6, y: -0.8 }, { w: 50, h: 22 }, [floor, disc({ x: 10, y: -30 }, 12)], { gap: 7 }];
     expect(place(...args)).toEqual(place(...args));
+  });
+});
+
+describe('placeAround', () => {
+  // a right-angled corner at the origin, its sides going left and up; the name belongs
+  // outside it, down and to the right
+  const V = { x: 0, y: 0 };
+  const sides = [segment(V, { x: -300, y: 0 }, 6), segment(V, { x: 0, y: -300 }, 6)];
+  const out = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
+  const size = { w: 20, h: 22 };
+  test('with nothing else near, the name goes straight out of the corner, as place() puts it', () => {
+    expect(placeAround(V, out, size, sides, { gap: 6 })).toEqual(place(V, out, size, sides, { gap: 6 }));
+  });
+  test('a line across the way out sends it round, close to the corner, not out past the line', () => {
+    // a dimension line just outside the corner, leaving no room along the diagonal
+    const tick = segment({ x: 14, y: 22 }, { x: 40, y: 22 }, 2);
+    const shapes = [...sides, tick];
+    const straight = place(V, out, size, shapes, { gap: 6 });
+    const p = placeAround(V, out, size, shapes, { gap: 6 });
+    expect(p.fits).toBe(true);
+    expect(clearance(p.box, shapes)).toBeGreaterThanOrEqual(6);
+    expect(p.d).toBeLessThan(straight.d);
+    expect(Math.hypot(p.x, p.y)).toBeLessThan(40);
+  });
+  test('the same figure gives the same spot', () => {
+    const args = [V, out, size, [...sides, disc({ x: 30, y: 30 }, 8)], { gap: 6 }];
+    expect(placeAround(...args)).toEqual(placeAround(...args));
   });
 });

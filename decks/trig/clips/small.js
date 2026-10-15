@@ -5,15 +5,19 @@
 //
 // One square of her drawing is one square of the stage's paper (40 px), so the counting
 // happens on the grid the viewer sees.
+//
+// The corners are named so that the names say which corner matches which: the tree's triangle
+// is ABC (A where the angle is measured, B the top, C the right angle) and her drawing DEF,
+// D, E, F answering to A, B, C. Each of her corners is named as she draws it.
 
 import { clip } from '../lib/clip.js';
 import { C, F, SQ } from '../lib/theme.js';
 import { seg, tw, lerp, inOutCubic, outBack, clamp } from '../../../src/kit/ease.js';
 import { text } from '../../../src/kit/draw.js';
-import { focus, ringBox } from '../../../src/kit/cue.js';
-import { rect } from '../../../src/kit/place.js';
+import { focus, ringBox, enter } from '../../../src/kit/cue.js';
+import { rect, segment } from '../../../src/kit/place.js';
 import { treeTriangle, TREE } from '../lib/scene.js';
-import { corners, mixPose, drawTri, ghostTri, angleArc, angleAt, placeLabel, triShapes, RAD } from '../lib/tri.js';
+import { corners, mixPose, drawTri, ghostTri, angleArc, angleAt, angleShape, placeLabel, label, vertexLabel, triShapes, RAD } from '../lib/tri.js';
 import { math, row, frac, tag } from '../lib/math.js';
 import { protractor, pill } from '../lib/parts.js';
 
@@ -22,6 +26,11 @@ const BIG1 = { x: 120, y: 600, s: 0.6 };
 // her drawing: A on a grid crossing, a base of 10 squares
 const SMALL = { x: 800, y: 680, base: 10 * SQ };
 const H78 = SMALL.base * Math.tan(38 * RAD); // 7.81 squares
+// how long she takes to draw the two other sides (the hypotenuse is the first 0.55 of it),
+// and the protractor's radius
+const DRAW = 1.4;
+const HYP = 0.55;
+const PROT = 150;
 
 const script = [
   { id: 'a', label: '18 m と 38°', text: '木までの距離は{d18} 18 メートルで、見上げる角度は{d38} 38 度。知りたいのは、{ask}この縦の[辺|ヘン]の長さなのだ。' },
@@ -57,6 +66,8 @@ export default clip({
       height: answer > 0.5 ? '約 14 m' : '？',
       heightColor: answer > 0.5 ? C.accent : C.sin,
       heightSize: lerp(40, 34, move),
+      // the names are ground: in with the first sentence, after the cut from the opening
+      names: enter(t, at('a'), pace),
     });
     // the three facts, pointed at as she names them
     const k = Math.max(0.6, pose.s);
@@ -67,7 +78,7 @@ export default clip({
     // ——— the plan: a copy of the big triangle shrinks onto the paper
     const smallT = corners(38, SMALL.base, { x: SMALL.x, y: SMALL.y });
     const ghostGo = inOutCubic(seg(t, at('small') - 0.2, at('small') + 0.8));
-    const drawn = seg(t, at('draw'), at('draw') + 1.4);
+    const drawn = seg(t, at('draw'), at('draw') + DRAW);
     if (ghostGo > 0) {
       const G = corners(38, TREE.base, mixPose(BIG1, { x: SMALL.x, y: SMALL.y, s: SMALL.base / TREE.base }, ghostGo));
       ghostTri(ctx, G, { alpha: 1 - 0.85 * clamp(drawn * 1.5) });
@@ -86,21 +97,21 @@ export default clip({
     const base = at('base');
     const baseP = seg(t, base - 0.1, base + 1.1);
     const baseCount = Math.floor(baseP * 10 + 1e-6);
-    drawTri(ctx, smallT, { lw: 5, right: tw(t, at('draw') + 1.2, 0.3), base: { p: baseP }, hyp: { p: seg(drawn, 0, 0.55) }, height: { p: seg(drawn, 0.55, 1) } });
+    drawTri(ctx, smallT, { lw: 5, right: tw(t, at('draw') + 1.2, 0.3), base: { p: baseP }, hyp: { p: seg(drawn, 0, HYP) }, height: { p: seg(drawn, HYP, 1) } });
+    const nums = [];
     for (let i = 1; i <= 10; i++) {
       const on = clamp((baseP * 10 - (i - 1)) * 2);
-      if (on <= 0) continue;
-      text(ctx, String(i), SMALL.x + (i - 0.5) * SQ, SMALL.y + 30, { font: F.mono(500, 18), color: C.cos, align: 'center', alpha: on * (1 - tw(t, at('g'), 0.5) * 0.6) });
+      nums.push(label(ctx, String(i), SMALL.x + (i - 0.5) * SQ, SMALL.y + 30 - 18 * 0.36, { size: 18, font: F.mono(500, 18), color: C.cos, alpha: on * (1 - tw(t, at('g'), 0.5) * 0.6) }));
     }
     if (baseCount >= 10) text(ctx, '10 マス', SMALL.x + SMALL.base / 2, SMALL.y + 64, { font: F.jp(700, 26), color: C.cos, align: 'center', alpha: tw(t, base + 1.1, 0.3) });
 
     // the 38° from a protractor
     const deg = at('deg');
     const prot = tw(t, deg - 0.2, 0.4) * (1 - tw(t, at('draw') + 0.8, 0.4));
-    protractor(ctx, smallT.A, { r: 150, alpha: prot });
+    protractor(ctx, smallT.A, { r: PROT, alpha: prot });
     const markA = tw(t, deg + 0.3, 0.3);
     if (markA > 0) {
-      const r = 150;
+      const r = PROT;
       const mx = smallT.A.x + Math.cos(-38 * RAD) * r;
       const my = smallT.A.y + Math.sin(-38 * RAD) * r;
       ctx.save();
@@ -111,7 +122,7 @@ export default clip({
       ctx.fill();
       ctx.restore();
     }
-    angleAt(ctx, smallT, 'A', { r: 64, label: '38°', size: 28, alpha: tw(t, deg + 0.3, 0.4) });
+    const deg38 = angleAt(ctx, smallT, 'A', { r: 64, label: '38°', size: 28, alpha: tw(t, deg + 0.3, 0.4) });
 
     // the height, counted up the right side: seven whole squares and most of the eighth
     const count = at('count');
@@ -131,7 +142,16 @@ export default clip({
     // beside the column of counted squares
     const column = rect(smallT.C.x, smallT.B.y, SQ, smallT.C.y - smallT.B.y);
     const v78 = tw(t, n78 - cue.lead, 0.4, outBack);
-    placeLabel(ctx, '約 7.8 マス', { x: smallT.C.x, y: (smallT.B.y + smallT.C.y) / 2 }, { x: 1, y: 0 }, [column, ...triShapes(smallT)], { size: 28, color: C.sin, alpha: clamp(v78), gap: 14 });
+    const n78box = placeLabel(ctx, '約 7.8 マス', { x: smallT.C.x, y: (smallT.B.y + smallT.C.y) / 2 }, { x: 1, y: 0 }, [column, ...triShapes(smallT)], { size: 28, color: C.sin, alpha: clamp(v78), gap: 14 });
+
+    // her corners' names, each as she draws the corner: D where she starts the base, F where
+    // the base ends, E where the slanted side meets the height. They keep clear of the counted
+    // squares, the numbers and the protractor's edge.
+    const avoid = [column, segment({ x: smallT.A.x - PROT, y: smallT.A.y }, { x: smallT.A.x + PROT, y: smallT.A.y }, 2), angleShape(smallT.A, smallT.C, smallT.B, 64)];
+    const words = [...nums, deg38, n78box];
+    vertexLabel(ctx, smallT, 'A', 'D', { avoid, text: words, alpha: tw(t, base - 0.1, 0.3) });
+    vertexLabel(ctx, smallT, 'C', 'F', { avoid, text: words, alpha: tw(t, base + 1.1, 0.3) });
+    vertexLabel(ctx, smallT, 'B', 'E', { avoid, text: words, alpha: tw(t, at('draw') + DRAW * HYP, 0.3) });
 
     // 7.8 / 10 = 0.78, under her drawing
     const ratio = tw(t, at('ratio') - cue.lead, 0.5);

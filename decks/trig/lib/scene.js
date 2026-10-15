@@ -7,7 +7,7 @@ import { clamp, lerp } from '../../../src/kit/ease.js';
 import { circle, text } from '../../../src/kit/draw.js';
 import { hash } from '../../../src/kit/random.js';
 import { C, F, W } from './theme.js';
-import { corners, drawTri, angleAt, dim, RAD } from './tri.js';
+import { corners, drawTri, angleAt, angleShape, dim, vertexLabel, RAD } from './tri.js';
 import { drawSprite } from './figures.js';
 
 // ——— the tree's triangle ————————————————————————————————————————————
@@ -208,8 +208,9 @@ export function mark(ctx, x, y, s, p, color = C.accent) {
 // colours, the right angle, the 18 m under the base, the 38° at A and the unknown height.
 // o: { pose, alpha, sides (0–1: drawn sides), labels (0–1, or { dist, ang, height, distP,
 // angP, heightP }), height: label for the height, heightColor, heightSize, patch (alpha of a
-// white plate under the height's label, to read it over the leaves) }. Returns { T, box } —
-// box holds the labels' boxes, for rings.
+// white plate under the height's label, to read it over the leaves), names (alpha of the
+// corners' names A, B, C; none by default) }. Returns { T, box } — box holds the labels'
+// boxes, for rings, and box.names the names' boxes by corner.
 export function treeTriangle(ctx, o = {}) {
   const T = treeCorners(o.pose);
   const s = o.pose?.s ?? 1;
@@ -218,18 +219,24 @@ export function treeTriangle(ctx, o = {}) {
   drawTri(ctx, T, { alpha: a * sides, lw: 6, right: o.right ?? sides });
   const L = typeof o.labels === 'object' ? { dist: 1, ang: 1, height: 1, ...o.labels } : { dist: o.labels ?? 1, ang: o.labels ?? 1, height: o.labels ?? 1 };
   const k = Math.max(0.6, s);
-  const dist = dim(ctx, T.A, T.C, { x: 0, y: 1 }, 56 * k, '18 m', { alpha: L.dist * a, p: L.distP ?? 1, size: 34, color: C.cos, labelColor: C.cos }).box;
+  const distDim = dim(ctx, T.A, T.C, { x: 0, y: 1 }, 56 * k, '18 m', { alpha: L.dist * a, p: L.distP ?? 1, size: 34, color: C.cos, labelColor: C.cos });
+  const dist = distDim.box;
   const ang = angleAt(ctx, T, 'A', { r: 84 * k, label: '38°', size: 32, alpha: L.ang * a, p: L.angP ?? 1, color: C.ink });
   const hl = o.height ?? '？';
-  const height = dim(ctx, T.C, T.B, { x: 1, y: 0 }, 56 * k, hl, {
+  const heightDim = dim(ctx, T.C, T.B, { x: 1, y: 0 }, 56 * k, hl, {
     alpha: L.height * a,
     p: L.heightP ?? 1,
     size: o.heightSize ?? 40,
     color: C.sin,
     labelColor: o.heightColor ?? C.sin,
     patch: o.patch ?? 0,
-  }).box;
-  return { T, box: { dist, ang, height } };
+  });
+  const height = heightDim.box;
+  // the corners' names keep clear of the dimension lines and every label
+  const avoid = [...distDim.shapes, ...heightDim.shapes, angleShape(T.A, T.C, T.B, 84 * k)];
+  const text = [dist, ang, height];
+  const names = o.names == null ? null : Object.fromEntries(['A', 'B', 'C'].map((c) => [c, vertexLabel(ctx, T, c, c, { avoid, text, alpha: o.names * a })]));
+  return { T, box: { dist, ang, height, names } };
 }
 
 export { RAD, lerp };

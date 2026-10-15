@@ -139,3 +139,35 @@ export function place(anchor, dir, size, shapes, o = {}) {
   }
   return result(best, false);
 }
+
+// Like place(), but free to leave the anchor at an angle to `dir`: the box is slid out along
+// `dir` and along directions turned by o.turn, 2·o.turn, … up to o.spread either way (radians),
+// and the spot nearest the anchor wins, a turn away from `dir` counting as o.bend px per radian
+// farther. For a name at a corner, which may sit anywhere outside it: the name tucks into the
+// corner when there is room and steps round a dimension line or a number when there is not.
+// The candidates are scored on a fine fan of directions, so as the figure moves the winner
+// changes only between neighbours whose spots are nearly as near: the name glides, not jumps.
+// o: place()'s options and { spread = π/3, turn = π/36, bend = 12 }. Returns what place() does;
+// when no direction is clear, place()'s clearest spot along `dir`.
+export function placeAround(anchor, dir, size, shapes, o = {}) {
+  const spread = o.spread ?? Math.PI / 3;
+  const turn = o.turn ?? Math.PI / 36;
+  const bend = o.bend ?? 12;
+  const a0 = Math.atan2(dir.y, dir.x);
+  const n = Math.max(0, Math.round(spread / turn));
+  let best = null;
+  let bestScore = Infinity;
+  // 0, +1, −1, +2, −2, …: on a tie the direction nearer `dir` keeps the spot
+  for (let i = 0; i <= 2 * n; i++) {
+    const k = i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2);
+    const a = a0 + k * turn;
+    const at = place(anchor, k === 0 ? dir : { x: Math.cos(a), y: Math.sin(a) }, size, shapes, o);
+    if (!at.fits) continue;
+    const score = at.d + bend * Math.abs(k * turn);
+    if (score < bestScore - 1e-9) {
+      best = at;
+      bestScore = score;
+    }
+  }
+  return best ?? place(anchor, dir, size, shapes, o);
+}
