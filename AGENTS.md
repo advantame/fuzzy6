@@ -19,6 +19,7 @@ server/, Dockerfile     公開版のサーバとイメージ
 tools/capture.mjs       静止フレーム、各クリップの poster、止まりごとの絵、連続フレームの一覧を撮る
 tools/narrate.mjs       語りの音声を合成し、語りの記録（voice/manifest.json）を書く
 tools/script*.mjs       台本（script.md）を作る。dev サーバのプラグインと、手で作り直すコマンド
+tools/play.mjs          語りつきのクリップを、声つきのまま実時間で再生して、終わりまで着くかを確かめる
 tools/figures/export.py 立ち絵を PSD から書き出す
 research/<題>/          調査の記録（log.md と report.md）
 tests/                  unit（vitest）と e2e（playwright）
@@ -34,6 +35,7 @@ npm run test:e2e       # e2e（playwright、port 8082 で自前のサーバを�
 npm run capture -- …   # 使い方は tools/capture.mjs の先頭（dev サーバが起動している前提）
 npm run narrate -- <deck> [clipId …]   # 語りの原稿と記録を比べる。--generate で合成、--prune で使っていない録りの片づけ（spec §7.1）
 npm run script -- [deck …]             # 台本（decks/<id>/script.md）を作り直す。dev サーバの起動中は、クリップや録りの記録を直すたびに書き直される
+npm run play -- <deck> [clipId …]      # 声つきで頭から最後まで実時間で再生する（同時に --jobs 本、既定 6）。使い方は tools/play.mjs の先頭（dev サーバが起動している前提）
 ```
 
 台本はコミットに入れる。クリップの script や録りの記録と食い違っていると、unit テストが落ちる。
@@ -81,7 +83,7 @@ npm run script -- [deck …]             # 台本（decks/<id>/script.md）を�
 3. `npm run narrate -- <deck> <id>` で読み上げの文を確かめ、`--generate` で合成する。合成の前でも、クリップは見積もった長さで無音のまま再生できる。聞き比べのために `--speeds` でほかの話速を足したときは、決まったあとに `--prune` で片づける。置いてある音声は、すべて公開版に入る。
 4. `npm run capture -- <deck> --posters` で全クリップの最後の絵を、`npm run capture -- <deck> <id> --stops` で止まりごとの絵と、各文の頭から 1 秒後の絵を撮る。重なり、はみ出し、折り返しを見て、静止点の絵が一枚の図版として読めるまで直す。
 5. `npm run capture -- <deck> <id> --sheet --every 0.75` で動きの一覧を撮り、途中の重なりを見る。静止フレームは動きの確認にならないので、区切りごとに実際に再生する。
-6. 合成したら、通常のモードで、声つきのまま頭から最後まで実時間で再生し、`ended` に着くことと、かかった時間がクリップの長さと合うことを確かめる。数秒の区間を見るだけでは、声の終わりで時計が止まる不具合は見つからない。
+6. 合成したら、`npm test` と `npm run test:e2e` を通す。声つきの再生が終わりまで着くこと（時計が声の終わりで止まらず、クリップの長さどおりに進むこと）は、この二つが確かめる。unit は、語りのあるすべてのクリップの実際の時間割の上で、engine の時計をコマ送りで最後まで進める。録りのない文や古い録りが残っていても落ちる。e2e は、すべての録りをブラウザで復号し、長さを記録と比べる。engine の音、時計、コマの進め方に手を入れたときは、さらに `npm run play -- <deck>` で、声つきのまま頭から最後まで実時間で再生する。
 7. 事実は一次資料で裏を取る（codex の research が向く）。訂正はデッキの `README.md` の表に反映する。
 
 気づいたこと:
@@ -92,7 +94,7 @@ npm run script -- [deck …]             # 台本（decks/<id>/script.md）を�
 - 撮影（静止フレームのモード）では枠のトランジションを止めているので、CSS のアニメーションとトランジションの不具合は写らない。枠に手を入れたら、通常のモードで再生し、Playwright で要素の不透明度や `getAnimations()` の進み具合を時間を追って読む。
 - 字幕の 1 行は全角 35 字まで。半角の混じる行は字数では決まらないので、cue ごとに seek して、描かれた行数を `getBoundingClientRect().height` と `line-height` から数え、書いた行数と比べる。
 - 動きの一覧では、重なりのほかに二つを探す。声があるのに対応する絵の変化がない文と、数え上げる数字の初期値（「0 回」「約 0 トークン」など、数えるものが出る前の値）。何も動かない時間は、見る人が声を聞きながら図を読むのに使うので、探さない。
-- dev サーバの上で長い確認（通しの再生など）を走らせている間は、`decks/` や `src/` の `.js` を書き換えない。Vite がページを読み直し、確認がはじめからやり直しになる。Markdown は書き換えてよい。
+- dev サーバの上で長い確認（`npm run play` など）を走らせている間は、`decks/` や `src/` の `.js` を書き換えない。Vite がページを読み直し、確認がはじめからやり直しになる。Markdown は書き換えてよい。
 
 ## 分担
 

@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "capture": "node tools/capture.mjs",
     "narrate": "node tools/narrate.mjs",
-    "script": "node tools/script.mjs"
+    "script": "node tools/script.mjs",
+    "play": "node tools/play.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
