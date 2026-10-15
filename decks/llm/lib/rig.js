@@ -349,6 +349,102 @@ export function sweep(ctx, L, p, bottom) {
   ctx.restore();
 }
 
+// ——— who acts: the app's box, and the tokens the LLM writes (4-2, 4-5) ——————————————
+
+// The app as a program that acts: a box at the top right of its frame, in the app's colour. The
+// document moves down to make room. Returns the box and the layout with the shorter document.
+export function actorLayout(L0 = layout()) {
+  const ACT = { x: L0.app.x + L0.app.w - 22 - 200, y: L0.app.y + 22, w: 200, h: 92 };
+  const top = ACT.y + ACT.h + 20;
+  return { ACT, L: { ...L0, doc: { x: L0.app.x + 22, y: top, w: L0.app.w - 44, h: L0.app.y + L0.app.h - 22 - top } } };
+}
+
+// The app's box, with a gear. glow: it is at work.
+export function actor(ctx, ACT, a, glow = 0) {
+  if (a <= 0.001) return;
+  const cy = ACT.y + ACT.h / 2;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, ACT.x, ACT.y, ACT.w, ACT.h, 18);
+  ctx.fillStyle = C.purple;
+  ctx.fill();
+  if (glow > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= clamp(glow);
+    rr(ctx, ACT.x - 7, ACT.y - 7, ACT.w + 14, ACT.h + 14, 24);
+    ctx.strokeStyle = C.accent;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.restore();
+  }
+  gear(ctx, ACT.x + 48, cy, 24, '#fff');
+  ctx.restore();
+  text(ctx, 'アプリ', ACT.x + 86, cy + 2, { font: F.jp(700, 32), color: '#fff', base: 'middle', alpha: a });
+}
+
+function gear(ctx, cx, cy, r, color) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = color;
+  for (let i = 0; i < 8; i++) {
+    ctx.save();
+    ctx.rotate((i / 8) * Math.PI * 2);
+    ctx.fillRect(-r * 0.17, -r, r * 0.34, r * 0.4);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.74, 0, Math.PI * 2);
+  ctx.moveTo(r * 0.3, 0);
+  ctx.arc(0, 0, r * 0.3, 0, Math.PI * 2, true);
+  ctx.fill();
+  ctx.restore();
+}
+
+// A token on its way from the LLM: the ink of the LLM, like the edge of the marks it writes.
+export const TOKEN = { font: F.jp(700, 17), h: 28, padX: 8 };
+
+export function token(ctx, x, y, w, s, a) {
+  if (a <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= a;
+  rr(ctx, x, y, w, TOKEN.h, 7);
+  ctx.fillStyle = C.ink;
+  ctx.fill();
+  ctx.restore();
+  text(ctx, s, x + w / 2, y + TOKEN.h / 2 + 1, { font: TOKEN.font, color: '#fff', align: 'center', base: 'middle', alpha: a });
+}
+
+// Where each token the LLM writes into entry E lands (its first character), and how much of
+// the entry is written once it has (upto, 0–1). For prepare.
+export function tokenPlaces(ctx, E, tokens) {
+  let row = 0;
+  let col = 0;
+  let chars = 0;
+  const total = tokens.reduce((n, s) => n + Array.from(s).length, 0);
+  return tokens.map((s) => {
+    const n = Array.from(s).length;
+    while (row < E.rows.length - 1 && col >= Array.from(E.rows[row]).length) {
+      col -= Array.from(E.rows[row]).length;
+      row++;
+    }
+    const at = rowAt(E, row);
+    const x = at.x + measure(ctx, E.font, Array.from(E.rows[row]).slice(0, col).join(''));
+    col += n;
+    chars += n;
+    return { s, x, y: at.y - 9, upto: chars / total };
+  });
+}
+
+// A point fraction e along a polyline [[x, y], …] (even speed).
+export function onPath(pts, e) {
+  const lens = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
+  let d = lens.reduce((a, b) => a + b, 0) * e;
+  let i = 0;
+  while (i < lens.length - 1 && d > lens[i]) d -= lens[i++];
+  const u = lens[i] ? Math.min(1, d / lens[i]) : 0;
+  return { x: lerp(pts[i][0], pts[i + 1][0], u), y: lerp(pts[i][1], pts[i + 1][1], u) };
+}
+
 // ——— things in flight ————————————————————————————————————————————————
 
 // A chip travelling from (x0, y0) to (x1, y1) as p runs 0 → 1; lift > 0 arcs it upward.
@@ -388,13 +484,7 @@ export function packet(ctx, x0, y0, x1, y1, p, label, kind = 'text', lift = 0) {
 // e.g. from an entry in the document, along a channel, into the tool.
 export function flow(ctx, pts, p, label, kind = 'text') {
   if (p <= 0 || p >= 1) return;
-  const lens = pts.slice(1).map((q, i) => Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]));
-  let d = lens.reduce((a, b) => a + b, 0) * inOutCubic(p);
-  let i = 0;
-  while (i < lens.length - 1 && d > lens[i]) d -= lens[i++];
-  const u = lens[i] ? Math.min(1, d / lens[i]) : 0;
-  const x = lerp(pts[i][0], pts[i + 1][0], u);
-  const y = lerp(pts[i][1], pts[i + 1][1], u);
+  const { x, y } = onPath(pts, inOutCubic(p));
   // packet() at a fixed point: p = 0.5 keeps it fully visible; fade the ends here
   ctx.save();
   ctx.globalAlpha *= clamp(p * 8) * clamp((1 - p) * 8);
