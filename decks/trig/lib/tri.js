@@ -390,7 +390,7 @@ export function vertexLabel(ctx, T, corner, s, o = {}) {
   const u = unit(T[p], V);
   const w = unit(T[q], V);
   const out = unit({ x: 0, y: 0 }, { x: u.x + w.x, y: u.y + w.y });
-  const size = o.size ?? 30;
+  const size = o.size ?? 36;
   const gap = o.gap ?? 6;
   const lo = { size, font: F.sans(600, size), color: COL.ink2, ...o };
   const words = (o.text ?? []).filter(Boolean).map((b) => grow(b, Math.max(0, (o.textGap ?? size * 0.8) - gap)));
