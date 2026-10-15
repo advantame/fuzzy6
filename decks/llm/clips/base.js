@@ -1,16 +1,18 @@
-// 4-1: a pre-trained model only continues. Given a question alone, it may go on with more
+// 4-1: a pre-trained model only continues. It opens on a look back at pre-training (3-6): the
+// parameters, and many texts practised with what comes next hidden, until the grid settles. Given a question alone, it may go on with more
 // questions — in a page of questions, that is what comes next. ずんだもん expected an answer.
 // Shape the text as question and answer, end it on "答え：", and the likely continuation is an
 // answer; GPT-3's paper showed this with examples in the prompt. A chatbot keeps the shape with
 // fixed marks: the labels turn into the role marks of 4-2.
-// The model's outputs are an example.
+// The model's outputs, the parameters' values and the practice texts are an example.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
-import { tag, example, source, SOURCE_RIGHT } from '../lib/parts.js';
+import { tag, chip, chipWidth, example, source, SOURCE_RIGHT } from '../lib/parts.js';
 import { slot } from '../lib/odds.js';
 import { trainingStrip } from '../lib/training.js';
 import { ROLE } from '../lib/rig.js';
+import { PARAMS_W, PARAMS_H, paramGrid, paramValue, flicker } from '../lib/params.js';
 import { text, measure, rr, arrow, typed } from '../../../src/kit/draw.js';
 import { tw, seg, outCubic } from '../../../src/kit/ease.js';
 import { enter, focus, ring } from '../../../src/kit/cue.js';
@@ -33,13 +35,26 @@ const SHAPED = [
 const ANSWER = '東京です。';
 const BOOK = { x: M.l, y: 594, w: 300, h: 196 };
 
+// ——— sentence a: pre-training, as in 3-6. Texts it learns from (o200k_base tokens), each
+// practised with what comes next hidden, the hidden place moving along
+const PG = { x: M.l, y: 184 };
+const TEXTS = [
+  ['の', 'ど', 'が', 'かわ', 'いた', 'ので', '、水', 'を', '飲', 'ん', 'だ', '。'],
+  ['駅', 'ま', 'では', '、', '歩', 'いて', '10', '分', 'です', '。'],
+  ['き', 'ょう', 'は', '、', '朝', 'から', '晴', 'れて', 'いる', '。'],
+  ['会', '議', 'は', '、', '午後', '3', '時', 'から', '始', 'ま', 'ります', '。'],
+];
+const TT = { x: 720, y: 184, step: 60 };
+const TCHIP = { font: F.jp(500, 24), h: 44, padX: 9, gap: 5 };
+const CAP_Y = PG.y + PARAMS_H + 64;
+
 export default clip({
   id: 'base',
   title: '続きを書くだけ',
   kicker: '事前学習だけのモデル',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: '事前学習を終えたモデルは、{cont}文章の続きを予測することを、\nたくさん学んできたわ。' },
+    { id: 'a', text: '事前学習を終えたモデルは、{cont}文章の続きを予測することを、\n{many}たくさん学んできたわ。' },
     { id: 'b', text: 'たとえば、このモデルに、{ask}「[日本|にほん]の首都はどこですか？」\nとだけ書いた場面を考えてみましょう。' },
     { id: 'c', still: true, text: '答えではなく、{more}「アメリカの首都はどこですか？」のように、\n別の質問を続けることもあるの。' },
     { id: 'c2', text: '{fig}InstructGPT の論文にも、[GPT-3|ジーピーティースリー] が質問に、\n別の質問で続けた例が載っているわ。' },
@@ -55,15 +70,20 @@ export default clip({
     { id: 'j', tail: 0.8, text: 'チャットボットでは、{mark}だれの発言かを、\n決まった印で区切る形式も使われているわ。' },
   ],
 
-  draw(ctx, t, _, { at, pace }) {
+  prepare(ctx) {
+    return { texts: TEXTS.map((toks) => toks.map((s) => chipWidth(ctx, s, TCHIP))) };
+  },
+
+  draw(ctx, t, { texts }, { at, pace }) {
     const cue = pace.cue;
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
     trainingStrip(ctx, { alpha: enter(t, at('a'), pace), lit: [0] });
+    recall(ctx, t, texts, { at, pace });
 
     // ——— left: the question alone, and what the model writes after it
-    const la = enter(t, at('a'), pace);
+    const la = enter(t, at('b'), pace);
     text(ctx, '事前学習だけのモデルに、続きを書かせる', LEFT.x, LEFT.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: la });
     card(ctx, LEFT, la);
     const asked = pop('ask');
@@ -164,6 +184,72 @@ export default clip({
     source(ctx, 'Brown ほか（2020）', fa, SOURCE_RIGHT);
   },
 });
+
+// Sentence a: pre-training, looked back on. The first text is practised position by position
+// while the voice says "predicting what comes next"; at "a great deal" more texts come in and
+// many cells change at once; the grid settles before the voice ends, and the scene clears for b.
+function recall(ctx, t, texts, { at, pace }) {
+  const lead = pace.cue.lead;
+  const a0 = at('a');
+  const out = 1 - seg(t, at('a.done'), at('b'));
+  if (out <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = out;
+  // when each text is practised: the first one slowly, the rest quickly, one after another
+  const s0 = at('cont') - lead;
+  const many = at('many') - lead;
+  const runs = TEXTS.map((_, i) => (i === 0 ? [s0, many - 0.1] : [many + 0.1 + (i - 1) * 0.12, many + 0.75 + (i - 1) * 0.12]));
+  const settle = runs[runs.length - 1][1];
+
+  text(ctx, '事前学習：先を隠して、次のトークンを当てる練習（3-6）', PG.x, 124, { font: F.jp(700, 22), color: C.ink, alpha: enter(t, a0, pace) });
+  text(ctx, 'モデルのパラメータ（値は例）', PG.x, PG.y - 16, { font: F.jp(700, 18), color: C.ink2, alpha: enter(t, a0, pace, 1) });
+  text(ctx, '学習に使う文章（GPT-4o の切り方）', TT.x, TT.y - 16, { font: F.jp(700, 18), color: C.ink2, alpha: enter(t, a0, pace, 1) });
+
+  // the parameters: random at first, drifting as the practice goes on, still once it is done
+  const k2 = seg(t, s0, settle);
+  paramGrid(ctx, PG.x, PG.y, (r, c, id) => {
+    const a = tw(t, a0 + (r + c) * 0.01, pace.enter);
+    if (a <= 0) return null;
+    // as in 3-6's sentence i: while the practice runs, a few cells light up at a time
+    const flash = t >= s0 && t < settle ? flicker(id, t - s0) : 0;
+    return { a, v: paramValue(id, 0, k2), flash };
+  });
+
+  // what the guesses do to the parameters
+  const fix = tw(t, s0, pace.enter);
+  if (fix > 0) {
+    const y = PG.y + PARAMS_H / 2;
+    ctx.save();
+    ctx.globalAlpha *= fix;
+    ctx.strokeStyle = C.accent;
+    ctx.fillStyle = C.accent;
+    ctx.lineWidth = 3;
+    arrow(ctx, TT.x - 18, y, PG.x + PARAMS_W + 18, y, outCubic(fix), 12);
+    ctx.restore();
+  }
+  text(ctx, '外れが小さくなるように、少しずつ直す', PG.x, CAP_Y, { font: F.jp(700, 18), color: C.accent, alpha: fix });
+
+  // the texts
+  texts.forEach((ws, i) => {
+    const [r0, r1] = runs[i];
+    const a = i === 0 ? enter(t, a0, pace, 2) : tw(t, r0 - 0.25, pace.enter);
+    if (a <= 0) return;
+    const p = seg(t, r0, r1);
+    const cur = p > 0 && p < 1 ? 1 + Math.floor(p * (ws.length - 1)) : -1;
+    let x = TT.x;
+    const y = TT.y + i * TT.step;
+    ws.forEach((w, k) => {
+      if (k === cur) slot(ctx, x, y, w, TCHIP.h, { alpha: a, lit: 1 });
+      else {
+        const hidden = cur >= 0 && k > cur;
+        chip(ctx, x, y, TEXTS[i][k], { ...TCHIP, fill: hidden ? C.panel : C.tints[k % C.tints.length], color: hidden ? C.panel : C.ink, alpha: a });
+      }
+      x += w + TCHIP.gap;
+    });
+  });
+  text(ctx, 'たくさんの文章で、何度もくり返す', TT.x, CAP_Y, { font: F.jp(700, 18), color: C.ink2, alpha: tw(t, many, pace.enter) });
+  ctx.restore();
+}
 
 function card(ctx, b, a) {
   if (a <= 0.001) return;

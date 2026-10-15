@@ -27614,7 +27614,8 @@
             "file": "base/a@1.3.opus",
             "duration": 4.715,
             "anchors": {
-              "cont": 1.728
+              "cont": 1.728,
+              "many": 3.573
             },
             "mouth": [
               [
@@ -27759,7 +27760,7 @@
               ]
             ],
             "sha256": "c686ff801d8d0690ed02b386e666fb96050548372c49b810b7fc58bd9c1cffa9",
-            "generationSha256": "e542bf6b51ced367f8cdb2a48e75aa96a4cb7613fd50e3f1ba1bfa4a4b1ca9fa",
+            "generationSha256": "01bbd64e33cf2a70e42cf90230db7ade127ccfbe226a365ae957315afc34787a",
             "master": {
               "file": "base/a@1.3.wav",
               "sha256": "a737fa1a17f7dc13a24d82cd1f26540742570b44db18ebde66127e47681d8407"

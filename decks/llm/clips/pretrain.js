@@ -14,14 +14,13 @@ import { tag, chip, chipWidth, example, source, SOURCE_RIGHT } from '../lib/part
 import { oddsRow, slot } from '../lib/odds.js';
 import { strip } from '../lib/inside.js';
 import { text, rr, line, arrow } from '../../../src/kit/draw.js';
-import { tw, seg, lerp, clamp, inOutCubic, outCubic, outExpo } from '../../../src/kit/ease.js';
+import { tw, seg, lerp, inOutCubic, outCubic, outExpo } from '../../../src/kit/ease.js';
 import { enter, focus, dimmed, ring } from '../../../src/kit/cue.js';
 import { hash2 } from '../../../src/kit/random.js';
+import { PARAMS, PARAMS_W as gridW, PARAMS_H as gridH, paramGrid, paramValue, flicker } from '../lib/params.js';
 
 // ——— the parameters, as a grid of numbers
-const GRID = { x: M.l, y: 168, cols: 20, rows: 8, cell: 21, gap: 4 };
-const gridW = GRID.cols * (GRID.cell + GRID.gap) - GRID.gap;
-const gridH = GRID.rows * (GRID.cell + GRID.gap) - GRID.gap;
+const GRID = { x: M.l, y: 168, ...PARAMS };
 
 // ——— one practice step on 1-2's sentence (o200k_base tokens)
 const TOKS = ['の', 'ど', 'が', 'かわ', 'いた', 'ので', '、水', 'を', '飲', 'ん', 'だ', '。'];
@@ -114,37 +113,20 @@ export default clip({
       text(ctx, '？', GRID.x + gridW / 2, GRID.y + gridH / 2 + 30, { font: F.jp(700, 84), color: C.muted, align: 'center', alpha: ask });
     }
     if (ga > 0) {
-      for (let r = 0; r < GRID.rows; r++) {
-        for (let c = 0; c < GRID.cols; c++) {
-          // the grid fills in part by part as sentence b names them
-          const part = c < 7 ? 0 : c < 14 ? 1 : 2;
-          const a = tw(t, at(['t1', 't2', 't3'][part]) - lead + (r + c % 7) * 0.012, pace.enter);
-          if (a <= 0) continue;
-          const id = r * GRID.cols + c;
-          // random to begin with; each nudge moves it a little, many nudges move it more
-          let v = 0.2 + 0.7 * hash2(id, 1);
-          const k1 = seg(t, nudge, nudge + 0.4);
-          const k2 = seg(t, every, every + 3);
-          v += (hash2(id, 2) - 0.5) * 0.18 * k1 + (hash2(id, 3) - 0.5) * 0.5 * k2;
-          v = clamp(v, 0.06, 0.95);
-          const x = GRID.x + c * (GRID.cell + GRID.gap);
-          const y = GRID.y + r * (GRID.cell + GRID.gap);
-          const lit = named.level[part];
-          ctx.globalAlpha = a * v * dimmed(lit, named.any, cue);
-          ctx.fillStyle = C.ink;
-          ctx.fillRect(x, y, GRID.cell, GRID.cell);
-          // a ripple runs through the grid with each nudge
-          const d1 = t - (nudge + (c / GRID.cols) * 0.4);
-          let flash = d1 >= 0 && d1 < 0.35 ? 1 - d1 / 0.35 : 0;
-          if (t >= every && t < every + 3) flash = Math.max(flash, 0.5 * (hash2(id, Math.floor((t - every) * 6)) > 0.8 ? 1 : 0));
-          if (flash > 0) {
-            ctx.globalAlpha = a * flash;
-            ctx.fillStyle = C.accent;
-            ctx.fillRect(x, y, GRID.cell, GRID.cell);
-          }
-          ctx.globalAlpha = 1;
-        }
-      }
+      const k1 = seg(t, nudge, nudge + 0.4);
+      const k2 = seg(t, every, every + 3);
+      paramGrid(ctx, GRID.x, GRID.y, (r, c, id) => {
+        // the grid fills in part by part as sentence b names them
+        const part = c < 7 ? 0 : c < 14 ? 1 : 2;
+        const a = tw(t, at(['t1', 't2', 't3'][part]) - lead + (r + c % 7) * 0.012, pace.enter);
+        if (a <= 0) return null;
+        // a ripple runs through the grid with each nudge
+        const d1 = t - (nudge + (c / GRID.cols) * 0.4);
+        let flash = d1 >= 0 && d1 < 0.35 ? 1 - d1 / 0.35 : 0;
+        if (t >= every && t < every + 3) flash = Math.max(flash, flicker(id, t - every));
+        // random to begin with; each nudge moves it a little, many nudges move it more
+        return { a, v: paramValue(id, k1, k2), dim: dimmed(named.level[part], named.any, cue), flash };
+      });
       ['数の並びの表', '前を見る計算', '確率を出す計算'].forEach((s, part) => {
         const x = GRID.x + part * 7 * (GRID.cell + GRID.gap);
         const w = (part === 2 ? 6 : 7) * (GRID.cell + GRID.gap) - GRID.gap;
