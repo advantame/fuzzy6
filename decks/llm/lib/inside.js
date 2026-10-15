@@ -1,4 +1,4 @@
-// The flow of an LLM that writes from the front, which chapter 3 walks through: the text so far
+// The flow of an autoregressive LLM, which chapter 3 walks through: the text so far
 // is cut into tokens and numbered; the model turns each number into a list of numbers, rewrites
 // those lists by looking at the token itself and the ones before it, and gives every token of
 // the vocabulary a chance; one is picked and added to the end, and the text goes round again.
@@ -22,7 +22,7 @@ export const STAGES = [
   { id: 'pick', label: '一つ選んで足す', clip: '3-5' },
 ];
 export const INPUT = '書きかけの文章';
-export const TITLE = '前から順に書く LLM の流れ';
+export const TITLE = '自己回帰型 LLM の流れ';
 export const INNER = [1, 2, 3]; // the stages inside the model's frame
 
 // ——— the small pictures of the stages ————————————————————————————————————

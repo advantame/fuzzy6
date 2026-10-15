@@ -1,9 +1,9 @@
 // 1-3: building text out of holes. 1-2 said a language model predicts what goes into a hole;
 // this clip shows that filling holes again and again builds a text, and that there is more than
 // one way to do it. Two lanes build the same sentence: the top one the way the LLMs in wide use
-// today do, from the front, filling the hole at the end and opening the next one; the bottom one
-// the way diffusion models do, from a row of holes filled a few at a time in no fixed order.
-// The deck follows the first, and says so.
+// today do, from the front, filling the hole at the end and opening the next one — named here as
+// the autoregressive model (自己回帰型モデル); the bottom one the way diffusion models do, from a
+// row of holes filled a few at a time in no fixed order. The deck follows the first, and says so.
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
@@ -35,10 +35,11 @@ export default clip({
   script: [
     { id: 'a', text: '穴埋めをくり返していけば、文章を組み立てることができるわ。\n{ways}ただ、その組み立て方は、一つではないの。' },
     { id: 'b', text: 'いま広く使われている LLM は、\n文章を{ar}前から順に書いていくわ。' },
-    { id: 'c', still: true, tail: 0.8, text: '{fill1}書きかけの文の後ろにある穴を埋めたら、\n{open}そのすぐ先に、また新しい穴を開けるの。' },
+    { id: 'c', tail: 0.8, text: '{fill1}書きかけの文の後ろにある穴を埋めたら、\n{open}そのすぐ先に、また新しい穴を開けるの。' },
+    { id: 'c2', still: true, text: 'このように、書いた部分を手がかりにして、すぐ先の穴を\n一つずつ埋めていくモデルを、{arname}自己回帰型モデルと呼ぶわ。' },
     { id: 'd', text: '一方で、{holes}穴だらけの下書きから始めて、\n{fills}あちこちの穴を、何か所かずつ埋めていく作り方もあるわ。' },
     { id: 'e', still: true, text: 'これは、{diff}拡散型と呼ばれる作り方の一つよ。' },
-    { id: 'f', tail: 0.6, text: 'この先は、{scope}前から順に書いていく作り方の、\nしくみを見ていきましょう。' },
+    { id: 'f', tail: 0.6, text: 'この先は、{scope}自己回帰型 LLM のしくみを、見ていきましょう。' },
   ],
 
   prepare(ctx) {
@@ -87,7 +88,7 @@ export default clip({
     const nameY = (y) => y + 54;
 
     // ——— the front lane: fill the hole at the end, open the next one
-    tag(ctx, M.l + 32, nameY(front), '広く使われている LLM', { font: F.jp(700, 18), h: 32, padX: 12, fill: C.ink, color: C.paper, alpha: enter(t, at('b'), pace) });
+    tag(ctx, M.l + 32, nameY(front), '自己回帰型', { font: F.jp(700, 18), h: 32, padX: 12, fill: C.ink, color: C.paper, alpha: pop('arname') });
     text(ctx, '前から順に', M.l + 32, labelY(front), { font: F.jp(700, 32), color: C.ink, alpha: pop('ar') });
     tag(ctx, LANE.x + LANE.w - 24, front + 22, 'この先で追う型', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.accent, color: '#fff', alpha: kept, align: 'right' });
     const open = at('open');

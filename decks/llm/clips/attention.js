@@ -1,8 +1,8 @@
 // 3-4: looking around. かける means different things after 電話, 眼鏡 and 橋, and what decides it
 // comes before it. Attention lets every token weigh the tokens before it (arcs, thicker = more)
 // and mix what it finds into its own list of numbers, so the same かける comes out meaning
-// something different in each line. ずんだもん asks about the words after it: a model that
-// writes from the front does not look at them. The order is known from position information.
+// something different in each line. ずんだもん asks about the words after it: an autoregressive
+// LLM does not look at them. The order is known from position information.
 // Below, the layer: looking around, then each token's list made over on its own; the pair is
 // stacked dozens of times (96 in GPT-3), the shape of the Transformer of 2017.
 // The weights are an example, drawn on words rather than tokens.
@@ -47,7 +47,7 @@ export default clip({
     { id: 'e2', text: '{take}参考にする度合いに応じて、\nそれぞれの情報を、自分の数の並びに混ぜ込むの。' },
     { id: 'f', still: true, text: 'こうして、{mean}同じ「かける」でも、前の言葉に応じて、\n数の並びが変わっていくのよ。' },
     { id: 'g', by: 'zunda', text: '{ask}後ろにある言葉は、見ないのだ？' },
-    { id: 'h', text: '前から順に書く LLM では、{ahead}自分より後ろのトークンは、\n見ないように作られているの。' },
+    { id: 'h', text: '自己回帰型 LLM では、{ahead}自分より後ろのトークンは、\n見ないように作られているの。' },
     { id: 'h2', text: '書いている途中では、{none}後ろは、まだ書かれていないものね。' },
     { id: 'i', still: true, text: '並び順もわかるように、{pos}トークンの位置の情報も、\n計算に使われているわ。' },
     { id: 'j', text: 'LLM の中では、{layer}この前を見る計算のあとに、\n{ffn}トークンごとに数の並びを作り変える計算が続くの。' },

@@ -1,4 +1,4 @@
-// 3-1: what happens in an LLM that writes from the front. First the loop as 1-3 left it: from
+// 3-1: what happens in an autoregressive LLM, one that writes from the front. First the loop as 1-3 left it: from
 // the text so far the LLM works out the candidates for what comes next and their chances, one
 // is picked and added to the end, and the next is predicted from the longer text. ずんだもん
 // asks what goes on inside; the box opens into the model's three stages, with the cutting into
@@ -44,10 +44,10 @@ const LOOP_Y = TEXT_Y + 30; // the way back runs along the text
 export default clip({
   id: 'inside',
   title: 'LLM の中',
-  kicker: '前から順に書く LLM',
+  kicker: '自己回帰型 LLM',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: 'ここからは、前から順に書いていく LLM の中で、\n何が起きているのかを見ていきましょう。' },
+    { id: 'a', text: 'ここからは、自己回帰型 LLM の中で、\n何が起きているのかを見ていきましょう。' },
     { id: 'b', text: 'LLM は、{in}書きかけの文章をもとに、\n{out}次に来る言葉の候補と、その確率を計算するの。' },
     { id: 'c', text: '{pick}その中から一つを選んで、{add}文章の後ろに足したら、\n{again}足したところまでを手がかりに、また次を予測するのよ。' },
     { id: 'd', still: true, text: '{loop}これをくり返して、文章が少しずつ書き進められていくわ。' },
