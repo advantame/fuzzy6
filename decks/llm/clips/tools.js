@@ -42,7 +42,7 @@ const REQ_NOTE = '頼みの中身を、ふつうの言葉で表したもの（�
 const ANS = ['あ', 'した', 'の', '京都', 'は', '晴', 'れ', 'で', '、', '最高', '気', '温', 'は', '24', '℃', 'の', '予', '報', 'です', '。'];
 const RESULT = '京都　あした：晴れ　最高 24℃';
 // the tool's place, at the end: four kinds of tool, two by two
-const KINDS = [['天気予報', '都市 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え'], ['シェル', 'コマンド → 出力']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え'], ['シェル', 'コマンド → 出力']];
 const CARD = { x: TOOL.x + 20, y: TOOL.y + 20, w: (TOOL.w - 54) / 2, h: (TOOL.h - 54) / 2, gap: 14 };
 const cardBox = (i) => ({ x: CARD.x + (i % 2) * (CARD.w + CARD.gap), y: CARD.y + Math.floor(i / 2) * (CARD.h + CARD.gap), w: CARD.w, h: CARD.h });
 // the room the last sentence makes at the head of the document, for the tool definitions (5-2)
@@ -413,7 +413,7 @@ function toolContents(ctx, b, a, { shrink, kinds }) {
   }
   const big = 1 - shrink;
   text(ctx, '天気予報のプログラム', b.x + b.w / 2, b.y + b.h / 2 + 14, { font: F.jp(700, 26), color: C.ink, align: 'center', alpha: a * big });
-  text(ctx, '都市 → 予報', b.x + b.w / 2, b.y + b.h / 2 + 54, { font: F.jp(500, 19), color: C.ink2, align: 'center', alpha: a * big });
+  text(ctx, '都市と日 → 予報', b.x + b.w / 2, b.y + b.h / 2 + 54, { font: F.jp(500, 19), color: C.ink2, align: 'center', alpha: a * big });
   KINDS.forEach(([name, what], i) => {
     const k = i === 0 ? clamp((shrink - 0.6) / 0.4) : kinds[i - 1];
     if (k <= 0) return;
