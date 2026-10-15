@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-for (const [id, least] of [['llm', 79], ['trig', 11]]) test(`${id} deck clips retain finite timelines and render through the still-mode contract`, async ({ page }) => {
+for (const [id, least] of [['llm', 79], ['trig', 11], ['anglesum', 20]]) test(`${id} deck clips retain finite timelines and render through the still-mode contract`, async ({ page }) => {
   test.setTimeout(120_000);
   const errors = [];
   page.on('pageerror', error => { if (errors.length < 10) errors.push(error.message); });
@@ -34,7 +34,7 @@ for (const [id, least] of [['llm', 79], ['trig', 11]]) test(`${id} deck clips re
 
 test('home cards and cover frames use calculated durations without NaN', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.deck')).toHaveCount(3);
+  await expect(page.locator('.deck')).toHaveCount(4);
   expect(await page.locator('.deck-meta').allTextContents()).not.toEqual(expect.arrayContaining([expect.stringContaining('NaN')]));
   await expect.poll(() => page.locator('iframe').evaluateAll(nodes => nodes.every(iframe => iframe.contentWindow?.__ready))).toBe(true);
   const states = await page.locator('iframe').evaluateAll(nodes => nodes.map(iframe => iframe.contentWindow.__mx.state()));
