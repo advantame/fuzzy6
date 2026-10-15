@@ -9,23 +9,29 @@ const isAscii = (ch) => ch !== undefined && ch.codePointAt(0) < 0x80;
 
 export const isName = (s) => typeof s === 'string' && NAME.test(s);
 
-// parseLine(text) → { caption, plain, speech, anchors }
+// parseLine(text) → { caption, plain, speech, anchors, pages }
 //   caption  cue markup for the subtitle (** and \n kept, see cueMarkup in model.js)
 //   plain    the caption without markup, on one line (for labels)
 //   speech   what the voice reads
 //   anchors  [{ name, offset }] — offset is the number of speech characters (code points)
 //            before the anchor, so the anchor sits at the start of speech[offset]
+//   pages    speech offsets at blank lines, in source order
+export const pagesMatch = (take, pages = []) => take?.pages === undefined
+  ? pages.length === 0 : Array.isArray(take.pages) && take.pages.length === pages.length;
+
 export function parseLine(text) {
   const src = Array.from(String(text ?? ''));
   let caption = '';
   const spoken = []; // code points, before the spaces are normalised
   const raw = []; // { name, index } with index into `spoken`
+  const pageIndices = [];
   const fail = (why) => {
     throw new Error(`Narration line: ${why} — ${JSON.stringify(text)}`);
   };
   const say = (s) => {
     for (const ch of Array.from(s)) spoken.push(ch);
   };
+  if (/\n{3,}/.test(src.join(''))) fail('three or more consecutive line breaks');
   for (let i = 0; i < src.length; i++) {
     const ch = src[i];
     if (ch === '\\' && ESCAPABLE.has(src[i + 1])) {
@@ -57,6 +63,11 @@ export function parseLine(text) {
       i++;
     } else if (ch === '\n') {
       caption += '\n';
+      if (src[i + 1] === '\n') {
+        caption += '\n';
+        pageIndices.push(spoken.length);
+        i++;
+      }
     } else {
       caption += ch;
       say(ch);
@@ -81,6 +92,9 @@ export function parseLine(text) {
   for (let i = 0; i < spoken.length; i++) before.push(before[i] + (kept[i] ? 1 : 0));
   const speech = spoken.filter((_, i) => kept[i]).join('');
   const anchors = raw.map(({ name, index }) => ({ name, offset: before[index] }));
+  const pages = pageIndices.map(index => before[index]);
+  if (pages.length && caption.split('\n\n').some(page => !page.replace(/\*\*/g, '').trim()))
+    fail('blank line at the start or end of a narration line');
   const plain = caption.replace(/\*\*/g, '').replace(/\n/g, '');
-  return { caption, plain, speech, anchors };
+  return { caption, plain, speech, anchors, pages };
 }

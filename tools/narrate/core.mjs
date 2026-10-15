@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { parseLine, isName } from '../../src/explorer/script.js';
+import { parseLine, isName, pagesMatch } from '../../src/explorer/script.js';
 import { readCast, lineBy, clipCast } from '../../src/explorer/cast.js';
 import { mergePace, lineSpeed } from '../../src/explorer/timeline.js';
 import { orderedClips } from '../../src/explorer/model.js';
@@ -101,7 +101,7 @@ export function collectLines(deck, selected = []) {
       if (![actor.speaker, actor.style].every(s => typeof s === 'string' && s.trim()))
         throw new Error(`語り手 ${by} の speaker と style が必要です。`);
       // bridge shifts playback only; keep synthesis input and recording hashes unchanged.
-      lines.push({ by, speaker: actor.speaker, style: actor.style, clipId: clip.id, lineId: line.id, source: parsed.speech, anchors: parsed.anchors, speed });
+      lines.push({ by, speaker: actor.speaker, style: actor.style, clipId: clip.id, lineId: line.id, source: parsed.speech, anchors: parsed.anchors, pages: parsed.pages, speed });
       if (lines.length > 2000) throw new Error('一度の処理は2000文以内にしてください。');
     }
   }
@@ -114,6 +114,7 @@ export const generationHash = (line, voice, speed) => {
   const lexicon = lineLexicon(line.source, readLexicon(voice.lexicon));
   return sha256(JSON.stringify({
     source: line.source, anchors: line.anchors, by: line.by, voice: { speaker: narrator(line, voice).speaker, style: narrator(line, voice).style },
+    ...(line.pages?.length ? { pages: line.pages } : {}),
     engine: ENGINE_INFO, core: CORE_VERSION, settings: SETTINGS, speed: speedKey(speed), upspeak: true,
     // Omit the key entirely for legacy decks and unaffected sentences.
     ...(lexicon.length ? { lexicon } : {}),
@@ -127,6 +128,7 @@ export function takeStatus(manifest, line, voice, speed, exists) {
   if (!exists || !take) return 'missing';
   if (entry.source !== line.source || entry.by !== line.by || entry.speaker !== narrator(line, voice).speaker || entry.style !== narrator(line, voice).style ||
       !Array.isArray(take.mouth) || !take.mouth.length ||
+      !pagesMatch(take, line.pages) ||
       manifest.engine?.version !== ENGINE_INFO.version || manifest.engine?.name !== ENGINE_INFO.name ||
       take.generationSha256 !== generationHash(line, voice, speed)) return 'stale';
   return 'ready';

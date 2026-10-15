@@ -1,4 +1,4 @@
-import { CORE_VERSION, SETTINGS, narrator, queryTiming, speedKey } from './core.mjs';
+import { CORE_VERSION, SETTINGS, narrator, queryTiming, speedKey, prefixMoraCount, anchorSeconds } from './core.mjs';
 import { readLexicon, lineLexicon, applyLong } from './lexicon.mjs';
 import { syncDictionary } from './dictionary.mjs';
 import { request, startSupervisedEngine, resolveStyle } from './engine.mjs';
@@ -9,6 +9,38 @@ export async function queryLine(line, lexicon, params, options) {
     if (typeof query.kana !== 'string' || query.kana.length > 10000) throw new Error('AudioQuery に読みがありません。');
     return applyLong(query, line.source, lexicon);
   } catch (error) { throw new Error(`${line.clipId}/${line.lineId}: ${error.message}`); }
+}
+
+// Prefix queries locate moras; seconds always come from the complete, post-long query.
+// Share requests for an anchor and a page boundary at the same speech offset.
+export async function queryPositions(line, query, params, options) {
+  const counts = new Map();
+  const countAt = async (offset, label) => {
+    if (counts.has(offset)) return counts.get(offset);
+    const prefix = Array.from(line.source).slice(0, offset).join('');
+    let count;
+    try {
+      if (!prefix) count = 0;
+      else if (prefix === line.source) count = query.accent_phrases.reduce((n, p) => n + p.moras.length, 0);
+      else count = prefixMoraCount(query, await request('/audio_query', {
+        ...options, method: 'POST', params: { ...params, text: prefix },
+      }));
+    } catch (error) { throw new Error(`${line.clipId}/${line.lineId} ${label}: ${error.message}`); }
+    counts.set(offset, count);
+    return count;
+  };
+  const anchors = {};
+  for (const anchor of line.anchors) anchors[anchor.name] = await countAt(anchor.offset, `{${anchor.name}}`);
+  const pages = [];
+  for (const [i, offset] of (line.pages ?? []).entries()) pages.push(await countAt(offset, `page ${i + 2}`));
+  return { anchors, pages };
+}
+
+export function positionSeconds(query, counts) {
+  return {
+    anchors: Object.fromEntries(Object.entries(counts.anchors).map(([name, count]) => [name, anchorSeconds(query, count)])),
+    ...(counts.pages.length ? { pages: counts.pages.map(count => anchorSeconds(query, count)) } : {}),
+  };
 }
 
 // Yield one query at a time: JSON/table output must not accumulate a whole deck.
@@ -26,13 +58,15 @@ export async function* inspectQueries(root, lines, voice, speeds, signal) {
       signal.throwIfAborted();
       const actor = narrator(line, voice);
       if (!styles.has(line.by)) styles.set(line.by, await resolveStyle(actor, options));
-      const query = await queryLine(line, lexicon, { speaker: styles.get(line.by), core_version: CORE_VERSION }, options);
+      const params = { speaker: styles.get(line.by), core_version: CORE_VERSION };
+      const query = await queryLine(line, lexicon, params, options);
+      const counts = await queryPositions(line, query, params, options);
       for (const speed of speeds ?? [line.speed]) {
         const current = { ...query, ...SETTINGS, speedScale: Number(speedKey(speed)) };
         const timing = queryTiming(current);
         yield { clipId: line.clipId, lineId: line.lineId, by: line.by, speaker: actor.speaker, style: actor.style,
           source: line.source, lexicon: lineLexicon(line.source, lexicon),
-          duration: timing.duration, query: current };
+          duration: timing.duration, ...positionSeconds(current, counts), query: current };
       }
     }
   } finally { await engine.stop(); }
@@ -52,5 +86,6 @@ export function formatInspection(result) {
     if (phrase.pause_mora) rows.push(`${i + 1}\t—\t—\t間\t—\t—\t${n(phrase.pause_mora.vowel_length)}`);
   });
   rows.push(`話速適用後の長さ（前後の無音・疑問上昇を含む）: ${n(result.duration)}秒`);
+  if (result.pages?.length) rows.push(`字幕の替わり目（音声の頭からの秒）: ${result.pages.map(n).join(', ')}`);
   return rows.join('\n');
 }

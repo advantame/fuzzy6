@@ -114,7 +114,7 @@ describe('arguments and deck input', () => {
     const lines = collectLines({ voice, chapters: [{ clips: [{ id: 'sample', script: [
       { id: 'a', text: '**1948 年**\n{point}[GPT|ジーピーティー]' }, { id: 'silent', lead: 3 },
     ] }] }] });
-    expect(lines).toEqual([{ by: 'metan', speaker: actor.speaker, style: actor.style, clipId: 'sample', lineId: 'a', source: '1948年ジーピーティー', anchors: [{ name: 'point', offset: 5 }], speed: '1.3' }]);
+    expect(lines).toEqual([{ by: 'metan', speaker: actor.speaker, style: actor.style, clipId: 'sample', lineId: 'a', source: '1948年ジーピーティー', anchors: [{ name: 'point', offset: 5 }], pages: [], speed: '1.3' }]);
   });
   it('handles decks without voice, script, or spoken lines', () => {
     expect(collectLines({ chapters: [{ clips: [{ id: 'x', duration: 2 }] }] })).toEqual([]);
@@ -181,6 +181,21 @@ describe('phoneme frame timing and reading alignment', () => {
 });
 
 describe('staleness and partial multi-speed updates', () => {
+  it('checks page counts even with a matching generation hash and preserves old hashes without breaks', () => {
+    const m = emptyManifest();
+    const paged = { ...line, pages: [1] };
+    applyRecording(m, update('1', paged));
+    const take = m.clips.sample.a.takes['1'];
+    for (const pages of [undefined, [], [0.05, 0.1]]) {
+      take.pages = pages;
+      expect(takeStatus(m, paged, voice, '1', true)).toBe('stale');
+    }
+    take.pages = [0.1];
+    expect(takeStatus(m, paged, voice, '1', true)).toBe('ready');
+    expect(generationHash(line, voice, '1')).toBe(generationHash({ ...line, pages: [] }, voice, '1'));
+    take.generationSha256 = generationHash(line, voice, '1');
+    expect(takeStatus(m, line, voice, '1', true)).toBe('stale');
+  });
   it('distinguishes absent, matching and stale takes', () => {
     const manifest = emptyManifest();
     const u = update();

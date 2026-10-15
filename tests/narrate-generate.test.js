@@ -57,6 +57,34 @@ const run = async (speeds = ['1']) => {
 };
 
 describe('generation with a fake local engine', () => {
+  it('records page boundaries from full-query timing with one synthesis per line/speed', async () => {
+    const lines = collectLines({ voice, chapters: [{ clips: [{ id: 'sample', script: [
+      { id: 'a', text: 'ア\n\n{point}イ' },
+    ] }] }] });
+    expect(lines[0]).toMatchObject({ source: 'アイ', pages: [1], anchors: [{ name: 'point', offset: 1 }] });
+    const state = await inspectAssets(voiceDir, lines, voice, ['1', '1.5']);
+    await generate(root, voiceDir, state, voice, new AbortController().signal, { tools: {}, encodeAudio });
+    expect(engine.request.mock.calls.filter(([p]) => p === '/synthesis')).toHaveLength(2);
+    expect(engine.request.mock.calls.filter(([p]) => p === '/audio_query').map(([, o]) => o.params.text)).toEqual(['アイ', 'ア']);
+    const record = JSON.parse(await readFile(join(voiceDir, 'manifest.json'), 'utf8')).clips.sample.a;
+    expect(record.takes['1'].pages).toEqual([0.149]);
+    expect(record.takes['1.5'].pages).toEqual([0.096]);
+    for (const take of Object.values(record.takes)) expect(take.pages).toEqual([take.anchors.point]);
+    expect((await inspectAssets(voiceDir, lines, voice, ['1', '1.5'])).plan.map(p => p.status)).toEqual(['ready', 'ready']);
+    const removed = [{ ...lines[0], pages: [] }];
+    expect((await inspectAssets(voiceDir, removed, voice, ['1'])).plan[0].status).toBe('stale');
+    const moved = [{ ...lines[0], pages: [0] }];
+    expect((await inspectAssets(voiceDir, moved, voice, ['1'])).plan[0].status).toBe('stale');
+  });
+  it('rejects a mismatched page prefix before synthesis and closes the engine', async () => {
+    const state = await inspectAssets(voiceDir, [{ ...line, anchors: [], pages: [1] }], voice, ['1']);
+    engine.request.mockResolvedValueOnce({});
+    engine.request.mockResolvedValueOnce(structuredClone(full));
+    engine.request.mockResolvedValueOnce({ accent_phrases: [{ moras: [mora('ウ')] }] });
+    await expect(generate(root, voiceDir, state, voice, new AbortController().signal, { tools: {}, encodeAudio })).rejects.toThrow('sample/a page 2');
+    expect(engine.request.mock.calls.some(([p]) => p === '/synthesis')).toBe(false);
+    expect(engine.stop).toHaveBeenCalledOnce();
+  });
   it('synthesizes per-line deck speeds by default and preserves unused comparison takes', async () => {
     const lines = collectLines({ voice, chapters: [{ clips: [{ id: 'sample', script: [
       { id: 'a', text: 'アイ' }, { id: 'b', text: 'アイ', speed: 'slow' }, { id: 'c', text: 'アイ', speed: 'fast' },
@@ -109,6 +137,7 @@ describe('generation with a fake local engine', () => {
     const record = manifest.clips.sample.a;
     expect(record.source).toBe('アイ'); expect(record.reading).toBe("ア'イ");
     expect(record.takes['1'].anchors.point).toBe(0.149);
+    expect(record.takes['1'].pages).toBeUndefined();
     expect(record.takes['1'].file).toBe('sample/a@1.opus');
     expect(record.takes['1'].sha256).toBe(sha256(await readFile(join(voiceDir, 'sample/a@1.opus'))));
     expect(record.takes['1'].master).toEqual({ file: 'sample/a@1.wav', sha256: sha256(await readFile(join(voiceDir, 'sample/a@1.wav'))) });

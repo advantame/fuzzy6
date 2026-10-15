@@ -210,19 +210,19 @@ function wav(seconds = 3) {
   for (let i = 0; i < count; i++) buffer.writeInt16LE(Math.round(1500 * Math.sin(i / 16000 * Math.PI * 440)), 44 + i * 2);
   return buffer;
 }
-async function audioFixture(page, format = 'wav') {
+async function audioFixture(page, format = 'wav', pages = false) {
   await page.goto('/tests/fixtures/?t=0'); await page.waitForFunction(() => window.__ready);
-  await page.evaluate(format => {
+  await page.evaluate(({ format, pages }) => {
     window.__mx.destroy();
     const clip = window.fixtureDeck.chapters[0].clips[0];
     delete clip.duration;
-    clip.script = [{ id: 'a', text: '声{mark}です', tail: 0.2 }, { id: 'silent', lead: 0.4 }];
+    clip.script = [{ id: 'a', text: pages ? '声\n\n{mark}です' : '声{mark}です', tail: 0.2 }, { id: 'silent', lead: 0.4 }];
     window.fixtureDeck.pace = { pre: 0.1 };
     window.fixtureDeck.credits = ['VOICEVOX:四国めたん'];
     window.fixtureDeck.voice = { cast: { metan: { name: '四国めたん', credit: 'VOICEVOX:四国めたん' } }, url: () => format === 'opus' ? '/tests/fixtures/tone.opus' : '/test-narration.wav',
-      manifest: { clips: { 'clip-0': { a: { source: '声です', takes: { '1': { duration: 3, anchors: { mark: 1 }, file: `test.${format}` } } } } } } };
+      manifest: { clips: { 'clip-0': { a: { source: '声です', takes: { '1': { duration: 3, anchors: { mark: 1 }, ...(pages ? { pages: [1] } : {}), file: `test.${format}` } } } } } } };
     window.makeExplorer({ url: false });
-  }, format);
+  }, { format, pages });
   await page.waitForFunction(() => window.__mx.state().state !== 'loading');
 }
 async function probeAudio(page) {
@@ -247,6 +247,41 @@ async function probeAudio(page) {
     };
   });
 }
+
+test('subtitle pages switch at their recording offsets during seeking and continuous audio playback', async ({ page }) => {
+  await probeAudio(page);
+  await audioFixture(page, 'opus', true);
+  const cue = page.locator('.mx-cue');
+  for (const [t, text] of [[0.1, '声'], [1.099, '声'], [1.1, 'です'], [3.5, 'です'], [0.5, '声']]) {
+    await pauseAt(page, t);
+    await expect(cue).toHaveCount(1);
+    await expect(cue).toHaveText(text);
+    await expect(cue).toHaveAttribute('data-by', 'metan');
+  }
+  expect(await page.locator('.mx-seek-mark').evaluateAll(nodes => nodes.map(n => Number(n.dataset.seconds))))
+    .toEqual([0, 3.6, 4]);
+  await page.keyboard.press('k');
+  await pauseAt(page, 0);
+  await page.evaluate(() => {
+    window.audioProbe.sources.length = 0;
+    window.pageTransitions = [];
+    window.offPages = window.__mx.on('time', s => {
+      const cue = document.querySelector('.mx-cue[data-state="in"]');
+      if (cue && cue.textContent !== window.pageTransitions.at(-1)?.text && window.pageTransitions.length < 8)
+        window.pageTransitions.push({ t: s.t, text: cue.textContent, by: cue.dataset.by });
+    });
+    window.__mx.play();
+  });
+  await page.waitForFunction(() => window.__mx.state().t > 1.6);
+  await page.evaluate(() => { window.offPages(); window.__mx.pause(); });
+  const transitions = await page.evaluate(() => window.pageTransitions);
+  expect(transitions.map(p => [p.text, p.by])).toEqual([['声', 'metan'], ['です', 'metan']]);
+  expect(transitions[0].t).toBeGreaterThanOrEqual(0.1);
+  expect(transitions[0].t).toBeLessThan(0.3);
+  expect(transitions[1].t).toBeGreaterThanOrEqual(1.1);
+  expect(transitions[1].t).toBeLessThan(1.3);
+  expect(await page.evaluate(() => window.audioProbe.sources.length)).toBe(1);
+});
 
 test('Chromium decodes .opus and sends non-silent samples through the engine audio graph', async ({ page }) => {
   await probeAudio(page);

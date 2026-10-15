@@ -20,6 +20,56 @@ const pace = mergePace();
 const timeline = () => buildTimeline(clip, pace, voice);
 
 describe('timeline', () => {
+  it('splits cues at recorded page offsets, keeping one audio line and its stops', () => {
+    const c = { id: 'test', script: [{ id: 'a', text: 'a\nb\n\nc{mark}d', lead: 0.5, tail: 0.4 }, { id: 'b', text: '**end**' }] };
+    const v = structuredClone(voice);
+    v.manifest.clips.test.a.takes['1.3'].pages = [0.7];
+    v.manifest.clips.test.a.takes['1.5'].pages = [0.3];
+    const t = buildTimeline(c, pace, v);
+    expect(t.lines).toHaveLength(2);
+    expect(t.cues).toEqual([
+      { at: 0.8, to: 1.5, text: 'a\nb', by: 'metan' },
+      { at: 1.5, to: 3.8, text: 'cd', by: 'metan' },
+      { at: 3.8, to: Infinity, text: '**end**', by: 'metan' },
+    ]);
+    expect(t.stops.map(s => s.at)).toEqual([0, 3.5, 4.8]);
+    expect(t.lines[0].label).toBe('ab');
+    expect(buildTimeline(c, mergePace({ voice: { speed: { normal: 1.5 } } }), v).cues[1].at).toBe(1.1);
+    expect(buildTimeline(c, mergePace({ voice: { speed: { normal: 1.4 } } }), v).cues[1].at).toBe(1.5);
+    c.script[0].label = 'explicit';
+    expect(buildTimeline(c, pace, v).lines[0].label).toBe('explicit');
+  });
+  it('estimates missing page positions with the same code-point ratio as anchors', () => {
+    const c = { id: 'test', script: [{ id: 'a', text: '😀 [字|abc]\n\n{same}日本\n\n語' }] };
+    const p = mergePace({ voice: { cps: 4, speed: { normal: 1.2 } } });
+    const t = buildTimeline(c, p);
+    expect(t.cues.map(cue => cue.at)).toEqual([0.3, 1.133, 1.55]);
+    expect(t.cues[1].at).toBe(t.at('same'));
+    expect(t.lines[0].take).toBeUndefined();
+    const v = structuredClone(voice);
+    v.manifest.clips.test.a = { source: parseLine(c.script[0].text).speech,
+      takes: { '1.3': { duration: 2, pages: [null, 1.8] } } };
+    const recorded = buildTimeline(c, p, v);
+    expect(recorded.cues[1].at).toBe(recorded.at('same'));
+    expect(recorded.cues[2].at).toBe(2.1);
+  });
+  it.each([undefined, [], [0.1, 0.2]])('ignores takes whose page count is stale: %j', pages => {
+    const c = { id: 'test', script: [{ id: 'a', text: 'ab\n\ncd' }] };
+    const v = structuredClone(voice);
+    for (const take of Object.values(v.manifest.clips.test.a.takes)) take.pages = pages;
+    const t = buildTimeline(c, pace, v);
+    expect(t.lines[0].take).toBeUndefined();
+    expect(t.cues).toEqual(buildTimeline(c, pace).cues.map(cue => ({ ...cue, by: 'metan' })));
+    v.manifest.clips.test.a.takes['1.5'].pages = [0.3];
+    expect(buildTimeline(c, pace, v).lines[0].speed).toBe(1.5);
+    c.script[0].text = 'abcd';
+    v.manifest.clips.test.a.takes = { '1.5': v.manifest.clips.test.a.takes['1.5'] };
+    expect(buildTimeline(c, pace, v).lines[0].take).toBeUndefined();
+  });
+  it.each(['\n\nx', 'x\n\n', 'x\n\n\ny'])(
+    'rejects a clip with invalid page syntax: %j', text => {
+      expect(() => buildTimeline({ script: [{ id: 'a', text }] })).toThrow('Narration line');
+    });
   it.each(['silent', 'estimated', 'recorded'])('accepts exactly 180 seconds and rejects longer %s scripts', kind => {
     const spoken = kind !== 'silent';
     const make = extra => ({ id: 'limit', script: [{ id: 'a', ...(spoken ? { text: 'ab' } : {}), lead: (spoken ? 178 : 180) + extra }] });

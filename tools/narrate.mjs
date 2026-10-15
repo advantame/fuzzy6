@@ -37,13 +37,13 @@ import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'vite';
 import { parseArgs, collectClips, collectLines, narrator, SETTINGS, CORE_VERSION, generationHash,
-  prefixMoraCount, anchorSeconds, queryTiming, checkDuration, validateWav, millis, MAX_WAV_BYTES } from './narrate/core.mjs';
+  queryTiming, checkDuration, validateWav, millis, MAX_WAV_BYTES } from './narrate/core.mjs';
 import { inspectAssets, openWriter, readOptional } from './narrate/assets.mjs';
 import { encodeOpus, opusTools } from './narrate/opus.mjs';
 import { startSupervisedEngine, request, resolveStyle, TOTAL_MS } from './narrate/engine.mjs';
 import { readLexicon, lineLexicon } from './narrate/lexicon.mjs';
 import { syncDictionary } from './narrate/dictionary.mjs';
-import { queryLine, inspectQueries, formatInspection } from './narrate/inspect.mjs';
+import { queryLine, queryPositions, positionSeconds, inspectQueries, formatInspection } from './narrate/inspect.mjs';
 import { deckEndings, formatEnding } from './narrate/endings.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -135,22 +135,12 @@ export async function generate(root, voiceDir, state, voice, signal, { tools, en
       params = { speaker: styles.get(line.by), core_version: CORE_VERSION };
       if (line !== previousLine) {
         query = await queryLine(line, lexicon, params, options);
-        counts = {};
-        for (const anchor of line.anchors) {
-          const prefix = Array.from(line.source).slice(0, anchor.offset).join('');
-          if (!prefix) counts[anchor.name] = 0;
-          else if (prefix === line.source) counts[anchor.name] = query.accent_phrases.reduce((n, p) => n + p.moras.length, 0);
-          else {
-            const prefixQuery = await request('/audio_query', { ...options, method: 'POST', params: { ...params, text: prefix } });
-            try { counts[anchor.name] = prefixMoraCount(query, prefixQuery); }
-            catch (error) { throw new Error(`${line.clipId}/${line.lineId} {${anchor.name}}: ${error.message}`); }
-          }
-        }
+        counts = await queryPositions(line, query, params, options);
         previousLine = line;
       }
       const current = { ...query, ...SETTINGS, speedScale: Number(speed) };
       const { mouth } = queryTiming(current); // Same phoneme clock as the anchors.
-      const anchors = Object.fromEntries(Object.entries(counts).map(([name, count]) => [name, anchorSeconds(current, count)]));
+      const positions = positionSeconds(current, counts);
       const wav = await request('/synthesis', { ...options, method: 'POST', params: { ...params, enable_interrogative_upspeak: true }, body: current, bytes: true });
       let info;
       try {
@@ -161,7 +151,7 @@ export async function generate(root, voiceDir, state, voice, signal, { tools, en
       // Validate the derivative before recording anything. A crash between the two
       // commits leaves a valid legacy WAV take, recoverable by --encode.
       const encoded = encodeAudio(wav, { tools, signal });
-      const take = { file: masterFile, duration: millis(info.duration), anchors, mouth, sha256: info.sha256, generationSha256: generationHash(line, voice, speed) };
+      const take = { file: masterFile, duration: millis(info.duration), ...positions, mouth, sha256: info.sha256, generationSha256: generationHash(line, voice, speed) };
       await writer.commit({ line, voice: { speaker: actor.speaker, style: actor.style, lexicon: lineLexicon(line.source, lexicon) }, speed, take, reading: query.kana, previousSha256: item.previousMasterSha256 }, wav);
       await commitEncoded(writer, { clipId: line.clipId, lineId: line.lineId, speed, take, file,
         master: { file: masterFile, sha256: info.sha256 }, previousSha256: item.previousSha256 }, encoded);

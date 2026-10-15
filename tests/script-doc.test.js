@@ -22,6 +22,11 @@ function fixture() {
 }
 
 describe('script document', () => {
+  it('keeps a multi-page narration line in one numbered document line', () => {
+    const deck = fixture();
+    deck.chapters[0].clips[1].script[1].text = '{mark}**答え**は[表示|ひょうじ]。\n\n次へ。\n終わり。';
+    expect(renderScript(deck)).toContain('1. 答えは表示。次へ。終わり。（ゆっくり） `a`\n2. **二人目**');
+  });
   it('renders speakers, pace notes, parsed text, IDs and engine numbering', () => {
     const text = renderScript(fixture());
     expect(text).toContain('話者を書いていない文は、一人目の文です。');

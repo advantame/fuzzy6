@@ -15,6 +15,12 @@ const voice = { cast: {
 } };
 
 describe('narration sentence endings', () => {
+  it('treats page breaks like line breaks, preserving sentence boundaries and row IDs', () => {
+    const text = '最初な\n\nの。\n\n次なの。途中です。\n\n最後なの。';
+    expect(find(rows(text))).toEqual(find(rows(text.replaceAll('\n', ''))));
+    expect(find(rows(text)).adjacent).toHaveLength(1);
+    expect(find(rows(text)).alternating).toHaveLength(1);
+  });
   it('reports both row IDs and display sentences for adjacent endings', () => {
     const result = find(rows('最初なの。', '次なの。'));
     expect(result).toEqual({ alternating: [], adjacent: [{

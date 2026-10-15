@@ -3,7 +3,7 @@ import { resolveDoors } from './dive.js';
 import { validateBridge } from './model.js';
 import { readCast, lineBy, clipCast, recordMatches } from './cast.js';
 import { PACE } from './pace.js';
-import { parseLine, isName } from './script.js';
+import { parseLine, isName, pagesMatch } from './script.js';
 
 export const roundTime = n => Math.round(n * 1000) / 1000;
 const copy = value => structuredClone(value);
@@ -103,6 +103,7 @@ export function buildTimeline(clip, pace = mergePace(), voice, answers = {}) {
     const record = voice?.manifest?.clips?.[clip.id]?.[source.id];
     const speeds = recordMatches(record, by, actors) && record.source === parsed.speech ? Object.keys(record.takes ?? {})
       .filter(s => Number.isFinite(Number(s)) && Number(s) > 0)
+      .filter(s => pagesMatch(record.takes[s], parsed.pages))
       .sort((a, b) => {
         const delta = Math.abs(Number(a) - speed) - Math.abs(Number(b) - speed);
         return Math.abs(delta) < 1e-9 ? Number(a) - Number(b) : delta;
@@ -119,7 +120,9 @@ export function buildTimeline(clip, pace = mergePace(), voice, answers = {}) {
     costs.push({ source, total: Math.round((roundTime(done + rest) - start) * 1000), rest: Math.round((roundTime(done + rest) - done) * 1000) });
     const line = { id: source.id, by, start, leadEnd, voice: voiceAt, end, done,
       next: roundTime(done + rest), spoken, take, speed: Number(speeds[0]), parsed,
-      label: source.label ?? Array.from(parsed.plain).slice(0, 12).join('') };
+      pages: parsed.pages.map((offset, i) => roundTime(voiceAt + seconds(take?.pages?.[i] ??
+        (length ? audioLength * offset / length : 0), 'page'))),
+      label: source.label ?? Array.from(parsed.caption.split('\n\n')[0].replace(/\*\*/g, '').replace(/\n/g, '')).slice(0, 12).join('') };
     if (!includesLine(source, clip.script, answers)) {
       for (const key of ['', '.start', '.voice', '.end', '.done', '.next']) times.set(source.id + key, Infinity);
       for (const anchor of parsed.anchors) times.set(anchor.name, Infinity);
@@ -143,7 +146,11 @@ export function buildTimeline(clip, pace = mergePace(), voice, answers = {}) {
   for (const line of lines) {
     times.set(line.id, line.start);
     for (const key of ['start', 'voice', 'end', 'done', 'next']) times.set(`${line.id}.${key}`, line[key]);
-    if (line.spoken) cues.push({ at: line.voice, to: Infinity, text: line.parsed.caption, by: line.by });
+    if (line.spoken) {
+      line.parsed.caption.split('\n\n').forEach((text, i) => {
+        cues.push({ at: i === 0 ? line.voice : line.pages[i - 1], to: Infinity, text, by: line.by });
+      });
+    }
   }
   cues.forEach((cue, i) => { cue.to = cues[i + 1]?.at ?? Infinity; });
   const questions = resolveQuestions(clip.script, at);

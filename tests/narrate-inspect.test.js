@@ -91,7 +91,7 @@ it('emits parseable JSON, honors explicit speeds, and never opens/writes voice a
   expect(result[0].query.accent_phrases[0].accent).toBe(4);
   expect(result[0].query.kana).toBe(full.kana);
   expect(result[0].duration).toBeGreaterThan(result[1].duration);
-  expect(queries).toEqual(['ツールを', 'ツールを']);
+  expect(queries).toEqual(['ツールを', 'ツール', 'ツールを']);
   expect(await readdir(dir)).toEqual(['manifest.json', 'untouched.opus']);
   for (const [i, file] of ['manifest.json', 'untouched.opus'].entries()) expect((await readFile(join(dir, file))).equals(before[i])).toBe(true);
   expect(await readdir(join(root, '.cache/voicevox'))).toEqual(['managed-words.json']);
@@ -106,6 +106,21 @@ it('dry-run lists only each sentence’s applicable lexicon without starting an 
   expect(output()).toContain('語彙: なし');
   expect(engine.start).not.toHaveBeenCalled();
   expect(await readdir(root)).toEqual([]);
+});
+
+it('inspects page timing after long-vowel and speed adjustments without writing a recording', async () => {
+  const d = deck();
+  d.chapters[0].clips[0].script[0].text = 'ツール\n\n{point}を';
+  await main(['test', 'sample', '--inspect', '--json', '--speeds', '1,1.5'], { root, load: async () => d });
+  const result = JSON.parse(output());
+  expect(result[0].pages).toEqual([0.555]);
+  expect(result[0].pages).toEqual([result[0].anchors.point]);
+  expect(result[1].pages[0]).toBeLessThan(result[0].pages[0]);
+  expect(result[2].pages).toBeUndefined();
+  expect(formatInspection(result[0])).toContain('字幕の替わり目（音声の頭からの秒）: 0.555000');
+  expect(queries).toEqual(['ツールを', 'ツール', 'ツールを']);
+  expect(await readdir(root)).toEqual(['.cache']);
+  expect(engine.request.mock.calls.some(([p]) => p === '/synthesis')).toBe(false);
 });
 
 it('stops the engine on inspection failure and on early iterator exit', async () => {
