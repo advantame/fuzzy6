@@ -880,7 +880,7 @@ function releases(ctx, a, note, rows) {
   });
   const na = note * a;
   text(ctx, '端末で動くのは、アプリの部分。', b.x + 16, b.y + 236, { font: F.jp(500, 14), color: C.ink2, alpha: na });
-  text(ctx, 'LLM は、API でつないだ提供元で動く。', b.x + 16, b.y + 257, { font: F.jp(500, 14), color: C.ink2, alpha: na });
+  text(ctx, 'LLM は、既定では、API の先の提供元で動く。', b.x + 16, b.y + 257, { font: F.jp(500, 14), color: C.ink2, alpha: na });
   text(ctx, SOURCE, b.x + 16, b.y + b.h - 12, { font: F.jp(400, 12), color: C.muted, alpha: rows[2] * a });
 }
 
