@@ -3,7 +3,8 @@
 // draw(ctx, t, s, k) paints one frame from scratch (s = what prepare returned).
 //
 // k.at('name') is a time of the narration's timeline and k.pace the shared pace. Both can
-// change while the clip is on screen, so draw reads them every frame.
+// change while the clip is on screen, so draw reads them every frame. k.answer('q1') is the
+// state of a question at the time drawn (spec §5.4): { choice, result, waiting }.
 
 import { C, W, H, SQ } from './theme.js';
 
@@ -15,6 +16,7 @@ export function clip({ prepare, draw, ...meta }) {
       const s = prepare ? prepare(ctx, stage) : {};
       const k = {
         at: (name) => stage.at(name),
+        answer: (id) => stage.answer(id),
         get pace() {
           return stage.pace;
         },

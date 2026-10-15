@@ -22,7 +22,7 @@ test('capture supports computed durations, named posters, and all stops/ground f
   const posters = await run(['--posters']);
   const ordered = posters.stdout.trim().split('\n').map(p => p.split('/').at(-1));
   expect(ordered.slice(0, 4)).toEqual(['01-opening.png', '02-sweep.png', '03-detail.png', '04-dom.png']);
-  expect(ordered).toContain('07-script.png');
+  expect(ordered).toContain('11-script.png');
   await run(['detail', '--stops']);
   await run(['detail', '--sheet', '--every', '1']);
   await run(['detail', '1']);

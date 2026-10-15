@@ -4,13 +4,14 @@ export function resolveDoors(clip, timeline) {
   if (!Array.isArray(doors) || doors.length > 3) throw new Error('A clip may have at most 3 doors');
   const time = value => {
     const result = typeof value === 'string' ? timeline.at(value) : value;
+    if (typeof value === 'string' && result === Infinity) return result; // excluded conditional line
     if (!Number.isFinite(result) || result < 0) throw new Error(`Invalid door time: ${value}`);
     return result;
   };
   return doors.map(door => {
     const from = time(door.from ?? 0);
     const until = door.until === undefined ? Infinity : time(door.until);
-    if (until < from) throw new Error(`Door ${door.to}: until precedes from`);
+    if (Number.isFinite(from) && until < from) throw new Error(`Door ${door.to}: until precedes from`);
     return { ...door, from, until, source: door };
   }).sort((a, b) => a.from - b.from);
 }

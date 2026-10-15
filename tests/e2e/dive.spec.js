@@ -18,7 +18,7 @@ test('time-only doors in still mode, DOM, state snapshots, pointer descent and e
   await pauseAt(page, 4.25);
   await page.locator('.mx-door').click();
   await clipIs(page, 'detail');
-  expect(await state(page)).toMatchObject({ dive: { parent: 'sweep', depth: 1 }, index: 1, count: 7, t: 0, doors: [] });
+  expect(await state(page)).toMatchObject({ dive: { parent: 'sweep', depth: 1 }, index: 1, count: 8, t: 0, doors: [] });
   await expect(page.locator('.mx')).toHaveAttribute('data-dive');
   await expect(page.locator('.mx-no-dive')).toHaveText('深掘り');
   await expect(page.locator('.mx-no-chapter')).toHaveText('1');
@@ -26,7 +26,7 @@ test('time-only doors in still mode, DOM, state snapshots, pointer descent and e
   await expect(page.locator('.mx-count-now')).toHaveText('02');
   await expect(page.locator('.mx-prev')).toBeEnabled();
   await expect(page.locator('.mx-next')).toBeEnabled();
-  await expect(page.locator('.mx-tick[data-dive]')).toHaveAttribute('data-state', 'current');
+  await expect(page.locator('.mx-tick[data-dive]:has([data-clip="detail"])')).toHaveAttribute('data-state', 'current');
   await expect(page.locator('.mx-crumb[data-level="back"] .mx-crumb-name')).toHaveText('Canvas clock');
   await page.locator('.mx-crumb[data-level="back"]').click();
   await clipIs(page, 'sweep');
@@ -85,14 +85,14 @@ test('auto returns after the dive hold and advances after returning to an ended 
 
 test('direct URL and index entry have depth zero and return to the parent from', async ({ page }) => {
   await boot(page, '?c=detail&t=1');
-  expect((await state(page)).dive).toEqual({ parent: 'sweep', depth: 0 });
+  expect((await state(page)).dive).toEqual({ parent: 'sweep', depth: 0, group: null, part: 1, parts: 1 });
   await page.evaluate(() => window.__mx.ascend());
   expect(await state(page)).toMatchObject({ clip: 'sweep', t: 3 });
   await page.evaluate(() => window.__mx.descend());
   await page.keyboard.press('i');
   await expect(page.locator('.mx-index-clip[data-clip="detail"]')).toBeFocused();
   await expect(page.locator('.mx-index-clip[data-clip="detail"] canvas')).toHaveAttribute('data-drawn');
-  await expect(page.locator('.mx-index-clips li[data-dive] .mx-index-no')).toHaveText('↳');
+  await expect(page.locator('.mx-index-clips li[data-dive] [data-clip="detail"] .mx-index-no')).toHaveText('↳');
   await page.keyboard.press('Escape'); await clipIs(page, 'detail');
   expect((await state(page)).dive.depth).toBe(1);
   await page.keyboard.press('i');

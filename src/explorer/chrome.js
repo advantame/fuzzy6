@@ -114,6 +114,14 @@ export function createChrome(root, deck, model, retire, frame) {
       ticks.push(tick);
       const li = element('li');
       li.toggleAttribute('data-dive', entry.dive);
+      if (entry.group) {
+        tick.dataset.group = entry.group.id;
+        li.dataset.group = entry.group.id;
+        if (entry.part === 0) {
+          li.setAttribute('data-group-start', '');
+          li.append(element('p', 'mx-index-group', entry.group.title));
+        }
+      }
       const button = element('button', 'mx-index-clip');
       button.dataset.clip = clip.id;
       button.append(
@@ -138,7 +146,10 @@ export function createChrome(root, deck, model, retire, frame) {
       node.dataset.to = door.to;
       if (door.by !== undefined) node.dataset.by = door.by;
       if (!instant) node.dataset.state = 'in';
-      node.append(element('span', 'mx-door-label', door.label), element('span', 'mx-door-hint', '深掘り'));
+      const target = model.targets.get(door.to);
+      const count = target.parts - target.part;
+      if (count > 1) node.dataset.count = count;
+      node.append(element('span', 'mx-door-label', door.label), element('span', 'mx-door-hint', count > 1 ? `深掘り · ${count} 本` : '深掘り'));
       const following = open.slice(i + 1).find(d => activeDoors.has(d));
       q('doors').insertBefore(node, activeDoors.get(following) ?? null);
       activeDoors.set(door, node);
@@ -216,6 +227,7 @@ export function createChrome(root, deck, model, retire, frame) {
           element('span', 'mx-no-clip', numbered.number),
         );
         if (entry.dive) no.append(element('span', 'mx-no-dive', '深掘り'));
+        if (entry.dive && entry.parts > 1) no.append(element('span', 'mx-no-part', `${entry.part + 1}/${entry.parts}`));
         body.append(no);
       }
       body.append(element('h1', 'mx-title', clip.title));

@@ -54,3 +54,7 @@ Only a join from `short` plays the retraction; ↑, the index, R and `go('cues')
 start at 0.6. The existing cues remain absolute (0, 2, 5 seconds); the cue at 0
 is not a stop, and the first stop is 0.6. `?c=cues&t=0` still shows the exact
 joining picture. Duration remains 9 seconds including the bridge. No synthesis.
+
+2026-10-15: 仕様 0.13 の契約例を追加。`quiz` は「1 + 1 は？」「2 × 2 は？」の二問を出し、各問の正解／不正解・skip の文のあとに共通の文を置く。選択肢には HTML と読みを持つものを含める。丸は正解で緑、不正解で朱、飛ばしたときは灰色になる。録りは作らず、見積もりの長さで無音再生する。数値は操作確認用の例。原稿の各文は `clips/quiz.js` と生成台本に記載する。
+
+`quiz` の降り口から `motion-group`（三本）へ降りられる。`group-one` の最後と `group-two` の最初は共通の描画関数で同じ絵を描き、二本めの `join: 'cut'` と `bridge` を確かめられる。組の途中から戻っても、問題の答えと降りた時刻を復元する。組のクリップは原稿を持たず、音源も外部の事実の引用もない。

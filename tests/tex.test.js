@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { texLayout, texBox, CJK } from '../src/kit/tex.js';
+import { texLayout, texBox, texSVG, CJK } from '../src/kit/tex.js';
 
 describe('texLayout', () => {
   test('a named piece on the baseline reports its box, its origin and baseline 0', () => {
@@ -33,5 +33,20 @@ describe('texLayout', () => {
   test('texBox scales the layout to px', () => {
     const L = texLayout('x');
     expect(texBox('x', 50)).toEqual({ w: (L.w * 50) / 1000, asc: (L.asc * 50) / 1000, desc: (L.desc * 50) / 1000 });
+  });
+});
+
+describe('texSVG', () => {
+  test('the same layout as markup, sized in em and on the baseline, with no ids', () => {
+    const src = String.raw`\frac{\el{n}{7.8}}{10} \, \text{高さ}`;
+    const L = texLayout(src);
+    const svg = texSVG(src, { parts: { n: { color: '#f00' } } });
+    expect(svg).toMatch(/^<svg [^>]*viewBox="0 -[\d.]+ [\d.]+ [\d.]+"/);
+    expect(svg).toContain(`width="${+(L.w / 1000).toFixed(2)}em"`);
+    expect(svg).toContain(`vertical-align:${+(-L.desc / 1000).toFixed(2)}em`);
+    expect(svg.match(/<path /g)).toHaveLength(L.items.filter((it) => it.type === 'path').length);
+    expect(svg).toContain('>高</text>');
+    expect(svg).toContain('fill="#f00"');
+    expect(svg).not.toMatch(/ id=/);
   });
 });

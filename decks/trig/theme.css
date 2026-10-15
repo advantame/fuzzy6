@@ -225,6 +225,139 @@
 .mx-crumb[data-level='back'] { margin-top: 14px; color: var(--mx-ink); }
 .mx-crumb + .mx-crumb[data-level='back']::before { content: '↩'; margin: 0 10px 0 0; color: var(--mx-accent); }
 .mx-index-clips > li[data-dive] .mx-index-no { color: var(--mx-accent); }
+.mx-no-part {
+  align-self: center;
+  margin-left: 10px;
+  font: 600 17px/1 var(--mx-font-mono);
+  letter-spacing: 0.04em;
+  color: var(--mx-muted);
+}
+.mx-index-group {
+  margin: 6px 0 4px 34px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--mx-accent);
+}
+
+/* ——— questions (spec §5.4) ———————————————————————————————————————————
+   The choices are the deck's white cards (lib/parts.js card()), their numbers and formulas in
+   Computer Modern like the formulas drawn on the paper. The answer is told the way the deck
+   tells every answer: in vermilion, with a tab on the card's top edge like formulaBox()'s
+   title. A wrong pick stays visible, greyed, so the viewer sees both. */
+.mx .mx-choices { gap: 28px; }
+.mx .mx-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  height: 100%;
+  padding: 16px 30px 16px 20px;
+  border: 2px solid #d5cec0;
+  border-radius: 14px;
+  background: #fff;
+  color: #151412;
+  font: 500 44px/1.15 'KaTeX_Main', 'IBM Plex Sans JP', serif;
+  text-align: left;
+  box-shadow: 0 6px 18px rgba(21, 20, 18, 0.07);
+  transition: border-color 0.2s, background 0.2s, color 0.2s, opacity 0.3s, transform 0.2s var(--mx-ease), box-shadow 0.2s;
+}
+.mx .mx-choice-key {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #7d776c;
+  border-radius: 50%;
+  font: 700 24px/1 'KaTeX_Main', serif;
+  color: #45413a;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.mx .mx-choice-label { flex: 1; text-align: center; }
+.mx .mx-choice-label svg { overflow: visible; }
+
+.mx .mx-choice:not([aria-disabled='true']):hover {
+  border-color: #151412;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgba(21, 20, 18, 0.12);
+}
+.mx .mx-choice:not([aria-disabled='true']):hover .mx-choice-key { border-color: #151412; color: #151412; }
+.mx .mx-choice:focus-visible { outline: 3px solid var(--mx-accent); outline-offset: 4px; }
+
+/* waiting: the cards stand out a little more from the paper */
+.mx .mx-quiz[data-state='wait'] .mx-choice:not([aria-disabled='true']) { border-color: #45413a; }
+
+/* told: the answer in vermilion, a wrong pick greyed, the rest stepped back */
+.mx .mx-choice[aria-disabled='true'] { cursor: default; }
+.mx .mx-quiz:is([data-state='right'], [data-state='wrong'], [data-state='skip']) .mx-choice:not([data-correct], [data-picked]) { opacity: 0.4; }
+.mx .mx-choice[data-correct] {
+  border-color: var(--mx-accent);
+  background: #fff6f1;
+  box-shadow: 0 0 0 2px var(--mx-accent), 0 10px 24px rgba(255, 90, 31, 0.16);
+}
+.mx .mx-choice[data-correct] .mx-choice-key { border-color: var(--mx-accent); background: var(--mx-accent); color: #fff; }
+.mx .mx-choice[data-picked]:not([data-correct]) {
+  border-color: #b7afa0;
+  background: #ece7db;
+  color: #7d776c;
+  box-shadow: none;
+  opacity: 1;
+}
+.mx .mx-choice[data-picked]:not([data-correct]) .mx-choice-label { text-decoration: none; }
+.mx .mx-choice[data-picked]:not([data-correct]) .mx-choice-key { border-color: #7d776c; background: #7d776c; color: #ece7db; }
+.mx .mx-choice[data-correct]::after,
+.mx .mx-choice[data-picked]:not([data-correct])::after {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  padding: 6px 14px 7px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  font: 700 19px/1 var(--mx-font);
+  letter-spacing: 0.08em;
+  color: #fff;
+}
+.mx .mx-choice[data-correct]::after { content: '正解'; background: var(--mx-accent); }
+.mx .mx-quiz[data-state='right'] .mx-choice[data-correct]::after { content: '正解！'; }
+.mx .mx-choice[data-picked]:not([data-correct])::after { content: '選んだ答え'; background: #7d776c; }
+
+/* the hint under the cards; the arrow is a key, like the door's Enter */
+.mx .mx-quiz-hint {
+  position: absolute;
+  top: calc(100% + 16px);
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font: 500 20px/1 var(--mx-font);
+  letter-spacing: 0.04em;
+  color: #7d776c;
+}
+.mx .mx-quiz[data-state='wait'] .mx-quiz-how { color: #151412; }
+.mx .mx-quiz-skip::first-letter {
+  padding: 2px 7px 3px;
+  margin-right: 4px;
+  border: 1.5px solid #d5cec0;
+  border-radius: 6px;
+  font: 500 16px/1 var(--mx-font-mono);
+}
+
+/* in: the cards rise one after another, at the deck's stagger */
+@keyframes trig-choice-in {
+  from { opacity: 0; transform: translateY(18px); }
+}
+.mx .mx-quiz[data-in] .mx-choices > li { animation: trig-choice-in 0.5s var(--mx-ease) both; }
+.mx .mx-quiz[data-in] .mx-choices > li:nth-child(2) { animation-delay: 0.08s; }
+.mx .mx-quiz[data-in] .mx-choices > li:nth-child(3) { animation-delay: 0.16s; }
+.mx .mx-quiz[data-in] .mx-choices > li:nth-child(4) { animation-delay: 0.24s; }
+.mx .mx-quiz[data-in] .mx-choices > li:nth-child(n + 5) { animation-delay: 0.32s; }
+@keyframes trig-tab-in {
+  from { opacity: 0; transform: translateY(-50%) scale(0.6); }
+}
+.mx:not([data-still]) .mx-choice[data-correct]::after,
+.mx:not([data-still]) .mx-choice[data-picked]::after { animation: trig-tab-in 0.35s var(--mx-ease) both; }
 
 /* ——— index: a printed contents page on the stage ——————————————————— */
 

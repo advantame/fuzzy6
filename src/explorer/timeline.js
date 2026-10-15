@@ -1,3 +1,4 @@
+import { includesLine, validateQuestions, resolveQuestions, validateQuestionDuration, validAnswers } from './quiz.js';
 import { resolveDoors } from './dive.js';
 import { validateBridge } from './model.js';
 import { readCast, lineBy, clipCast, recordMatches } from './cast.js';
@@ -49,14 +50,15 @@ function mergeStops(stops, duration, head = 0) {
     const last = result.at(-1);
     if (last && Math.round((stop.at - previousAt) * 1000) < 50) {
       // Keep the actual still's time/identity when a line head almost coincides with it.
-      if (stop.kind === 'still' && !(head > 0 && last.at === head)) Object.assign(last, stop);
-      last.kind = 'still';
+      const kind = last.kind === 'ask' || stop.kind === 'ask' ? 'ask' : 'still';
+      if ((stop.kind === 'ask' || (stop.kind === 'still' && last.kind !== 'ask')) && !(head > 0 && last.at === head)) Object.assign(last, stop);
+      last.kind = kind;
     } else result.push({ ...stop });
     previousAt = stop.at;
   }
   return result;
 }
-export function buildTimeline(clip, pace = mergePace(), voice) {
+export function buildTimeline(clip, pace = mergePace(), voice, answers = {}) {
   validateBridge(clip);
   const head = roundTime(clip.bridge ?? 0);
   const actors = readCast(voice);
@@ -74,10 +76,12 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     for (const mark of [{ at: head }, ...(clip.marks ?? clip.cues ?? []).filter(mark => mark.at >= head)])
       stops.push({ at: roundTime(mark.at), kind: 'line', line: null, label: mark.label ?? mark.text?.replace(/\*\*/g, '').slice(0, 12) ?? '' });
     stops.push({ at: duration, kind: 'still', line: null, label: '' });
-    return { cast, duration, head, lines, cues: clip.cues ?? [], stops: mergeStops(stops, duration, head), at, doors: resolveDoors(clip, { at }) };
+    return { questions: [], cast, duration, head, lines, cues: clip.cues ?? [], stops: mergeStops(stops, duration, head), at, doors: resolveDoors(clip, { at }) };
   }
   if (clip.duration !== undefined || clip.cues !== undefined) throw new Error('script cannot be combined with duration or cues');
   if (!Array.isArray(clip.script) || !clip.script.length) throw new Error('script must contain a line');
+  validateQuestions(clip.script);
+  answers = validAnswers(clip.script, answers);
   const names = new Set();
   const name = n => {
     if (!isName(n) || names.has(n)) throw new Error(`Invalid or duplicate timeline name: ${n}`);
@@ -87,6 +91,7 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     if (!Number.isFinite(n) || n < 0) throw new Error(`Invalid ${label}`);
     return n;
   };
+  const costs = [];
   let start = head;
   for (const source of clip.script) {
     name(source.id);
@@ -111,11 +116,18 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     const done = roundTime(end + seconds(source.tail ?? 0, 'tail'));
     const restName = source.rest ?? 'normal';
     const rest = seconds(typeof restName === 'number' ? restName : pace.rest[restName], 'rest');
+    costs.push({ source, total: Math.round((roundTime(done + rest) - start) * 1000), rest: Math.round((roundTime(done + rest) - done) * 1000) });
     const line = { id: source.id, by, start, leadEnd, voice: voiceAt, end, done,
       next: roundTime(done + rest), spoken, take, speed: Number(speeds[0]), parsed,
       label: source.label ?? Array.from(parsed.plain).slice(0, 12).join('') };
+    if (!includesLine(source, clip.script, answers)) {
+      for (const key of ['', '.start', '.voice', '.end', '.done', '.next']) times.set(source.id + key, Infinity);
+      for (const anchor of parsed.anchors) times.set(anchor.name, Infinity);
+      continue;
+    }
     lines.push(line);
     stops.push({ at: start, kind: 'line', line: line.id, label: line.label });
+    if (source.ask) stops.push({ at: done, kind: 'ask', line: line.id, label: line.label });
     if (source.still || source === clip.script.at(-1)) stops.push({ at: done, kind: 'still', line: line.id, label: line.label });
     for (const anchor of parsed.anchors) {
       const offset = take?.anchors?.[anchor.name] ?? (length ? audioLength * anchor.offset / length : 0);
@@ -123,16 +135,19 @@ export function buildTimeline(clip, pace = mergePace(), voice) {
     }
     start = line.next;
   }
+  validateQuestionDuration(costs, Math.round(head * 1000));
   const duration = lines.at(-1).done;
   if (duration > 180) throw new Error('duration must not exceed 180 seconds');
   lines.at(-1).next = duration;
+  stops.push({ at: duration, kind: 'still', line: lines.at(-1).id, label: lines.at(-1).label });
   for (const line of lines) {
     times.set(line.id, line.start);
     for (const key of ['start', 'voice', 'end', 'done', 'next']) times.set(`${line.id}.${key}`, line[key]);
     if (line.spoken) cues.push({ at: line.voice, to: Infinity, text: line.parsed.caption, by: line.by });
   }
   cues.forEach((cue, i) => { cue.to = cues[i + 1]?.at ?? Infinity; });
-  return { cast, duration, head, lines, cues, stops: mergeStops(stops, duration, head), at, doors: resolveDoors(clip, { at }) };
+  const questions = resolveQuestions(clip.script, at);
+  return { questions, cast, duration, head, lines, cues, stops: mergeStops(stops, duration, head), at, doors: resolveDoors(clip, { at }) };
 }
 export function nextTarget(timeline, t, pace) {
   if (t < timeline.head) return { at: timeline.head, kind: 'stop' };

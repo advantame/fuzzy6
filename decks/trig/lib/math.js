@@ -15,7 +15,7 @@
 // shade(a, …) is a piece drawn at alpha a, for a formula that fills in as it is said; the layout
 // stays put while it does.
 
-import { drawTex, texBox } from '../../../src/kit/tex.js';
+import { drawTex, texBox, texSVG } from '../../../src/kit/tex.js';
 import { C, F } from './theme.js';
 
 const FN = new Set(['sin', 'cos', 'tan']);
@@ -32,6 +32,7 @@ const OPS = {
   '>': '>',
   '→': '\\to',
   ',': ',',
+  ':': ':',
   '∽': '\\backsim',
 };
 const GREEK = { α: '\\alpha', β: '\\beta', γ: '\\gamma', θ: '\\theta', φ: '\\varphi', π: '\\pi', ω: '\\omega' };
@@ -191,4 +192,24 @@ export function math(ctx, nd, x, y, o = {}) {
     parts: Object.fromEntries([...new Set([...Object.keys(c.styles), ...Object.keys(o.parts ?? {})])].map((k) => [k, { ...c.styles[k], ...o.parts?.[k] }])),
     font: (w, px) => F.jp(w, px),
   });
+}
+
+// How a formula reads as plain text: 7.8/10, sin θ.
+function plain(nd) {
+  if (nd.t === 'text') return nd.s;
+  if (nd.t === 'tex') return nd.s;
+  if (nd.t === 'row') return nd.items.map(plain).join(' ');
+  if (nd.t === 'frac') return `${plain(nd.num)}/${plain(nd.den)}`;
+  if (nd.t === 'sqrt') return `√${plain(nd.a)}`;
+  if (nd.t === 'sup') return `${plain(nd.a)}^${plain(nd.s)}`;
+  return plain(nd.a);
+}
+
+// A choice of a question (spec §5.4) set as a formula: { html, text }. The engine puts the
+// markup in the choice's button, where it takes the button's font size and colour; text is how
+// it reads (the button's aria-label, the script book). o: { text, weight (of its Japanese) }.
+export function choice(nd, o = {}) {
+  const c = { n: 0, styles: {}, weight: o.weight ?? 500 };
+  const n0 = node(nd);
+  return { html: texSVG(texOf(n0, c), { parts: c.styles, weight: c.weight }), text: o.text ?? plain(n0) };
 }

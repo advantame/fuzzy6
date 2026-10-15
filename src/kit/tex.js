@@ -1,5 +1,6 @@
 // Formulas written in TeX, typeset by MathJax and drawn on a canvas glyph by glyph, so that they
 // look like formulas in a book (Computer Modern) and every piece of one can still be moved.
+// texSVG() gives the same formula as SVG markup, for the DOM.
 //
 //   drawTex(ctx, String.raw`\frac{\el{num}{BC}}{AC} = \frac{EF}{DF}`, x, y, { size: 44 })
 //
@@ -280,4 +281,49 @@ export function drawTex(ctx, src, x, y, o = {}) {
   }
   ctx.restore();
   return out;
+}
+
+// ——— markup ————————————————————————————————————————————————————————————
+
+const escapeXML = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const num = (n) => +n.toFixed(2);
+
+// A formula as SVG markup, for a formula in the DOM (a choice of a question, spec §5.4). The
+// layout is drawTex()'s, glyph for glyph. It is sized in em, so it takes the font size of the
+// text around it, sits on that text's baseline, and is coloured currentColor; its Japanese takes
+// the surrounding font-family. o: { weight (of the Japanese, 500), parts (by piece name:
+// { alpha, color, weight } — pieces do not move here) }.
+export function texSVG(src, o = {}) {
+  const L = texLayout(src);
+  const P = o.parts ?? {};
+  const mat = (m) => `matrix(${m.map(num).join(' ')})`;
+  const body = L.items
+    .map((it) => {
+      let alpha = 1;
+      let color = it.fill;
+      let weight = o.weight ?? 500;
+      for (const id of it.ids) {
+        const p = P[id];
+        if (!p) continue;
+        if (p.alpha != null) alpha *= p.alpha;
+        if (p.color) color = p.color;
+        if (p.weight) weight = p.weight;
+      }
+      if (alpha <= 0.001) return '';
+      const paint = `${color ? ` fill="${color}"` : ''}${alpha < 1 ? ` opacity="${num(alpha)}"` : ''}`;
+      if (it.type === 'path') return `<path d="${it.d}" transform="${mat(it.m)}"${paint}/>`;
+      if (it.type === 'rect') {
+        const [x, y, w, h] = it.r;
+        return `<rect x="${x}" y="${y}" width="${w}" height="${h}" transform="${mat(it.m)}"${paint}/>`;
+      }
+      return `<text transform="${mat(it.m)}" font-size="${CJK * 1000}" font-weight="${weight}"${paint}>${escapeXML(it.s)}</text>`;
+    })
+    .join('');
+  const em = (n) => `${num(n / 1000)}em`;
+  const h = L.asc + L.desc;
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${num(-L.asc)} ${num(L.w)} ${num(h)}" ` +
+    `width="${em(L.w)}" height="${em(h)}" style="vertical-align:${em(-L.desc)};overflow:visible" ` +
+    `fill="currentColor" aria-hidden="true">${body}</svg>`
+  );
 }

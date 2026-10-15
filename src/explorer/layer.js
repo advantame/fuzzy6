@@ -1,5 +1,6 @@
+import { answerAt } from './quiz.js';
 import { W, H, canvasScale } from './model.js';
-export function createLayer(clip, root, { k, still, thumb = false, report, timing, pace }) {
+export function createLayer(clip, root, { k, still, thumb = false, report, timing, pace, answers = () => ({}) }) {
   const el = document.createElement('div');
   el.className = 'mx-layer';
   el.dataset.clip = clip.id;
@@ -36,6 +37,7 @@ export function createLayer(clip, root, { k, still, thumb = false, report, timin
     still,
     thumb,
     at: name => timing().at(name),
+    answer: id => answerAt(timing(), answers(), id, lastTime, thumb),
     get duration() { return timing().duration; },
     get pace() { return pace(); },
     theme: name => getComputedStyle(root).getPropertyValue(name).trim(),

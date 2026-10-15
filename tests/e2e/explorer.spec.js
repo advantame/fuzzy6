@@ -11,7 +11,7 @@ test('boot, URL selection and navigation controls', async ({ page }) => {
   await expect(page.locator('.mx')).toHaveAttribute('data-state', 'playing');
   await expect(page.locator('.mx-prev')).toBeDisabled();
   await expect(page.locator('.mx-heading-body:not([data-out]) .mx-no')).toHaveCount(0);
-  for (const [key, id] of [['ArrowDown', 'sweep'], ['PageDown', 'dom'], ['PageDown', 'short'], ['PageUp', 'dom'], ['ArrowUp', 'sweep']]) {
+  for (const [key, id] of [['ArrowDown', 'sweep'], ['PageDown', 'dom'], ['PageDown', 'quiz'], ['PageDown', 'short'], ['PageUp', 'quiz'], ['PageUp', 'dom'], ['ArrowUp', 'sweep']]) {
     await page.keyboard.press(key); await isClip(page, id);
   }
   await expect(page).toHaveURL(/c=sweep/);
