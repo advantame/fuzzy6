@@ -90,7 +90,7 @@ const ANS = ['あ', 'した', 'の', '京都', 'は', '晴', 'れ', 'で', '、'
 const ANS_DOC = 'あしたの京都は晴れで、\n最高気温は24℃の予報です。';
 const ID_NOTE = '番号は模式。API では、呼び出しの id で結果を対応づける';
 const REUSE = 'ここまでの計算は使い回せる（9 章）';
-const PROG = '天気予報を調べています…';
+const PROG = '天気予報を調べました';
 const NOTE54 = '会話、呼び出し、結果は説明のための例';
 // the two ways a generation stops, and what the app does next (sentences h, i), above the LLM
 const PANEL = { x: 36, y: 80, w: 330, h: 182 };
@@ -726,18 +726,23 @@ function spin(ctx, cx, cy, p) {
   ctx.restore();
 }
 
-// k: a row of progress on the screen, where the answer was (it moves down), and what it is.
+// k: a row on the screen saying what the app did (the lookup, now done), where the answer was
+// (it moves down), and what it is.
 function progressRow(ctx, b, a) {
   if (a <= 0.001) return;
   const y = b.y + 16;
   const x = SCREEN.x + 24;
   ctx.save();
   ctx.globalAlpha = a;
-  ctx.strokeStyle = C.muted;
+  // the lookup is done by now (the answer is below it): a check, not a spinner
+  ctx.strokeStyle = C.green;
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
-  ctx.arc(x + 9, y, 8, -Math.PI * 0.4, Math.PI * 1.1);
+  ctx.moveTo(x + 2, y);
+  ctx.lineTo(x + 7, y + 5);
+  ctx.lineTo(x + 16, y - 6);
   ctx.stroke();
   ctx.restore();
   text(ctx, PROG, x + 28, y + 1, { font: F.jp(500, 17), color: C.ink2, base: 'middle', alpha: a });
