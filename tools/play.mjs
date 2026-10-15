@@ -3,6 +3,8 @@
  * Real-time sound/clock/frame integration check, for engine playback changes.
  * Requires the dev server at http://127.0.0.1:5175 (npm run dev).
  * npm run play -- <deck> [clipId ...] [--jobs N] [--timeout seconds]
+ * --answers right|wrong|skip chooses quiz answers (default right).
+ * FUZZY6_URL overrides the default server http://127.0.0.1:5175.
  * Omit clips to play every narrated clip, including dives. --jobs defaults to 6,
  * accepts 1–12. --timeout bounds the entire run (default 600, maximum 3600).
  * Normal-mode pages are 960x540, with Chromium autoplay enabled. Each page polls
@@ -22,11 +24,14 @@ import { deckIds, shortError } from './script-files.mjs';
 import { normalizeDeck } from '../src/explorer/model.js';
 
 export function parseArgs(args) {
-  let jobs = 6, timeout = 600;
+  let jobs = 6, timeout = 600, answers = 'right';
   const positional = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === '--jobs' || arg === '--timeout') {
+    if (arg === '--answers') {
+      answers = args[++i];
+      if (!['right', 'wrong', 'skip'].includes(answers)) throw new Error('Invalid --answers');
+    } else if (arg === '--jobs' || arg === '--timeout') {
       const value = Number(args[++i]);
       if (!Number.isInteger(value) || value < 1 || value > (arg === '--jobs' ? 12 : 3600))
         throw new Error(`${arg}: expected integer 1–${arg === '--jobs' ? 12 : 3600}`);
@@ -37,7 +42,7 @@ export function parseArgs(args) {
   }
   if (!positional.length || positional.some(id => !/^[a-z0-9][a-z0-9-]*$/.test(id)))
     throw new Error('Usage: play <deck> [clipId ...] [--jobs 1–12] [--timeout seconds]');
-  return { deck: positional[0], clips: [...new Set(positional.slice(1))], jobs, timeout };
+  return { deck: positional[0], clips: [...new Set(positional.slice(1))], jobs, timeout, answers };
 }
 
 async function step(promise, ms = 15000) {
@@ -51,14 +56,24 @@ async function step(promise, ms = 15000) {
 
 // Runs as an init script, before the app starts, so slow Node round trips cannot
 // omit the first part of playback. Retains scalars only, never a polling history.
-export function installMeasurement(clipId) {
+export function installMeasurement(input) {
+  const { clipId, questions = [], answers = 'right' } = typeof input === 'string' ? { clipId: input } : input;
   window.__playResult = new Promise(resolve => {
     const boot = performance.now();
     let start, last, stall = 0;
     const finish = result => { clearInterval(timer); resolve(result); };
     const timer = setInterval(() => {
       const now = performance.now();
-      const s = window.__mx?.state();
+      let s = window.__mx?.state();
+      // Answer when the UI opens, before the gate, so the measurement remains
+      // continuous. Skip uses play only at the gate, never seek.
+      if (s?.clip === clipId) {
+        for (const q of questions) {
+          if (answers !== 'skip') window.__mx.answer(q.id, answers === 'right' ? q.answer : q.wrong);
+        }
+        if (answers === 'skip' && s.ask) window.__mx.play();
+        s = window.__mx.state();
+      }
       if (!start) {
         if (now - boot > 30000) return finish({ error: 'playing timeout' });
         if (s?.state !== 'playing') return;
@@ -69,8 +84,9 @@ export function installMeasurement(clipId) {
         start = { at: now, t: s.t, duration: s.duration };
         last = { at: now, t: s.t };
       }
-      if (s.clip !== clipId || s.sound !== 'on' || s.duration !== start.duration)
+      if (s.clip !== clipId || s.sound !== 'on')
         return finish({ error: `clip=${s.clip} sound=${s.sound} duration=${s.duration}` });
+      start.duration = s.duration;
       if (s.t < last.t) return finish({ error: `backwards t=${s.t} previous=${last.t}` });
       // Count the interval through the first progress sample, too. Otherwise a
       // long blocked event loop could hide its stall by advancing on that sample.
@@ -97,7 +113,7 @@ export function checkResult(result, issues) {
   return `duration=${result.duration.toFixed(3)} span=${span.toFixed(3)} wall=${result.wall.toFixed(3)} diff=${diff.toFixed(3)} stall=${result.stall.toFixed(3)} issues=0`;
 }
 
-async function playClip(browser, deck, clip) {
+async function playClip(browser, deck, clip, questions, answers) {
   let page, issues = 0;
   const messages = [];
   const report = message => { issues++; if (messages.length < 3) messages.push(shortError(message)); };
@@ -109,8 +125,8 @@ async function playClip(browser, deck, clip) {
     page.on('console', message => {
       if (message.type() === 'error' || message.type() === 'warning') report(message.text());
     });
-    await step(page.addInitScript(installMeasurement, clip));
-    await page.goto(`http://127.0.0.1:5175/decks/${deck}/?c=${clip}`);
+    await step(page.addInitScript(installMeasurement, { clipId: clip, questions, answers }));
+    await page.goto(`${process.env.FUZZY6_URL ?? 'http://127.0.0.1:5175'}/decks/${deck}/?c=${clip}`);
     await page.waitForFunction(() => window.__mx?.state().clip && window.__mx.state().state !== 'loading');
     if (await step(page.evaluate(() => window.__mx.state().auto))) await page.keyboard.press('a');
     const result = await step(page.evaluate(() => window.__playResult), 215000);
@@ -130,7 +146,8 @@ async function worker(options) {
   try {
     if (!(await deckIds(ROOT)).includes(options.deck)) throw new Error(`Unknown deck: ${options.deck}`);
     const deck = await loadDeck(ROOT, options.deck);
-    const narrated = normalizeDeck(deck).all.filter(e => e.clip.script?.some(l => l.text !== undefined)).map(e => e.clip.id);
+    const entries = normalizeDeck(deck).all;
+    const narrated = entries.filter(e => e.clip.script?.some(l => l.text !== undefined)).map(e => e.clip.id);
     const clips = options.clips.length ? options.clips : narrated;
     for (const clip of clips) if (!narrated.includes(clip)) throw new Error(`Unknown or unnarrated clip: ${options.deck}/${clip}`);
     if (!clips.length) throw new Error(`${options.deck}: no narrated clips`);
@@ -141,7 +158,11 @@ async function worker(options) {
     // A finite work queue; no retry or replacement job after any timeout.
     const workers = Array.from({ length: Math.min(options.jobs, clips.length) }, async () => {
       while (!interrupted && next < clips.length) {
-        const result = await playClip(browser, options.deck, clips[next++]);
+        const id = clips[next++];
+        const questions = (entries.find(e => e.clip.id === id).clip.script ?? []).filter(s => s.ask).map(s => ({
+          id: s.id, answer: s.ask.answer, wrong: s.ask.choices.findIndex((_, i) => i !== s.ask.answer),
+        }));
+        const result = await playClip(browser, options.deck, id, questions, options.answers);
         if (!result.ok) failures++;
         console.log(result.message);
       }

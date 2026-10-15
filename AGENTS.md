@@ -11,7 +11,7 @@ docs/environment.md     道具と環境の記録（語りの合成、立ち絵�
 docs/publishing.md      公開のしかた（基盤、反映の手順、イメージとサーバ、GitHub）
 docs/next-deck.md       次のデッキ（高校数学）の構想
 src/explorer/           engine。spec の実装（index.js が createExplorer、pace.js が歩調の既定値）
-src/kit/                canvas で描くクリップのための道具（緩急、種付き乱数、文字、図形、強調、図の文字の置き場所）
+src/kit/                canvas で描くクリップのための道具（緩急、種付き乱数、文字、図形、強調、図の文字の置き場所、TeX の式）
 decks/<id>/             一つのデッキ。deck.js, clips/, lib/, voice/, README.md
 decks/<id>/script.md    語りの原稿を、デッキの順に一つにまとめた台本。クリップの script から作る（手で直さない）
 index.html, src/home/   デッキの一覧
@@ -82,7 +82,7 @@ npm run play -- <deck> [clipId …]      # 声つきで頭から最後まで実�
 1. デッキの `README.md` に、クリップの狙い、中身、語りの文、出典を書く。数値や出力が作り物なら「例」の札を付けると決めておく。
 2. クリップを書く。canvas のクリップは `decks/llm/lib/clip.js` の `clip({ prepare, draw })` の形が楽で、`prepare` に時刻によらない配置の計算を置く。語りの原稿 `script` を先に書き、文ごとに地、答え、動きを割り振ってから描く（手本は `decks/llm/clips/timeline.js`）。
 3. `npm run narrate -- <deck> <id>` で読み上げの文を確かめ、`--generate` で合成する。合成の前でも、クリップは見積もった長さで無音のまま再生できる。聞き比べのために `--speeds` でほかの話速を足したときは、決まったあとに `--prune` で片づける。置いてある音声は、すべて公開版に入る。
-4. `npm run capture -- <deck> --posters` で全クリップの最後の絵を、`npm run capture -- <deck> <id> --stops` で止まりごとの絵と、各文の頭から 1 秒後の絵を撮る。重なり、はみ出し、折り返しを見て、静止点の絵が一枚の図版として読めるまで直す。
+4. `npm run capture -- <deck> --posters` で全クリップの最後の絵を、`npm run capture -- <deck> <id> --stops` で止まりごとの絵と、各文の頭から 1 秒後の絵を撮る。重なり、はみ出し、折り返しを見て、静止点の絵が一枚の図版として読めるまで直す。問題（spec §5.4）のあるクリップは、何も付けずに撮ると飛ばしたときの絵になる。`--answers q1:0` のように答えを与えて、正解のときと不正解のときも撮る。
 5. `npm run capture -- <deck> <id> --sheet --every 0.75` で動きの一覧を撮り、途中の重なりを見る。静止フレームは動きの確認にならないので、区切りごとに実際に再生する。
 6. 合成したら、`npm test` と `npm run test:e2e` を通す。声つきの再生が終わりまで着くこと（時計が声の終わりで止まらず、クリップの長さどおりに進むこと）は、この二つが確かめる。unit は、語りのあるすべてのクリップの実際の時間割の上で、engine の時計をコマ送りで最後まで進める。録りのない文や古い録りが残っていても落ちる。e2e は、すべての録りをブラウザで復号し、長さを記録と比べる。engine の音、時計、コマの進め方に手を入れたときは、さらに `npm run play -- <deck>` で、声つきのまま頭から最後まで実時間で再生する。
 7. 事実は一次資料で裏を取る（codex の research が向く）。訂正はデッキの `README.md` の表に反映する。

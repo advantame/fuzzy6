@@ -1,6 +1,8 @@
+import { answerAt, availableQuestion, crossedGate, clearAnswers, parseAnswers, validAnswers } from './quiz.js';
+import { createQuizView } from './quiz-view.js';
 import { doorsAt, descentTarget, ascentTarget } from './dive.js';
 import { createCastView } from './cast-view.js';
-import { normalizeDeck, clampTime, advanceTime, seekState, canCutJoin } from './model.js';
+import { normalizeDeck, clampTime, advanceTime, seekState, canCutJoin, diveNeighbor } from './model.js';
 import { createChrome } from './chrome.js';
 import { createLayer } from './layer.js';
 import { bindInput } from './input.js';
@@ -28,6 +30,8 @@ export function createExplorer(host, deck, options = {}) {
   let generation = 0;
   let pending = model.ids.get(params.get('c')) ?? model.clips[0];
   let diveStack = [];
+  let answers = {};
+  let waiting = null;
   let openDoors = [];
   let current = null;
   let layer = null;
@@ -43,8 +47,8 @@ export function createExplorer(host, deck, options = {}) {
   let tune;
   const sound = still ? null : createSound(deck.voice);
   const view = () => ({ ...current.clip, ...timing.value });
-  function compute(clip) {
-    try { return buildTimeline(clip, pace, deck.voice); }
+  function compute(clip, choices = {}) {
+    try { return buildTimeline(clip, pace, deck.voice, choices); }
     catch (error) {
       return { ...buildTimeline({ duration: 1 }), error };
     }
@@ -109,6 +113,7 @@ export function createExplorer(host, deck, options = {}) {
   }
   const chrome = createChrome(root, deck, model, retire, frame);
   const { q } = chrome;
+  const quizView = createQuizView(q('stage'), q('doors'));
   const castView = createCastView(root, q('subs'));
   function state() {
     return {
@@ -127,7 +132,9 @@ export function createExplorer(host, deck, options = {}) {
       line: timing ? positionAt(timing.value, t)?.line ?? null : null,
       stops: timing ? timing.value.stops.map(s => ({ ...s })) : [],
       target: timing ? nextTarget(timing.value, t, pace) : null,
-      dive: current?.dive ? { parent: current.parent.clip.id, depth: diveStack.length } : null,
+      dive: current?.dive ? { parent: current.parent.clip.id, depth: diveStack.length, group: current.group?.id ?? null, part: current.part + 1, parts: current.parts } : null,
+      ask: waiting,
+      answers: Object.fromEntries((timing?.value.questions ?? []).map(q => [q.id, answerAt(timing.value, answers, q.id, t)])),
       doors: timing ? doorsAt(timing.value.doors, t).map(({ to, label, by }) => ({ to, label, by })) : [],
     };
   }
@@ -165,14 +172,18 @@ export function createExplorer(host, deck, options = {}) {
   }
   function render(instant = false) {
     if (!current || destroyed) return;
+    if (still) waiting = timing.value.questions?.find(q => answerAt(timing.value, answers, q.id, t).waiting)?.id ?? null;
+    if (waiting) { if (root.dataset.ask !== waiting) root.dataset.ask = waiting; }
+    else root.removeAttribute('data-ask');
     layer.render(t);
+    quizView.render(timing.value, answers, t, instant || still || status !== 'playing');
     chrome.render(view(), t, instant || still, still, nextTarget(timing.value, t, pace));
     castView.render(current.clip.id, timing.value, t, castOn);
     const doors = doorsAt(timing.value.doors, t);
     chrome.doors(doors, instant || still || status !== 'playing');
     if (doors.length !== openDoors.length || doors.some((door, i) => door !== openDoors[i])) {
       openDoors = doors;
-      for (const door of doors) void loadFonts(model.ids.get(door.to).clip.fonts);
+      for (const door of doors) void loadFonts(model.targets.get(door.to).clip.fonts);
       prepareSound(current, timing.value, t);
     }
     emit('time');
@@ -188,10 +199,16 @@ export function createExplorer(host, deck, options = {}) {
     clockFrame = frame(stamp => {
       clockFrame = null;
       const dt = lastStamp === undefined ? 0 : Math.max(0, Math.min(0.1, (stamp - lastStamp) / 1000));
+      const before = t;
       t = soundOn && sound ? sound.clock(current.clip.id, timing.value, t, dt)
         : advanceTime(t, dt, timing.value.duration);
       lastStamp = stamp;
+      const gate = crossedGate(timing.value, answers, before, t);
+      if (gate) { t = gate.gate; waiting = gate.id; setState('paused'); }
+      else for (const q of timing.value.questions ?? [])
+        if (before === q.gate && t > q.gate && !Object.hasOwn(answers, q.id)) answers[q.id] = null;
       render();
+      if (gate) return;
       if (t >= timing.value.duration) ended(true);
       else startClock();
     });
@@ -220,16 +237,16 @@ export function createExplorer(host, deck, options = {}) {
   };
   function newLayer(clip, thumb = false, box = timing) {
     const source = box.value.error ? { ...clip, setup() { throw box.value.error; } } : clip;
-    return createLayer(source, root, { k, still, thumb, report, timing: () => box.value, pace: () => pace });
+    return createLayer(source, root, { k, still, thumb, report, timing: () => box.value, pace: () => pace, answers: () => box.answers ?? {} });
   }
   function prepareSound(entry, timeline, seconds = 0, stack = diveStack) {
     if (!sound) return;
     // Retain only the current neighborhood and the currently open destinations.
     const neighbors = entry.dive
-      ? [model.ids.get(stack.at(-1)?.id) ?? entry.parent]
+      ? [diveNeighbor(entry, -1), diveNeighbor(entry, 1), model.ids.get(stack.at(-1)?.id) ?? entry.parent]
       : [model.clips[entry.index - 1], model.clips[entry.index + 1]];
     const entries = [...new Set([entry, ...neighbors,
-      ...doorsAt(timeline.doors, seconds).map(d => model.ids.get(d.to))].filter(Boolean))];
+      ...doorsAt(timeline.doors, seconds).map(d => model.targets.get(d.to))].filter(Boolean))];
     sound.prepare(entries.map(e => ({ id: e.clip.id, timeline: e === entry ? timeline : compute(e.clip) })), soundOn);
   }
   function syncSound() {
@@ -299,7 +316,7 @@ export function createExplorer(host, deck, options = {}) {
     pace = nextPace;
     if (!current) return;
     const before = timing.value;
-    timing.value = compute(current.clip);
+    timing.value = compute(current.clip, answers);
     t = preservePosition(before, timing.value, t);
     lastStamp = undefined;
     chrome.timing(view());
@@ -311,7 +328,7 @@ export function createExplorer(host, deck, options = {}) {
     emit('timeline');
     thumbnails();
   }
-  async function navigate(entry, seconds, dir = 'jump', stack = [], returning = false) {
+  async function navigate(entry, seconds, dir = 'jump', stack = [], returning = false, restored = {}) {
     if (destroyed) return;
     const requestedJoin = canCutJoin(current, entry, t, timing?.value.duration, dir);
     const joins = () => requestedJoin && canCutJoin(current, entry, t, timing?.value.duration, dir);
@@ -324,7 +341,8 @@ export function createExplorer(host, deck, options = {}) {
     if (ticket !== generation || destroyed) return;
     await loadFonts(entry.clip.fonts);
     if (ticket !== generation || destroyed) return;
-    const nextTimeline = compute(entry.clip);
+    const nextAnswers = validAnswers(entry.clip.script, restored);
+    const nextTimeline = compute(entry.clip, nextAnswers);
     const entryTime = () => clampTime(seconds ?? (joins() ? 0 : nextTimeline.head), nextTimeline.duration);
     prepareSound(entry, nextTimeline, entryTime(), stack);
     if (sound && soundOn) await sound.waitFirst(entry.clip.id, nextTimeline);
@@ -354,7 +372,9 @@ export function createExplorer(host, deck, options = {}) {
     diveStack = stack;
     openDoors = [];
     chrome.doors([], true);
-    timing = { value: nextTimeline };
+    answers = nextAnswers;
+    waiting = null;
+    timing = { value: nextTimeline, answers };
     t = start;
     root.dataset.chapter = entry.chapter.id;
     root.dataset.clip = entry.clip.id;
@@ -396,8 +416,8 @@ export function createExplorer(host, deck, options = {}) {
     else setState(still || blocked() ? 'paused' : 'playing');
     emit('timeline');
     emit('change');
-    for (const i of [entry.index - 1, entry.index + 1])
-      if (model.clips[i]) void loadFonts(model.clips[i].clip.fonts);
+    for (const neighbor of entry.dive ? [diveNeighbor(entry, -1), diveNeighbor(entry, 1)] : [model.clips[entry.index - 1], model.clips[entry.index + 1]])
+      if (neighbor) void loadFonts(neighbor.clip.fonts);
     if (still) window.__ready = true;
   }
   function go(id, { t } = {}) {
@@ -407,33 +427,79 @@ export function createExplorer(host, deck, options = {}) {
   }
   function next() {
     cancelHold();
-    if (pending.dive) return ascend();
+    if (pending.dive) {
+      const neighbor = diveNeighbor(pending, 1);
+      return neighbor ? navigate(neighbor, undefined, 'next', diveStack) : ascend();
+    }
     if (pending.index < model.clips.length - 1) return navigate(model.clips[pending.index + 1], undefined, 'next');
   }
   function prev() {
     cancelHold();
-    if (pending.dive) return ascend();
+    if (pending.dive) {
+      const neighbor = diveNeighbor(pending, -1);
+      return neighbor ? navigate(neighbor, undefined, 'prev', diveStack) : ascend();
+    }
     if (pending.index > 0) return navigate(model.clips[pending.index - 1], undefined, 'prev');
   }
   function descend(to) {
     if (!current || destroyed || status === 'loading' || indexOpen || diveStack.length >= 8) return;
     const door = descentTarget(timing.value.doors, t, to);
     if (!door) return;
-    return navigate(model.ids.get(door.to), 0, 'jump', [...diveStack, { id: current.clip.id, t }]);
+    return navigate(model.targets.get(door.to), undefined, 'jump', [...diveStack, { id: current.clip.id, t, answers: { ...answers } }]);
   }
   function ascend() {
     if (destroyed || status === 'loading') return;
     const target = ascentTarget(current, diveStack, compute);
     if (!target) return;
-    return navigate(model.ids.get(target.id), target.t, 'jump', diveStack.slice(0, -1), true);
+    return navigate(model.ids.get(target.id), target.t, 'jump', diveStack.slice(0, -1), true, target.answers);
+  }
+  function rebuildAnswers() {
+    sound?.stop();
+    timing.value = compute(current.clip, answers);
+    timing.answers = answers;
+    lastStamp = undefined;
+    chrome.timing(view());
+    prepareSound(current, timing.value, t);
+    emit('timeline');
+  }
+  function answer(id, choice) {
+    if (!current || destroyed || status === 'loading') return false;
+    const question = availableQuestion(timing.value, answers, t);
+    if (!question || question.id !== id || !Number.isInteger(choice) || choice < 0 || choice >= question.choices.length) return false;
+    const resume = waiting === id;
+    cancelHold();
+    answers[id] = choice;
+    waiting = null;
+    rebuildAnswers();
+    render(true);
+    if (resume && !still) {
+      if (t >= timing.value.duration) ended(true);
+      else play();
+    }
+    return true;
+  }
+  function restart() {
+    if (!current || status === 'loading') return;
+    answers = {};
+    waiting = null;
+    rebuildAnswers();
+    t = timing.value.head;
+    render(true);
+    if (t >= timing.value.duration) ended();
+    else play();
   }
   function play() {
     cancelHold();
     if (!current || destroyed || status === 'loading' || indexOpen) return;
-    if (t >= timing.value.duration) {
-      t = timing.value.head;
-      render(true);
-    }
+    const gate = timing.value.questions?.find(q => q.gate === t && !Object.hasOwn(answers, q.id));
+    if (gate) answers[gate.id] = null;
+    else if (t >= timing.value.duration) { restart(); return; }
+    // Starting exactly on a gate deliberately passes it. The next frame is
+    // strictly beyond the gate; retain the skip until the question is rewound.
+    waiting = null;
+    root.removeAttribute('data-ask');
+    if (gate) render(true);
+    if (t >= timing.value.duration) { ended(true); return; }
     if (!still && blocked()) { setState('paused'); unlock(); return; }
     setState('playing');
   }
@@ -445,7 +511,13 @@ export function createExplorer(host, deck, options = {}) {
     cancelHold();
     if (!current || destroyed) return;
     sound?.stop();
-    t = clampTime(seconds, timing.value.duration);
+    const before = t;
+    const destination = clampTime(seconds, timing.value.duration);
+    if (clearAnswers(timing.value, answers, before, destination)) rebuildAnswers();
+    t = clampTime(destination, timing.value.duration);
+    waiting = null;
+    if (!still) for (const q of timing.value.questions ?? [])
+      if (t > q.gate && !Object.hasOwn(answers, q.id)) answers[q.id] = null;
     lastStamp = undefined;
     const nextState = seekState(status, t, timing.value.duration);
     render(true);
@@ -455,15 +527,27 @@ export function createExplorer(host, deck, options = {}) {
   function moveStop(backward) {
     cancelHold();
     if (!current || status === 'loading') return;
+    const wasWaiting = !!waiting;
     const wasPlaying = status === 'playing' || status === 'ended';
     const target = backward ? previousTarget(timing.value, t, pace) : nextTarget(timing.value, t, pace);
     if (!target) {
-      if (backward && current.dive) return ascend();
+      if (!backward && waiting) {
+        answers[waiting] = null; waiting = null; ended(); render(true); return;
+      }
+      if (backward && current.dive) {
+        const neighbor = diveNeighbor(current, -1);
+        return neighbor ? navigate(neighbor, Infinity, 'prev', diveStack) : ascend();
+      }
       if (backward && current.index > 0) return navigate(model.clips[current.index - 1], Infinity, 'prev');
       if (!backward && status === 'ended') return next();
       return;
     }
     seek(target.at);
+    const gate = timing.value.questions?.find(q => q.gate === t && !Object.hasOwn(answers, q.id));
+    if (!backward && target.kind === 'stop' && gate) {
+      waiting = gate.id; setState('paused'); render(true); return;
+    }
+    if (wasWaiting && !backward && !still && t < timing.value.duration) setState('playing');
     if (t >= timing.value.duration) return;
     if (wasPlaying && !still) {
       setState('playing');
@@ -607,6 +691,7 @@ export function createExplorer(host, deck, options = {}) {
     go,
     descend,
     ascend,
+    answer,
     next,
     prev,
     play,
@@ -624,7 +709,8 @@ export function createExplorer(host, deck, options = {}) {
   syncAuto();
   syncSound();
   root.dataset.state = status;
-  bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor, unlock, cues: () => timing?.value.cues ?? [] });
+  bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor, unlock, restart,
+    question: () => timing && availableQuestion(timing.value, answers, t)?.id, cues: () => timing?.value.cues ?? [] });
   listen(window, 'resize', resize);
   listen(document, 'visibilitychange', () => {
     cancelHold();
@@ -650,7 +736,7 @@ export function createExplorer(host, deck, options = {}) {
       tune = createTune(root, deck, api, () => timing ? positionAt(timing.value, t) : null);
       resize();
     }
-    if (!destroyed) await navigate(pending, still ? Number(params.get('t')) : undefined);
+    if (!destroyed) await navigate(pending, still ? Number(params.get('t')) : undefined, 'jump', [], false, parseAnswers(params.get('a') ?? ''));
   })();
   return api;
 }

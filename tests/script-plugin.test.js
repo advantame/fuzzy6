@@ -98,7 +98,7 @@ export default { id: 'test', title: 'Test', chapters: [{ id: 'one', title: '章'
   await writeFile(join(dir, 'deck.js'), source);
   await writeFile(join(root, 'index.html'), '<html><body>Watch test<script type="module">window.ready = true;</script></body></html>');
   server = await createServer({ root, configFile: false, plugins: [scriptDocs()], logLevel: 'silent',
-    server: { host: '127.0.0.1', port: 5174, strictPort: true },
+    server: { host: '127.0.0.1', port: 8080, strictPort: true },
     optimizeDeps: { noDiscovery: true, include: [] },
   });
   const warning = vi.spyOn(server.config.logger, 'warn');
@@ -111,7 +111,7 @@ export default { id: 'test', title: 'Test', chapters: [{ id: 'one', title: '章'
   page.setDefaultNavigationTimeout(10_000);
   let navigations = 0;
   page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
-  await page.goto('http://127.0.0.1:5174/');
+  await page.goto('http://127.0.0.1:8080/');
   await page.waitForFunction(() => window.ready);
   const baseline = navigations;
   const before = (await stat(join(dir, 'script.md'))).mtimeMs;

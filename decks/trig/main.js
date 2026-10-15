@@ -12,6 +12,8 @@ import '@fontsource/ibm-plex-sans-condensed/700.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '@fontsource/ibm-plex-mono/600.css';
+// the Computer Modern faces of numbers and letters (lib/theme.js)
+import 'katex/dist/katex.min.css';
 import '../../src/explorer/explorer.css';
 import './theme.css';
 import { createExplorer } from '../../src/explorer/index.js';

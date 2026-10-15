@@ -1,5 +1,7 @@
+import { parseLine } from '../src/explorer/script.js';
+import { conditions } from '../src/explorer/quiz.js';
 import { normalizeDeck } from '../src/explorer/model.js';
-import { readCast } from '../src/explorer/cast.js';
+import { readCast, lineBy } from '../src/explorer/cast.js';
 import { buildTimeline, mergePace, lineSpeed } from '../src/explorer/timeline.js';
 
 // Escape only what changes the rendering, so the file still reads well as plain text ("GPT-3",
@@ -58,19 +60,33 @@ export function renderScript(deck) {
     };
     for (const entry of model.all.filter(e => e.indexChapter === chapter)) {
       const { clip } = entry;
+      if (entry.group && entry.part === 0) {
+        flush();
+        paragraphs.push(`### 深掘り ${markdown(entry.group.title)} ${code(entry.group.id)}`);
+        for (const parent of model.all) for (const parentDoor of parent.clip.doors ?? [])
+          if (model.targets.get(parentDoor.to)?.group === entry.group) paragraphs.push(doorText({ parent, parentDoor }));
+      }
       if (!hasSpeech(clip)) { silent.push(title(entry)); continue; }
       flush();
       const tl = timeline(clip);
-      const spoken = tl.lines.filter(l => l.spoken);
-      const estimated = spoken.some(l => !l.take || l.speed !== lineSpeed(clip.script.find(s => s.id === l.id), pace));
+      const spoken = clip.script.filter(s => s.text !== undefined).map(s => ({ ...s, by: lineBy(s, cast), parsed: parseLine(s.text) }));
+      const estimated = tl.lines.some(l => l.spoken && (!l.take || l.speed !== lineSpeed(clip.script.find(s => s.id === l.id), pace)));
       const duration = (Math.round(tl.duration * 10) / 10).toFixed(1);
-      paragraphs.push(`### ${title(entry)} ${code(clip.id)}（${estimated ? `約 ${duration} 秒、録りのない文は見積もり` : `${duration} 秒`}）`);
-      if (entry.dive) paragraphs.push(doorText(entry));
+      paragraphs.push(`${entry.group ? '####' : '###'} ${title(entry)} ${code(clip.id)}（${estimated ? `約 ${duration} 秒、録りのない文は見積もり` : `${duration} 秒`}）`);
+      if (entry.dive && !entry.group) paragraphs.push(doorText(entry));
       paragraphs.push(spoken.map((line, i) => {
         const speed = clip.script.find(s => s.id === line.id).speed;
         const actor = line.by !== first ? `**${markdown(cast[line.by].name)}**　` : '';
         const note = speed === 'slow' ? '（ゆっくり）' : speed === 'fast' ? '（早口）' : '';
-        return `${i + 1}. ${actor}${markdown(line.parsed.plain)}${note} ${code(line.id)}`;
+        const byQuestion = new Map();
+        for (const condition of conditions(line)) {
+          const [id, result] = condition.split('.');
+          if (!byQuestion.has(id)) byQuestion.set(id, []);
+          byQuestion.get(id).push({ right: '正解', wrong: '不正解', skip: '飛ばした' }[result]);
+        }
+        const prefix = byQuestion.size ? `〔${[...byQuestion].map(([id, results]) => `${id} が${results.join('か')}${results.at(-1).endsWith('正解') ? 'の' : ''}とき`).join('、または ')}〕` : '';
+        const choices = line.ask ? `\n   選択肢: ${line.ask.choices.map((choice, j) => `${j + 1}. ${markdown(typeof choice === 'string' ? parseLine(choice).plain : choice.text)}${j === line.ask.answer ? '（正解）' : ''}`).join(' ')}` : '';
+        return `${i + 1}. ${prefix}${actor}${markdown(line.parsed.plain)}${note} ${code(line.id)}${choices}`;
       }).join('\n'));
     }
     flush();

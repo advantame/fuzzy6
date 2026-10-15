@@ -155,7 +155,7 @@ function exactTable(ctx, a, fill, frame) {
   ctx.save();
   ctx.globalAlpha *= a;
   card(ctx, x, y, w, h, { stroke: frame > 0 ? C.accent : C.rule, lw: frame > 0 ? 3 + 3 * frame : 2 });
-  text(ctx, 'θ', x + degW / 2, y + 46, { font: F.sans(400, 30), color: C.ink, align: 'center' });
+  math(ctx, 'θ', x + degW / 2, y + 46, { size: 30, color: C.ink, align: 'center' });
   ['sin', 'cos', 'tan'].forEach((c, i) => math(ctx, row(c, 'θ'), x + degW + colW * (i + 0.5), y + 46, { size: 30, color: { sin: C.sin, cos: C.cos, tan: C.tan }[c], align: 'center' }));
   ctx.fillStyle = C.ink;
   ctx.fillRect(x + 12, y + headH - 2, w - 24, 2);

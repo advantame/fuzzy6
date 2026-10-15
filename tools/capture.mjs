@@ -9,6 +9,7 @@
  *   -> test-output/<deck>/<clipId>_sheet.png (480px tiles, up to 60 frames)
  * npm run capture -- <deck> <clipId> --stops [--clean] [--size WxH]
  *   -> test-output/<deck>/<clipId>_stops/ (head onward; stops and line.start + pace.ground)
+ * --answers q1:0,q2:2 supplies zero-based choices through URL &a=.
  * --timeout seconds bounds the entire run (default 240). A separate supervisor
  * terminates the worker and its browser process group if graceful cleanup stalls.
  * Viewports are limited to 8 million pixels; sheet image data to 64 MiB.
@@ -46,6 +47,8 @@ if (!worker) {
 }
 async function capture() {
   const clean = takeFlag('--clean'), posters = takeFlag('--posters'), sheet = takeFlag('--sheet'), stops = takeFlag('--stops');
+  const answers = takeValue('--answers', '');
+  if (answers && !/^[a-z][a-z0-9-]*:[0-8](,[a-z][a-z0-9-]*:[0-8])*$/.test(answers)) throw new Error('Invalid --answers');
   const explicitSize = takeValue('--size', null);
   const size = String(explicitSize ?? '1920x1080').split('x').map(Number);
   const every = Number(takeValue('--every', '1')), cols = Number(takeValue('--cols', '4'));
@@ -87,6 +90,7 @@ async function capture() {
     const url = new URL(`/decks/${deck}/`, process.env.FUZZY6_URL ?? 'http://127.0.0.1:5175');
     url.searchParams.set('t', times[0] ?? 0);
     if (clipId) url.searchParams.set('c', clipId);
+    if (answers) url.searchParams.set('a', answers);
     if (clean) url.searchParams.set('clean', '');
     await page.goto(url.href);
     await page.waitForFunction(() => window.__ready === true);
@@ -102,37 +106,51 @@ async function capture() {
       await step(page.evaluate(() => window.dispatchEvent(new Event('resize'))));
     }
     if (clipId && await step(page.evaluate(() => window.__mx.state().clip)) !== clipId) throw new Error(`Unknown clip: ${clipId}`);
+    const setFrame = async (id, t) => {
+      if (answers) {
+        // Each answer-bearing frame is independent, including backwards times
+        // and posters of another clip; go/seek intentionally clear answers.
+        url.searchParams.set('c', id); url.searchParams.set('t', t);
+        await page.goto(url.href);
+        await page.waitForFunction(() => window.__ready === true);
+      } else if (id !== await step(page.evaluate(() => window.__mx.state().clip))) {
+        await step(page.evaluate(({ id, t }) => window.__go(id, t), { id, t }));
+      } else await step(page.evaluate(t => window.__setTime(t), t));
+    };
     const screenshot = async path => { await page.screenshot({ path, timeout: 15000 }); console.log(path); };
     if (posters) {
-      const entries = await step(page.evaluate(async deck => {
+      const entries = await step(page.evaluate(async ({ deck, answers }) => {
         const { default: data } = await import(`/decks/${deck}/deck.js`);
         const { buildTimeline, mergePace, posterTime } = await import('/src/explorer/timeline.js');
         const { normalizeDeck } = await import('/src/explorer/model.js');
-        return normalizeDeck(data).all.map(({ clip }) => ({ id: clip.id, t: posterTime(clip, buildTimeline(clip, mergePace(data.pace), data.voice)) }));
-      }, deck));
+        const { parseAnswers } = await import('/src/explorer/quiz.js');
+        return normalizeDeck(data).all.map(({ clip }) => ({ id: clip.id, t: posterTime(clip, buildTimeline(clip, mergePace(data.pace), data.voice, parseAnswers(answers))) }));
+      }, { deck, answers }));
       await mkdir(resolve(root, 'posters'), { recursive: true });
       for (const [i, entry] of entries.entries()) {
         if (!safeId(entry.id)) throw new Error(`Unsafe clip id: ${entry.id}`);
-        await step(page.evaluate(({ id, t }) => window.__go(id, t), entry));
+        await setFrame(entry.id, entry.t);
         await screenshot(resolve(root, 'posters', `${String(i + 1).padStart(Math.max(2, String(entries.length).length), '0')}-${entry.id}.png`));
       }
     } else if (stops) {
-      const entries = await step(page.evaluate(async ({ deck, clipId }) => {
+      const entries = await step(page.evaluate(async ({ deck, clipId, answers }) => {
         const { default: data } = await import(`/decks/${deck}/deck.js`);
-        const clip = data.chapters.flatMap(c => [...c.clips, ...(c.dives ?? [])]).find(c => c.id === clipId);
+        const { normalizeDeck } = await import('/src/explorer/model.js');
+        const { parseAnswers } = await import('/src/explorer/quiz.js');
+        const clip = normalizeDeck(data).ids.get(clipId).clip;
         const { buildTimeline } = await import('/src/explorer/timeline.js');
         const pace = window.__mx.pace();
-        const timeline = buildTimeline(clip, pace, data.voice);
+        const timeline = buildTimeline(clip, pace, data.voice, parseAnswers(answers));
         return [
           ...timeline.stops.map(s => ({ t: s.at, label: `${s.kind}-${s.line ?? 'clip'}` })),
           ...timeline.lines.map(l => ({ t: Math.min(timeline.duration, l.start + pace.ground), label: `ground-${l.id}` })),
         ].sort((a, b) => a.t - b.t);
-      }, { deck, clipId }));
+      }, { deck, clipId, answers }));
       if (entries.length > 300) throw new Error('Stops exceed 300 frames');
       const directory = resolve(root, `${clipId}_stops`);
       await mkdir(directory, { recursive: true });
       for (const [i, entry] of entries.entries()) {
-        await step(page.evaluate(t => window.__setTime(t), entry.t));
+        await setFrame(clipId, entry.t);
         await screenshot(resolve(directory, `${String(i + 1).padStart(3, '0')}-${entry.label}_t${entry.t}.png`));
       }
     } else if (sheet) {
@@ -142,7 +160,7 @@ async function capture() {
       const images = []; let bytes = 0;
       for (let i = 0; i < count; i++) {
         const t = Math.min(i * every, duration);
-        await step(page.evaluate(t => window.__setTime(t), t));
+        await setFrame(clipId, t);
         const buffer = await page.screenshot({ timeout: 15000 });
         if (bytes + buffer.length > 48 * 1024 * 1024) throw new Error('Sheet exceeds 64 MiB encoded image budget');
         bytes += buffer.length; images.push({ t, src: `data:image/png;base64,${buffer.toString('base64')}` });
@@ -162,7 +180,7 @@ async function capture() {
       await screenshot(resolve(root, `${clipId}_sheet.png`));
     } else {
       for (const t of times) {
-        await step(page.evaluate(t => window.__setTime(t), t));
+        await setFrame(clipId, t);
         await screenshot(resolve(root, `${clipId}_t${t}.png`));
       }
     }

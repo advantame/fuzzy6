@@ -1,5 +1,5 @@
 import { clampTime, cuesAt, formatTime } from './model.js';
-export function bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor, unlock, cues }) {
+export function bindInput({ root, chrome, model, api, listen, cancelHold, toggleAuto, showCursor, unlock, restart, question, cues }) {
   const { q, buttons } = chrome;
   const toggle = () => (api.state().state === 'playing' ? api.pause() : api.play());
   let unlockGesture = false;
@@ -28,6 +28,7 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
     else if (button.matches('.mx-sound')) api.setSound(api.state().sound === 'off');
     else if (button.matches('.mx-unlock')) unlock();
     else if (button.matches('.mx-auto')) toggleAuto();
+    else if (button.matches('.mx-choice')) api.answer(button.closest('.mx-quiz').dataset.ask, Number(button.dataset.key) - 1);
     else if (button.matches('.mx-door')) void api.descend(button.dataset.to);
     else if (button.matches('.mx-crumb')) {
       if (button.dataset.level === 'back') void api.ascend();
@@ -201,15 +202,14 @@ export function bindInput({ root, chrome, model, api, listen, cancelHold, toggle
     else if (key === 'end') action = () => api.go(model.clips.at(-1).clip.id);
     else if (/^[1-9]$/.test(key))
       action = () => {
+        const id = question();
+        if (id) return api.answer(id, Number(key) - 1);
         const entry = model.clips.find(c => c.chapterNumber === Number(key));
         if (entry) return api.go(entry.clip.id);
       };
     else if (key === ' ' || key === 'k') action = toggle;
     else if (key === 'r')
-      action = () => {
-        api.seek(state.head);
-        api.play();
-      };
+      action = restart;
     else if (key === 'i') action = () => api.openIndex();
     else if (key === 'm') action = () => api.setSound(state.sound === 'off');
     else if (key === 'c') action = () => api.setSubs(!state.subs);

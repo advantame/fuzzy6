@@ -21,11 +21,16 @@ for (const id of await deckIds(ROOT)) {
   const { deck, recordingsRequired } = await loadNarrationDeck(ROOT, id);
   describe(`${id}: actual narration timelines`, () => {
     for (const { clip } of normalizeDeck(deck).all.filter(e => e.clip.script !== undefined)) {
+      const questions = clip.script.filter(s => s.ask);
+      for (const mode of questions.length ? ['right', 'wrong', 'skip'] : ['skip']) {
       for (const [label, delta] of offsets) {
-        it(`${clip.id}: ${label} decoded length`, async () => {
-          const timeline = buildTimeline(clip, mergePace(deck.pace), deck.voice);
+        it(`${clip.id}: ${mode}, ${label} decoded length`, async () => {
+          const answers = mode === 'skip' ? {} : Object.fromEntries(questions.map(q => [q.id,
+            mode === 'right' ? q.ask.answer : q.ask.choices.findIndex((_, i) => i !== q.ask.answer)]));
+          const timeline = buildTimeline(clip, mergePace(deck.pace), deck.voice, answers);
           await checkClock(`${id}/${clip.id}`, timeline, { delta, recordingsRequired });
         });
+      }
       }
     }
   });

@@ -11,7 +11,7 @@ import { focus, ringBox } from '../../../src/kit/cue.js';
 import { segment } from '../../../src/kit/place.js';
 import { corners, drawTri, angleAt, angleArc, dim, RAD } from '../lib/tri.js';
 import { cursive } from '../lib/cursive.js';
-import { row, jp, frac } from '../lib/math.js';
+import { math, row, jp, frac, tex, shade } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
 import { cornerMemo, tab, example, workLine } from '../lib/drill.js';
 import { mark } from '../lib/scene.js';
@@ -75,9 +75,11 @@ export default clip({
     // m1: what each number is
     const notang = tw(t, at('notang') - lead, 0.5);
     if (notang > 0) {
-      const pct = text(ctx, '10%', 150, 600, { font: F.sans(600, 40), color: C.ink, alpha: notang });
-      workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('水平の距離', C.cos)), '×', '100'), 150 + pct + 14, 600, tw(t, at('ratio') - lead, 0.5), { size: 36 });
-      text(ctx, 'θ ＝ 角度', 150, 668, { font: F.jp(500, 32), color: C.ink2, alpha: notang });
+      // 10% = 高さ / 水平の距離 × 100, the ratio coming in after the 10%; and beside it, which
+      // one is the angle
+      const r = tw(t, at('ratio') - lead, 0.5);
+      const pct = math(ctx, row(tex('\\mathbf{10\\%}'), shade(r, '='), shade(r, frac(jp('高さ', C.sin), jp('水平の距離', C.cos))), shade(r, '×'), shade(r, '100')), 150, 600, { size: 38, alpha: notang });
+      math(ctx, row('θ', '=', jp('角度')), pct.x + pct.w + 56, 600, { size: 34, color: C.ink2, alpha: notang });
     }
     // a5: both ways
     const both = tw(t, at('both') - lead, 0.5);
@@ -164,6 +166,7 @@ function sign(ctx, x, y, r, a) {
   ctx.lineTo(r * 0.5, -r * 0.12);
   ctx.closePath();
   ctx.fill();
-  text(ctx, '10%', 0, -r * 0.22, { font: F.sans(700, r * 0.36), color: '#151412', align: 'center' });
+  // a road sign's lettering, not a formula: in the sans face
+  text(ctx, '10%', 0, -r * 0.22, { font: F.cond(700, r * 0.36), color: '#151412', align: 'center' });
   ctx.restore();
 }
