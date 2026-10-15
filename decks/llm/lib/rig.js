@@ -4,8 +4,9 @@
 // things into the tool's place. Every function draws one frame and keeps no state.
 
 import { clamp, lerp, inOutCubic } from '../../../src/kit/ease.js';
-import { text, rr, wrap, measure, arrow, circle, line } from '../../../src/kit/draw.js';
+import { text, rr, wrap, measure, arrow, arrowHead, circle, line } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
+import { bubbleLayout, bubble } from './parts.js';
 import { hash } from '../../../src/kit/random.js';
 
 // ——— geometry ————————————————————————————————————————————————————
@@ -232,6 +233,10 @@ export const ROLE = {
   assistant: { name: 'アシスタント', fill: C.ink, color: C.paper },
   result: { name: 'ツールの結果', fill: C.green, color: '#fff' },
   search: { name: '検索結果', fill: C.green, color: '#fff' },
+  // chapter 5 (5-1): the marks the LLM writes around a tool call, and at the end of its answer
+  call: { name: '呼び出し', fill: C.accent, color: '#fff' },
+  callEnd: { name: '呼び出しの終わり', fill: C.accent, color: '#fff' },
+  end: { name: '答えの終わり', fill: C.ink, color: C.paper },
 };
 
 const TAG = { font: F.jp(700, 15), h: 28, padX: 9 };
@@ -239,6 +244,12 @@ const TAG = { font: F.jp(700, 15), h: 28, padX: 9 };
 // Who writes a mark into the document, as the colour of its outer edge (4-2): the app's
 // marks carry the colour of its box, the ones the model writes the ink of the LLM's.
 export const BY = { app: C.purple, llm: C.ink };
+
+// Who writes each mark in chapter 5, as its edge: docEntry(ctx, E, a, { edge: WRITER[E.role] }).
+// The app writes the role marks (the assistant's open mark included) and the result's mark; the
+// LLM writes the marks around its call and the end of its answer. A mark the LLM writes out of
+// turn (4-2's runaway assistant mark) takes BY.llm by hand.
+export const WRITER = { system: BY.app, user: BY.app, assistant: BY.app, result: BY.app, call: BY.llm, callEnd: BY.llm, end: BY.llm };
 
 // The width of a mark named `name`.
 export const markWidth = (ctx, name) => measure(ctx, TAG.font, name) + TAG.padX * 2;
@@ -443,6 +454,187 @@ export function onPath(pts, e) {
   while (i < lens.length - 1 && d > lens[i]) d -= lens[i++];
   const u = lens[i] ? Math.min(1, d / lens[i]) : 0;
   return { x: lerp(pts[i][0], pts[i + 1][0], u), y: lerp(pts[i][1], pts[i + 1][1], u) };
+}
+
+// ——— chapter 5: one picture for 5-1 … 5-5 ——————————————————————————————————
+//
+// The tool diagram as chapter 5 draws it (README「2026-10-15（5 章を作り直す）」, laid out in 5-1):
+// the LLM on the left; in the middle the app's frame, with its box (⚙ アプリ) at the top right
+// and the document under it; at the top right a small chat screen, joined to the app's box by
+// 会話 (in) and 答え (out); at the bottom right the tool's place, joined to the app's frame by
+// 入力 and 結果. The LLM, the app's box and the document's left edge stand where 4-2 and 4-5 have
+// them; the frame is 20 px narrower than BASE's to make room for the tool's channels. BASE,
+// layout() and actorLayout() are unchanged: the older clips (7 章から先) still use them.
+//
+// Use, in a clip:
+//   const T = toolUseLayout();                       // module level; T.L is a layout(), T.ACT the app's box
+//   prepare: const E = docLayout(ctx, T.L, entries, T.DOC);
+//            const B = screenBubbles(ctx, T.SCREEN, [['user', '…'], ['assistant', '…']]);
+//            const toks = tokenPlaces(ctx, E[i], ['あ', 'した', …]);   // o200k_base pieces
+//   draw:    llmBlock(ctx, T.L, a, { glow }); appFrame(ctx, T.L, a, { name: '' }); actor(ctx, T.ACT, a, glow);
+//            channel(ctx, T.L.read | T.L.write | T.L.call | T.L.back, p, { hot });  // 読ませる 続きを書く 入力 結果
+//            chatScreen(ctx, T.SCREEN, a); chatBubble(ctx, B[k], { alpha, chars });
+//            screenLinks(ctx, T, { talk, back, talkHot, backHot });           // 会話 → app's box → 答え
+//            toolBox(ctx, T.L, a, { solid, glow, draw(ctx, box, a) { … } });  // T.L.tool is the tool's place
+//            docEntry(ctx, E[i], a, { tagAlpha: 0, chars }); roleMark(ctx, E[i].x, E[i].y + 1, ROLE[r], { edge: WRITER[r] });
+//            flyMark(ctx, T, E[i], p, ROLE.result);          // a mark the app writes, out of its box
+//            token(ctx, …) at onPath(writePath(T, E[i], x, y), e);   // the LLM's tokens into their place
+//            sweep(ctx, T.L, p, bottom); send(ctx, T.L.read, p, '', 'doc');   // the app has the LLM read
+//            flow(ctx, toTool(T, E[i]), p, '京都', 'call'); flow(ctx, fromTool(T, E[j]), p, '…', 'data');
+//            working(ctx, T.L, p);                            // the tool at work
+//            edgeKey(ctx, T.KEY, [[BY.app, 'アプリが付ける', a1], [BY.llm, 'LLM が書く', a2]]);
+//            loopIcon(ctx, T.LOOP.x, T.LOOP.y, T.LOOP.r, a);   // the app's loop (5-5)
+// The call is a docLayout entry of kind 'call' (the vermilion band) and the tool's result one of
+// kind 'data' (the green band) under ROLE.result; the edges of their marks are WRITER's. T.DOC
+// is docLayout's options (24 px text, 19 px in the bands); pass `font` per entry for JSON.
+// T.NOTE: the two rows of tags under the LLM (centre x, top y). T.SIDE: the strip left of the
+// app's box, for a note on what the app does (right end x2, centre y). T.FROM: where the app's
+// marks leave its box. T.lane: the gap between the document and the frame's right edge, where
+// things for the tool run. T.margin: the lane left of the frame, where the LLM's tokens climb or
+// drop to their row.
+export const G5 = {
+  llm: BASE.llm,
+  app: { x: BASE.app.x, y: BASE.app.y, w: 680, h: BASE.app.h },
+  tool: { x: 1150, y: 486, w: 354, h: 284 },
+};
+
+export function toolUseLayout(g = G5) {
+  const { ACT, L } = actorLayout(layout(g));
+  const cy = ACT.y + ACT.h / 2;
+  return {
+    L,
+    ACT,
+    SCREEN: { x: g.tool.x, y: g.app.y, w: g.tool.w, h: 296 },
+    LINK: { x1: ACT.x + ACT.w + 12, x2: g.tool.x - 12, talk: cy - 18, back: cy + 18 },
+    DOC: { top: 30, gap: 22, font: F.jp(500, 24), lh: 36, mono: F.jp(500, 19), lhMono: 32 },
+    KEY: { x: L.llm.x, y: 690 },
+    NOTE: { x: L.llm.x + L.llm.w / 2, y: [L.llm.y + L.llm.h + 24, L.llm.y + L.llm.h + 66] },
+    SIDE: { x1: L.doc.x, x2: ACT.x - 22, y: cy },
+    LOOP: { x: ACT.x - 44, y: cy, r: 22 },
+    FROM: { x: ACT.x + 24, y: ACT.y + ACT.h - MARK_H / 2 - 6 },
+    lane: (L.doc.x + L.doc.w + L.app.x + L.app.w) / 2,
+    margin: L.write.x2 - 2,
+  };
+}
+
+// The chat screen: a white panel with its name.
+export function chatScreen(ctx, S, a = 1, title = 'チャットの画面') {
+  if (a <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, S.x, S.y, S.w, S.h, 20);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.rule;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  text(ctx, title, S.x + 20, S.y + 40, { font: F.jp(700, 20), color: C.ink2, alpha: a });
+}
+
+// Lay out the screen's bubbles once (prepare), top to bottom: [[role, text], …] → [{ role, s,
+// L, x, y }]; the user's on the right, the assistant's on the left. o: { top, gap, font, pad }
+export function screenBubbles(ctx, S, turns, o = {}) {
+  let y = S.y + (o.top ?? 62);
+  return turns.map(([role, s]) => {
+    const L = bubbleLayout(ctx, s, S.w - 40, { font: o.font ?? F.jp(500, 20), pad: o.pad ?? 14 });
+    const b = { role, s, L, x: role === 'user' ? S.x + S.w - 20 - L.w : S.x + 20, y };
+    y += L.h + (o.gap ?? 14);
+    return b;
+  });
+}
+
+// One of them, in its role's colour. o: { alpha, chars (0–1, typed in) }
+export function chatBubble(ctx, b, o = {}) {
+  bubble(ctx, b.x, b.y, b.L, { fill: b.role === 'user' ? C.blueSoft : C.panel, alpha: o.alpha ?? 1, chars: o.chars ?? 1 });
+}
+
+// The screen ↔ the app's box: 会話 comes in, 答え goes out. o: { talk, back (0–1, drawn up
+// to), talkHot, backHot }
+export function screenLinks(ctx, T, o = {}) {
+  const { LINK } = T;
+  const talk = o.talk ?? 1;
+  const back = o.back ?? 1;
+  if (talk <= 0 && back <= 0) return;
+  ctx.save();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = ctx.fillStyle = o.talkHot ? C.accent : C.ink2;
+  arrow(ctx, LINK.x2, LINK.talk, LINK.x1, LINK.talk, talk, 11);
+  ctx.strokeStyle = ctx.fillStyle = o.backHot ? C.accent : C.ink2;
+  arrow(ctx, LINK.x1, LINK.back, LINK.x2, LINK.back, back, 11);
+  ctx.restore();
+  const mid = (LINK.x1 + LINK.x2) / 2;
+  text(ctx, '会話', mid, LINK.talk - 12, { font: F.jp(500, 15), color: o.talkHot ? C.accent : C.muted, align: 'center', alpha: talk });
+  text(ctx, '答え', mid, LINK.back + 27, { font: F.jp(500, 15), color: o.backHot ? C.accent : C.muted, align: 'center', alpha: back });
+}
+
+// From an entry of the document (its band's right end) to the tool: along the lane by the
+// frame's edge, then the 入力 channel. dy: the entry's offset when the document has moved.
+export function toTool(T, E, dy = 0) {
+  const { call, tool } = T.L;
+  const y = E.y + E.h / 2 + dy;
+  return [[E.tx + E.w - 40, y], [T.lane, y], [T.lane, call.y], [call.x2, call.y], [tool.x, call.y]];
+}
+
+// From the tool back into an entry: the 結果 channel, the lane, and in to x (default: a little
+// way into the entry's band).
+export function fromTool(T, E, dy = 0, x = E.tx + 110) {
+  const { back, tool } = T.L;
+  const y = E.y + E.h / 2 + dy;
+  return [[tool.x, back.y], [back.x2, back.y], [T.lane, back.y], [T.lane, y], [x, y]];
+}
+
+// The way a token the LLM writes takes to its place (x, y) in entry E: out of the write
+// channel, along the frame's left margin, along a lane just under the entry, and in (4-5).
+export function writePath(T, E, x, y, dy = 0) {
+  const w = T.L.write;
+  const laneY = E.y + dy + E.h + 22;
+  return [[w.x1, w.y], [T.margin, w.y], [T.margin, laneY], [x, laneY], [x, y + dy]];
+}
+
+// A mark the app writes, on its way out of the app's box to entry E (p 0 → 1). o: { edge,
+// alpha, dy }
+export function flyMark(ctx, T, E, p, r = ROLE[E.role], o = {}) {
+  if (p <= 0 || p >= 1) return;
+  const q = inOutCubic(p);
+  const x = lerp(T.FROM.x, E.x, q);
+  const y = lerp(T.FROM.y, E.y + 1 + (o.dy ?? 0), q) + Math.sin(Math.PI * q) * 16;
+  roleMark(ctx, x, y, r, { edge: o.edge ?? BY.app, alpha: clamp(p * 6) * (o.alpha ?? 1) });
+}
+
+// The key to the edges, under the LLM: rows [[edge, label, alpha], …].
+export function edgeKey(ctx, K, rows) {
+  const ka = Math.max(...rows.map((r) => r[2]));
+  if (ka <= 0.001) return;
+  text(ctx, '印の外枠の色', K.x, K.y, { font: F.jp(700, 16), color: C.muted, alpha: ka });
+  const sample = { name: '印', fill: C.panel, color: C.ink2 };
+  rows.forEach(([edge, s, a], i) => {
+    const y = K.y + 22 + i * 44;
+    const w = roleMark(ctx, K.x + 5, y, sample, { edge, alpha: a });
+    text(ctx, s, K.x + 5 + w + 16, y + MARK_H / 2 + 1, { font: F.jp(500, 17), color: C.ink2, base: 'middle', alpha: a });
+  });
+}
+
+// The app's loop: a round arrow, drawn up to p, in the app's colour. o: { p, color, lw }
+export function loopIcon(ctx, x, y, r, a = 1, o = {}) {
+  if (a <= 0.001) return;
+  const p = o.p ?? 1;
+  if (p <= 0) return;
+  const a0 = -Math.PI * 0.4;
+  const a1 = a0 + Math.PI * 1.6 * p;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  ctx.strokeStyle = ctx.fillStyle = o.color ?? C.purple;
+  ctx.lineWidth = o.lw ?? 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(x, y, r, a0, a1 - 0.25);
+  ctx.stroke();
+  if (p > 0.6) {
+    ctx.globalAlpha *= clamp((p - 0.6) / 0.4);
+    arrowHead(ctx, x + Math.cos(a1) * r, y + Math.sin(a1) * r, a1 + Math.PI / 2, 13);
+  }
+  ctx.restore();
 }
 
 // ——— things in flight ————————————————————————————————————————————————
