@@ -415,7 +415,7 @@ export default clip({
       ctx.fillStyle = C.paper;
       ctx.fill();
       ctx.restore();
-      tag(ctx, TOOL.x + TOOL.w / 2, TOOL.y + TOOL.h / 2 - 17, '定義だけでは、中のプログラムは渡らない', { font: F.jp(700, 16), h: 34, padX: 12, fill: '#fff', stroke: C.red, color: C.red, align: 'center', alpha: veil });
+      tag(ctx, TOOL.x + TOOL.w / 2, TOOL.y + TOOL.h + 14, '定義だけでは、中のプログラムは渡らない', { font: F.jp(700, 16), h: 34, padX: 12, fill: '#fff', stroke: C.red, color: C.red, align: 'center', alpha: veil });
     }
     const [which] = lit(['which'], at('how'));
     ring(ctx, TOOL.x, TOOL.y, TOOL.w, TOOL.h, which, C.accent, 20);
