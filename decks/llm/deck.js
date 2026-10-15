@@ -130,10 +130,10 @@ export default {
     { id: 'chat', title: 'チャットボット', clips: [base, template, sft, rlhf, memory, hallucination] },
     { id: 'tools', title: 'ツール', clips: [tools, toolspec, toolcall, toolresult, toolloop] },
     { id: 'connect', title: 'つなぐ先', clips: [rag, search, shell, agent, coding, gui] },
-    { id: 'harness', title: 'ハーネス', clips: [harness, scaffold, mcp, mcpflow, session, compact, subagent, safety, horizon, nest] },
+    { id: 'harness', title: 'ハーネス', clips: [harness, mcp, mcpflow, session, compact, subagent, safety, nest] },
     { id: 'wiki', title: '知識を育てる', clips: [lostmiddle, noremain, knowledgeplaces, llmwiki, ingest, query, lint, compile, ideafile, drift, wikimemory] },
     { id: 'cost', title: '計算と値段', clips: [kvcache, kvsize, kvshrink, promptcache, prefix, moe, reasoning, sessioncost] },
-    { id: 'tune', title: '鍛えて測る', clips: [harnesseng, nohands, maplessons, samemodel, metaharness, selfharness, saturate, readscore] },
+    { id: 'tune', title: '鍛えて測る', clips: [harnesseng, nohands, maplessons, scaffold, samemodel, metaharness, selfharness, saturate, horizon, readscore] },
     { id: 'open', title: '開いたハーネス', clips: [dsh, cordis, eventlog, minimal, defaults, ptc, platform, appserver, approve, threads, acp, outlook] },
   ],
 };
