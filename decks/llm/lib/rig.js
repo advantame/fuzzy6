@@ -236,6 +236,36 @@ export const ROLE = {
 
 const TAG = { font: F.jp(700, 15), h: 28, padX: 9 };
 
+// Who writes a mark into the document, as the colour of its outer edge (4-2): the app's
+// marks carry the colour of its box, the ones the model writes the ink of the LLM's.
+export const BY = { app: C.purple, llm: C.ink };
+
+// The width of a mark named `name`.
+export const markWidth = (ctx, name) => measure(ctx, TAG.font, name) + TAG.padX * 2;
+export const MARK_H = TAG.h;
+
+// One mark with its top-left at (x, y). r: a ROLE entry, or any { name, fill, color }.
+// o: { alpha, edge (the writer's colour; no edge when absent) }. Returns its width.
+export function roleMark(ctx, x, y, r, o = {}) {
+  const w = markWidth(ctx, r.name);
+  const a = o.alpha ?? 1;
+  if (a <= 0.001) return w;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  if (o.edge) {
+    rr(ctx, x - 4.5, y - 4.5, w + 9, TAG.h + 9, 9);
+    ctx.strokeStyle = o.edge;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+  rr(ctx, x, y, w, TAG.h, 6);
+  ctx.fillStyle = r.fill;
+  ctx.fill();
+  text(ctx, r.name, x + w / 2, y + TAG.h / 2 + 1, { font: TAG.font, color: r.color, align: 'center', base: 'middle' });
+  ctx.restore();
+  return w;
+}
+
 // Lay out entries once, in prepare: [{ role?, text, kind: 'text' | 'call' | 'data' }] →
 // the same entries with x, y, rows and height. kind 'call' is the model's request (drawn on
 // vermilion), 'data' is mono text such as a tool's result. o: { top, gap, tagW, font, mono }
@@ -268,23 +298,13 @@ export function rowAt(E, r = 0) {
   return { x: E.tx + E.pad + 8, y: E.y + E.pad + Math.round(E.lh * 0.7) + r * E.lh };
 }
 
-// Draw one laid-out entry. o: { chars (0–1, typed in), tagAlpha, hot (outline the block),
-// dim }
+// Draw one laid-out entry. o: { chars (0–1, typed in), tagAlpha, edge (the mark's writer, see
+// BY), hot (outline the block), dim, color }
 export function docEntry(ctx, E, a = 1, o = {}) {
   if (a <= 0.001) return;
   ctx.save();
   ctx.globalAlpha *= clamp(a) * (o.dim ? 0.38 : 1);
-  if (E.role) {
-    const r = ROLE[E.role];
-    const w = measure(ctx, TAG.font, r.name) + TAG.padX * 2;
-    ctx.save();
-    ctx.globalAlpha *= o.tagAlpha ?? 1;
-    rr(ctx, E.x, E.y + 1, w, TAG.h, 6);
-    ctx.fillStyle = r.fill;
-    ctx.fill();
-    text(ctx, r.name, E.x + w / 2, E.y + 1 + TAG.h / 2 + 1, { font: TAG.font, color: r.color, align: 'center', base: 'middle' });
-    ctx.restore();
-  }
+  if (E.role) roleMark(ctx, E.x, E.y + 1, ROLE[E.role], { alpha: o.tagAlpha ?? 1, edge: o.edge });
   if (E.kind !== 'text') {
     const call = E.kind === 'call';
     rr(ctx, E.tx, E.y, E.w, E.h, 8);
