@@ -10,11 +10,13 @@ import '@fontsource/ibm-plex-sans-condensed/700.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import './home.css';
 import llm from '../../decks/llm/deck.js';
+import trig from '../../decks/trig/deck.js';
 import demo from '../../decks/demo/deck.js';
 import { buildTimeline, mergePace } from '../explorer/timeline.js';
 
 export const DECKS = [
   { deck: llm, href: 'decks/llm/', cover: 'opening', size: 'large' },
+  { deck: trig, href: 'decks/trig/', cover: 'opening', size: 'large' },
   { deck: demo, href: 'decks/demo/', cover: 'opening', size: 'small', note: 'engine の契約の見本。テストにも使う。' },
 ];
 const HOLD = 1.5; // seconds the last frame stays before the preview loops

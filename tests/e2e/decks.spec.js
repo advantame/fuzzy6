@@ -1,18 +1,18 @@
 import { test, expect } from '@playwright/test';
 
-test('LLM deck clips retain finite timelines and render through the still-mode contract', async ({ page }) => {
+for (const [id, least] of [['llm', 79], ['trig', 11]]) test(`${id} deck clips retain finite timelines and render through the still-mode contract`, async ({ page }) => {
   test.setTimeout(120_000);
   const errors = [];
   page.on('pageerror', error => { if (errors.length < 10) errors.push(error.message); });
   page.on('console', message => { if (message.type() === 'error' && errors.length < 10) errors.push(message.text()); });
-  await page.goto('/decks/llm/?t=0&sound=0');
+  await page.goto(`/decks/${id}/?t=0&sound=0`);
   await page.waitForFunction(() => window.__ready);
-  const clips = await page.evaluate(async () => {
-    const { default: deck } = await import('/decks/llm/deck.js');
+  const clips = await page.evaluate(async (id) => {
+    const { default: deck } = await import(`/decks/${id}/deck.js`);
     const { orderedClips } = await import('/src/explorer/model.js');
     return orderedClips(deck).map(c => ({ id: c.id, duration: c.duration, script: !!c.script }));
-  });
-  expect(clips.length).toBeGreaterThanOrEqual(79);
+  }, id);
+  expect(clips.length).toBeGreaterThanOrEqual(least);
   for (const clip of clips) {
     await page.evaluate(id => window.__go(id, 0), clip.id);
     const result = await page.evaluate(() => {
@@ -34,7 +34,7 @@ test('LLM deck clips retain finite timelines and render through the still-mode c
 
 test('home cards and cover frames use calculated durations without NaN', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.deck')).toHaveCount(2);
+  await expect(page.locator('.deck')).toHaveCount(3);
   expect(await page.locator('.deck-meta').allTextContents()).not.toEqual(expect.arrayContaining([expect.stringContaining('NaN')]));
   await expect.poll(() => page.locator('iframe').evaluateAll(nodes => nodes.every(iframe => iframe.contentWindow?.__ready))).toBe(true);
   const states = await page.locator('iframe').evaluateAll(nodes => nodes.map(iframe => iframe.contentWindow.__mx.state()));
