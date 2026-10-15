@@ -11,7 +11,7 @@ import { seg, tw, outBack, clamp } from '../../../src/kit/ease.js';
 import { focus, ringBox } from '../../../src/kit/cue.js';
 import { mark } from '../lib/scene.js';
 import { sideLabel, fillTri, rightBox, boxes } from '../lib/tri.js';
-import { board, BOARD_TRI, ratioCard, ratioTable, tatesoko, CARD } from '../lib/board.js';
+import { board, BOARD_TRI, ratioCard, ratioTable, tatesoko, CARD, TATE } from '../lib/board.js';
 
 const script = [
   { id: 'a', label: 'もっとすごいこと', text: '……待つのだ。{hidden}いまのやり方には、もっとすごいことが隠れているのだ。' },
@@ -96,7 +96,7 @@ export default clip({
 
     // g: her name for the first ratio, typed in by hand
     const typed = seg(t, at('tateso') - 0.05, at('tateso') + 0.9);
-    tatesoko(ctx, 1214, 206, { p: typed, alpha: typed > 0 ? 1 : 0 });
+    tatesoko(ctx, TATE.x, TATE.y, { p: typed, alpha: typed > 0 ? 1 : 0 });
   },
 });
 

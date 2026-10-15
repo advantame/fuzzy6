@@ -118,10 +118,13 @@ function layout(nd, size, inherited) {
     const s2 = size * 0.86;
     const a = layout(nd.num, s2, color);
     const b = layout(nd.den, s2, color);
-    const pad = size * 0.14;
+    // a fraction of fractions: its own bar reaches well past theirs, with more room, so the
+    // main bar reads as the main one
+    const nested = a.kind === 'frac' || b.kind === 'frac';
+    const pad = size * (nested ? 0.34 : 0.14);
     const w = Math.max(a.w, b.w) + pad * 2;
     const axis = size * 0.3; // the bar sits this far above the baseline
-    const g = size * 0.14;
+    const g = size * (nested ? 0.2 : 0.14);
     return {
       w,
       asc: axis + g + a.desc + a.asc,

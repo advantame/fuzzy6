@@ -14,7 +14,7 @@ import { focus, ringBox } from '../../../src/kit/cue.js';
 import { rect } from '../../../src/kit/place.js';
 import { treeTriangle, TREE } from '../lib/scene.js';
 import { corners, mixPose, drawTri, ghostTri, angleArc, angleAt, placeLabel, triShapes, RAD } from '../lib/tri.js';
-import { math, row, tag } from '../lib/math.js';
+import { math, row, frac, tag } from '../lib/math.js';
 import { protractor, pill } from '../lib/parts.js';
 
 const BIG0 = { x: TREE.A.x, y: TREE.A.y, s: 1 };
@@ -133,10 +133,10 @@ export default clip({
     const v78 = tw(t, n78 - cue.lead, 0.4, outBack);
     placeLabel(ctx, '約 7.8 マス', { x: smallT.C.x, y: (smallT.B.y + smallT.C.y) / 2 }, { x: 1, y: 0 }, [column, ...triShapes(smallT)], { size: 28, color: C.sin, alpha: clamp(v78), gap: 14 });
 
-    // 7.8 ÷ 10 = 0.78, under her drawing
+    // 7.8 / 10 = 0.78, under her drawing
     const ratio = tw(t, at('ratio') - cue.lead, 0.5);
     const rLit = focus(t, [at('ratio')], at('f.end'), cue).level[0];
-    const mine = math(ctx, row('7.8', '÷', '10', '=', tag('r', '0.78')), SMALL.x + SMALL.base / 2, 820, { size: 44, align: 'center', alpha: ratio });
+    const mine = math(ctx, row(frac('7.8', '10'), '=', tag('r', '0.78')), SMALL.x + SMALL.base / 2, 820, { size: 44, align: 'center', alpha: ratio });
     ringBox(ctx, mine.parts.r, rLit, C.accent);
 
     // the same 0.78 carried over to the tree: 18 × 0.78

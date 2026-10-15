@@ -12,7 +12,7 @@ import { focus, ringBox } from '../../../src/kit/cue.js';
 import { drawTri, angleAt, mixTri, rightBox, pointBox } from '../lib/tri.js';
 import { math, box } from '../lib/math.js';
 import {
-  board, boardCorners, ratioCard, ratioTable, tatesoko, CARD, ZUNDA_NAMES, METAN_NAMES,
+  board, boardCorners, ratioCard, ratioTable, tatesoko, CARD, TATE, ZUNDA_NAMES, METAN_NAMES,
   memo, memoPanel, MEMO_CORNER, drillTag, defCard, DEF_SLOT, definition,
 } from '../lib/board.js';
 
@@ -34,7 +34,7 @@ const script = [
   { id: 'try', by: 'metan', label: '問題へ', text: '使っているうちに、意味もわかってくるわ。{go}さっそく、問題を解いてみましょう。' },
 ];
 
-// ratio card i (her order: height÷base, height÷slant, base÷slant) becomes definition slot j
+// ratio card i (her order: height/base, height/slant, base/slant) becomes definition slot j
 const SLOT = [2, 0, 1];
 const LETTER = ['t', 's', 'c'];
 const NAMED = ['tanname', 'sinname', 'cosname'];
@@ -117,8 +117,8 @@ export default clip({
       // 「たてそこ比」: struck out, then gone into the tan card
       const strike = seg(t, at('wait') - 0.1, at('wait') + 0.35);
       const fly = inOutCubic(seg(t, at('tate'), at('tate') + 0.9));
-      const tx = lerp(1214, DEF_SLOT.x + DEF_SLOT.w - 250, fly);
-      const ty = lerp(206, DEF_SLOT.y[2] + 74, fly);
+      const tx = lerp(TATE.x, DEF_SLOT.x + DEF_SLOT.w - 250, fly);
+      const ty = lerp(TATE.y, DEF_SLOT.y[2] + 74, fly);
       tatesoko(ctx, tx, ty, { strike, alpha: (1 - seg(fly, 0.7, 1)) * (1 - split) });
       ctx.restore();
     }

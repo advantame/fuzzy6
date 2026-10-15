@@ -11,7 +11,7 @@ import { focus, ringBox } from '../../../src/kit/cue.js';
 import { treeTriangle } from '../lib/scene.js';
 import { cursive } from '../lib/cursive.js';
 import { label, triBox } from '../lib/tri.js';
-import { row, jp, colored } from '../lib/math.js';
+import { row, jp, frac, colored } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
 import { cornerMemo, tab, example, workLine } from '../lib/drill.js';
 
@@ -77,10 +77,10 @@ export default clip({
 
     // the working
     const tan38 = () => row('tan', '38°');
-    workLine(ctx, row(jp('高さ', C.sin), '÷', '18', '=', tan38()), 120, 760, tw(t, at('eq1') - lead, 0.5));
+    workLine(ctx, row(frac(jp('高さ', C.sin), '18'), '=', tan38()), 120, 760, tw(t, at('eq1') - lead, 0.5));
     const second = tw(t, at('eq2') - lead, 0.5);
     const third = tw(t, ans - lead, 0.5);
-    workLine(ctx, row(jp('高さ', C.sin), '=', '18', '×', tan38(), ...(third > 0 ? ['=', '18', '×', '0.7813', '≒', colored(C.accent, '14.06')] : [])), 120, 840, second);
+    workLine(ctx, row(jp('高さ', C.sin), '=', '18', '×', tan38(), ...(third > 0 ? ['=', '18', '×', '0.7813', '≒', colored(C.accent, '14.06')] : [])), 120, 852, second);
 
     // the table, scrolled to 38°; its tan cell lit as めたん reads it
     const look = tw(t, at('look') - lead, 0.6);

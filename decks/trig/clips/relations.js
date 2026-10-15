@@ -21,7 +21,7 @@ const X = 820; // the column of working
 
 const script = [
   { id: 'a', label: '気づいたこと', text: '三角比を{play}いじっていたら、気づいたことがあるのだ。' },
-  { id: 'b', label: 'sin ÷ cos', text: '{div}[sin θ|サインシータ] を [cos θ|コサインシータ] で割ると、{cancel}斜辺どうしが消えて、{left}高さ割る底辺……{tan}[tan θ|タンジェントシータ] になるのだ！' },
+  { id: 'b', label: 'sin を cos で割る', text: '{div}[sin θ|サインシータ] を [cos θ|コサインシータ] で割ると、{cancel}斜辺どうしが消えて、{left}高さ割る底辺……{tan}[tan θ|タンジェントシータ] になるのだ！' },
   { id: 'm1', by: 'metan', label: 'tan は sin と cos から', text: 'そのとおり。{eq}[tan θ|タンジェントシータ] は、[sin θ|サインシータ] と [cos θ|コサインシータ] から求められるの。' },
   { id: 'c', label: '斜辺を 1 に', lead: 1.0, text: '{one}それから、斜辺を 1 にすると、{hs}高さが [sin θ|サインシータ]、{bc}底辺が [cos θ|コサインシータ] そのものになるのだ。' },
   { id: 'd', label: '三平方の定理', text: 'そこに{pyth}三平方の定理を使うと……{sum}[sin θ|サインシータ] の 2 乗と、[cos θ|コサインシータ] の 2 乗を足すと、{one2}1 になるのだ！' },
@@ -71,20 +71,18 @@ export default clip({
     sideLabel(ctx, T, 'height', row('sin', 'θ'), { size: 32, alpha: vals * (1 - sq) * prob });
     sideLabel(ctx, T, 'base', row('cos', 'θ'), { size: 32, alpha: tw(t, at('bc') - lead, 0.5) * (1 - sq) * prob });
 
-    // ——— b: sin θ ÷ cos θ, the hypotenuses cancel
+    // ——— b: sin θ over cos θ, the hypotenuses cancel
     const defs = 1 - tw(t, at('c'), 0.5);
     const divA = tw(t, at('div') - lead, 0.5) * defs;
     if (divA > 0) {
-      const y1 = 260;
-      workLine(ctx, row('sin', 'θ', '÷', 'cos', 'θ'), X, y1, divA, { size: 46 });
-      // = (高さ/斜辺) ÷ (底辺/斜辺), the 斜辺s struck out as they cancel
-      const y2 = 400;
-      const line = workLine(ctx, row('=', frac(jp('高さ', C.sin), tag('d1', jp('斜辺'))), '÷', frac(jp('底辺', C.cos), tag('d2', jp('斜辺')))), X, y2, divA, { size: 46 });
+      // sin θ / cos θ = (高さ/斜辺) / (底辺/斜辺), the 斜辺s struck out as they cancel
+      const line = workLine(ctx, row(frac(row('sin', 'θ'), row('cos', 'θ')), tag('eq', '='), frac(frac(jp('高さ', C.sin), tag('d1', jp('斜辺'))), frac(jp('底辺', C.cos), tag('d2', jp('斜辺'))))), X, 340, divA, { size: 50 });
       const struck = seg(t, at('cancel') - 0.05, at('cancel') + 0.5);
       strike(ctx, line.parts.d1, struck, { alpha: divA });
       strike(ctx, line.parts.d2, struck, { alpha: divA });
+      // = 高さ / 底辺 = tan θ, its = under the first
       const left = tw(t, at('left') - lead, 0.5) * defs;
-      workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('底辺', C.cos)), ...(t > at('tan') - lead ? ['=', colored(C.tan, 'tan θ')] : [])), X, 560, left, { size: 46 });
+      workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('底辺', C.cos)), ...(t > at('tan') - lead ? ['=', colored(C.tan, 'tan θ')] : [])), line.parts.eq.x, 540, left, { size: 50 });
     }
     // m1: the relation, boxed
     const eq = tw(t, at('eq') - lead, 0.5) * (1 - tw(t, at('q') - 0.3, 0.5));
@@ -136,7 +134,7 @@ export default clip({
         workLine(ctx, row(sup('0.6', '2'), '=', '0.36'), X, 300, tw(t, at('p1') - lead, 0.5), { size: 42 }),
         workLine(ctx, row(sup('cos', '2'), 'θ', '=', '1', '−', '0.36', '=', '0.64'), X, 380, tw(t, at('p2') - lead, 0.5), { size: 42 }),
         workLine(ctx, row('cos', 'θ', '=', colored(C.accent, '0.8')), X, 460, tw(t, at('p3') - lead, 0.5), { size: 42 }),
-        workLine(ctx, row('tan', 'θ', '=', '0.6', '÷', '0.8', '=', colored(C.accent, '0.75')), X, 560, tw(t, at('p4') - lead, 0.5), { size: 42 }),
+        workLine(ctx, row('tan', 'θ', '=', frac('0.6', '0.8'), '=', colored(C.accent, '0.75')), X, 570, tw(t, at('p4') - lead, 0.5), { size: 42 }),
       ];
       sideLabel(ctx, T, 'height', '0.6', { size: 32, alpha: q });
       sideLabel(ctx, T, 'base', '0.8', { size: 32, alpha: tw(t, at('p3') - lead, 0.5) });

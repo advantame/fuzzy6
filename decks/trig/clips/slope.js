@@ -11,7 +11,7 @@ import { focus, ringBox } from '../../../src/kit/cue.js';
 import { segment } from '../../../src/kit/place.js';
 import { corners, drawTri, angleAt, angleArc, dim, RAD } from '../lib/tri.js';
 import { cursive } from '../lib/cursive.js';
-import { row, jp } from '../lib/math.js';
+import { row, jp, frac } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
 import { cornerMemo, tab, example, workLine } from '../lib/drill.js';
 import { mark } from '../lib/scene.js';
@@ -69,15 +69,15 @@ export default clip({
     ringBox(ctx, angle, focus(t, [at('small')], at('a4.end'), cue).level[0], C.accent, 10);
 
     // the working
-    workLine(ctx, row('tan', 'θ', '=', '10', '÷', '100', '=', '0.1'), 150, 470, tw(t, at('tv') - lead, 0.5), { size: 42 });
+    workLine(ctx, row('tan', 'θ', '=', frac('10', '100'), '=', '0.1'), 150, 450, tw(t, at('tv') - lead, 0.5), { size: 42 });
     // m2: how a calculator does it
-    text(ctx, '角度は、関数電卓の tan⁻¹ で（角度の単位は「度」に設定）', 150, 512, { font: F.jp(500, 22), color: C.muted, alpha: tw(t, at('calc') - lead, 0.5) });
+    text(ctx, '角度は、関数電卓の tan⁻¹ で（角度の単位は「度」に設定）', 150, 524, { font: F.jp(500, 22), color: C.muted, alpha: tw(t, at('calc') - lead, 0.5) });
     // m1: what each number is
     const notang = tw(t, at('notang') - lead, 0.5);
     if (notang > 0) {
-      const pct = text(ctx, '10%', 150, 560, { font: F.sans(600, 40), color: C.ink, alpha: notang });
-      workLine(ctx, row('=', jp('高さ', C.sin), '÷', jp('水平の距離', C.cos), '×', '100'), 150 + pct + 14, 560, tw(t, at('ratio') - lead, 0.5), { size: 36 });
-      text(ctx, 'θ ＝ 角度', 150, 620, { font: F.jp(500, 32), color: C.ink2, alpha: notang });
+      const pct = text(ctx, '10%', 150, 600, { font: F.sans(600, 40), color: C.ink, alpha: notang });
+      workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('水平の距離', C.cos)), '×', '100'), 150 + pct + 14, 600, tw(t, at('ratio') - lead, 0.5), { size: 36 });
+      text(ctx, 'θ ＝ 角度', 150, 668, { font: F.jp(500, 32), color: C.ink2, alpha: notang });
     }
     // a5: both ways
     const both = tw(t, at('both') - lead, 0.5);

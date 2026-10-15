@@ -12,7 +12,7 @@ import { clamp } from '../../../src/kit/ease.js';
 import { rr, text } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
 import { corners, drawTri, angleAt, sideLabel } from './tri.js';
-import { math, row, frac, jp, tag } from './math.js';
+import { math, row, frac, jp, tag, box } from './math.js';
 import { cursive, LETTER_COLOR } from './cursive.js';
 import { card, pill } from './parts.js';
 
@@ -21,8 +21,10 @@ import { card, pill } from './parts.js';
 export const BOARD_TRI = { deg: 38, base: 440, pose: { x: 160, y: 660 } };
 export const boardCorners = (base = BOARD_TRI.base, pose = BOARD_TRI.pose) => corners(BOARD_TRI.deg, base ?? BOARD_TRI.base, pose);
 
-// the three cards, in the order she finds them: height ÷ base, height ÷ slant, base ÷ slant
-export const CARD = { x: 720, w: 470, h: 84, y: [150, 256, 362] };
+// the three cards, in the order she finds them: height / base, height / slant, base / slant
+export const CARD = { x: 720, w: 470, h: 104, y: [130, 250, 370] };
+// where her name for the first ratio is written: beside the first card
+export const TATE = { x: 1214, y: 196 };
 export const CARD_VALUES = ['0.78', '0.62', '0.79'];
 const CARD_PARTS = [
   ['height', 'base'],
@@ -43,10 +45,15 @@ export function ratioCard(ctx, x, y, i, o = {}) {
   const [p, q] = CARD_PARTS[i];
   const names = o.names ?? ZUNDA_NAMES;
   card(ctx, x, y, w, h, { stroke: o.lit ? C.accent : C.rule, lw: o.lit ? 3 : 2, alpha: a });
-  const parts = [jp(names[p], COLOR[p]), '÷', jp(names[q], COLOR[q])];
+  const parts = [ratio(p, q, names)];
   if (o.value !== false) parts.push('=', tag('value', o.value ?? CARD_VALUES[i]));
-  return math(ctx, row(...parts), x + 30, y + h / 2 + 14, { size: 38, alpha: a });
+  const nd = row(...parts);
+  const b = box(nd, 38);
+  return math(ctx, nd, x + 30, y + h / 2 + (b.asc - b.desc) / 2, { size: 38, alpha: a });
 }
+
+// One side over another, in their colours.
+const ratio = (p, q, names) => frac(jp(names[p], COLOR[p]), jp(names[q], COLOR[q]));
 
 // The table of ratios by angle she wants to keep: only the 38° row is filled.
 const TABLE_ROWS = [20, 30, 38, 45, 60];
@@ -56,20 +63,23 @@ export function ratioTable(ctx, x, y, o = {}) {
   const names = o.names ?? ZUNDA_NAMES;
   const colW = 200;
   const degW = 120;
-  const rowH = 46;
+  const headH = 80;
+  const rowH = 44;
   const w = degW + colW * 3;
-  const h = rowH * (TABLE_ROWS.length + 1) + 8;
+  const h = headH + rowH * TABLE_ROWS.length + 10;
   ctx.save();
   ctx.globalAlpha *= a;
   card(ctx, x, y, w, h, { r: 12 });
-  text(ctx, '角度', x + degW / 2, y + 32, { font: F.jp(700, 22), color: C.ink2, align: 'center' });
+  text(ctx, '角度', x + degW / 2, y + headH / 2 + 8, { font: F.jp(700, 22), color: C.ink2, align: 'center' });
   CARD_PARTS.forEach(([p, q], i) => {
-    math(ctx, row(jp(names[p], COLOR[p]), '÷', jp(names[q], COLOR[q])), x + degW + colW * (i + 0.5), y + 32, { size: 24, align: 'center' });
+    const nd = ratio(p, q, names);
+    const b = box(nd, 27);
+    math(ctx, nd, x + degW + colW * (i + 0.5), y + headH / 2 + (b.asc - b.desc) / 2, { size: 27, align: 'center' });
   });
   ctx.fillStyle = C.ink;
-  ctx.fillRect(x + 10, y + rowH + 2, w - 20, 2);
+  ctx.fillRect(x + 10, y + headH, w - 20, 2);
   TABLE_ROWS.forEach((deg, r) => {
-    const ry = y + rowH * (r + 1) + 6;
+    const ry = y + headH + 4 + rowH * r;
     const mine = deg === 38;
     text(ctx, `${deg}°`, x + degW / 2, ry + 30, { font: F.mono(500, 24), color: mine ? C.ink : C.muted, align: 'center' });
     CARD_VALUES.forEach((val, i) => {
