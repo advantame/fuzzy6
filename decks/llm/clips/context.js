@@ -1,6 +1,6 @@
-// 3-7: how much the model can take at once. The text and the answer being written share one
-// window of tokens; the answer is worked out from what is in it, and the answer goes into it
-// too. When the text grows past the window, the original of what is left out cannot be looked
+// 3-7: how much the model can take at once. The context (3-1) has an upper limit in tokens, the
+// context window: the text given and the answer being written share it; the answer is worked
+// out from what is in it, and the answer goes into it too. When the text grows past the window, the original of what is left out cannot be looked
 // at as it is, so the program that runs the model decides what to keep — or keeps a shorter
 // summary. The window was 2,048 tokens for GPT-3 (2020); in 2026 several models take around a
 // million. ずんだもん asks how much that is: 『坊っちゃん』 counted in GPT-4o's tokens is about
@@ -48,13 +48,13 @@ const NV = { x: 1060, y: 520 };
 export default clip({
   id: 'context',
   title: '読める長さ',
-  kicker: 'コンテキストウィンドウ',
+  kicker: 'コンテクストウィンドウ',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: 'LLM が一度に扱えるトークンの数には、{limit}上限があるわ。' },
-    { id: 'b', text: 'この範囲を、{win}コンテキストウィンドウと呼ぶの。\n文章をのぞく窓のようなものね。' },
+    { id: 'a', text: 'コンテクストに入れられるトークンの数には、{limit}上限があるわ。' },
+    { id: 'b', text: 'この範囲を、{win}コンテクストウィンドウと呼ぶの。\n文章をのぞく窓のようなものね。' },
     { id: 'c', text: '答えを作るときは、\n{inside}この窓に入っている文章を、手がかりにするのよ。' },
-    { id: 'd', still: true, text: '{pr}プロンプトだけでなく、{own}書いていく答えも、\nこの窓の中に入っていくわ。' },
+    { id: 'd', still: true, text: '{pr}最初に与えた文章だけでなく、{own}書いていく答えも、\nこの窓の中に入っていくわ。' },
     { id: 'e', text: '{grow}文章が長くなると、{outside}窓に入っていない元の文章は、\nそのままでは参照できないの。' },
     { id: 'f', text: 'だから、{who}どこを残し、どこを省くかを、\nLLM を使うプログラムの側で決めるのよ。' },
     { id: 'f2', still: true, text: '前の内容を、{sum}短くまとめて残す方法もあるわ。' },
@@ -112,7 +112,7 @@ export default clip({
       }
       ctx.restore();
       const iw = tag(ctx, DOC.x + 140, DOC.y - 48, 'イメージ', { font: F.jp(700, 15), h: 26, padX: 9, stroke: C.muted, color: C.muted, alpha: winA });
-      tag(ctx, DOC.x + 150 + iw, DOC.y - 50, 'コンテキストウィンドウ', { font: F.jp(700, 18), h: 32, padX: 14, fill: C.accent, color: '#fff', alpha: winA });
+      tag(ctx, DOC.x + 150 + iw, DOC.y - 50, 'コンテクストウィンドウ', { font: F.jp(700, 18), h: 32, padX: 14, fill: C.accent, color: '#fff', alpha: winA });
     }
     // the limit, named before the window is drawn
     text(ctx, `上限：この例では ${WIN} トークン`, DOC.x + 560, DOC.y - 24, { font: F.jp(700, 18), color: C.ink2, alpha: pop('limit') });
@@ -133,7 +133,7 @@ export default clip({
       text(ctx, '窓の中を手がかりに', LLM.x + LLM.w / 2, LLM.y + LLM.h + 28, { font: F.jp(700, 17), color: C.accent, align: 'center', alpha: inA });
     }
     const ownA = pop('own') * (1 - seg(t, at('grow') - lead, at('grow')));
-    text(ctx, '黒は、プロンプト', LLM.x + LLM.w, LLM.y + LLM.h + 58, { font: F.jp(700, 17), color: C.ink, align: 'right', alpha: pop('pr') });
+    text(ctx, '黒は、最初に与えた文章', LLM.x + LLM.w, LLM.y + LLM.h + 58, { font: F.jp(700, 17), color: C.ink, align: 'right', alpha: pop('pr') });
     text(ctx, '赤は、書いている答え', LLM.x + LLM.w, LLM.y + LLM.h + 84, { font: F.jp(700, 17), color: C.accent, align: 'right', alpha: Math.max(ownA, pop('own') * 0.8) });
     // outside the window, and who decides
     const oa = pop('outside');

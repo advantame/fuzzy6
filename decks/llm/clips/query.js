@@ -16,14 +16,14 @@ const JP = F.jp(500, 18);
 const ENTRIES = [
   { role: 'user', text: 'RAG と長い窓は、どう使い分ける？' },
   { role: 'assistant', kind: 'call', text: 'read index.md' },
-  { role: 'result', kind: 'data', font: JP, lh: 29, text: '・RAG：要る断片を探して読ませる\n・コンテキスト：一度に読める長さ\n・検索、幻覚、年表 … ほか 8 頁' },
-  { role: 'assistant', kind: 'call', text: 'read wiki/RAG.md\nread wiki/コンテキスト.md' },
+  { role: 'result', kind: 'data', font: JP, lh: 29, text: '・RAG：要る断片を探して読ませる\n・コンテクスト：一度に読める長さ\n・検索、幻覚、年表 … ほか 8 頁' },
+  { role: 'assistant', kind: 'call', text: 'read wiki/RAG.md\nread wiki/コンテクスト.md' },
   { role: 'result', kind: 'data', font: JP, lh: 29, text: '（2 頁の本文）' },
-  { role: 'assistant', text: '資料が多ければ RAG、少なければ窓に全部。\n出典：[[RAG]] [[コンテキスト]]' },
+  { role: 'assistant', text: '資料が多ければ RAG、少なければ窓に全部。\n出典：[[RAG]] [[コンテクスト]]' },
   { role: 'assistant', kind: 'call', text: 'write  wiki/RAG と窓.md\nappend log.md' },
 ];
 const T = { user: 0.4, read1: 1.0, call1: 1.6, out1: 2.0, back1: 2.6, res1: 3.0, read2: 3.4, call2: 4.2, out2: 4.6, back2: 5.2, res2: 5.6, read3: 6.2, answer: 7.0, call3: 9.0, out3: 9.4, page: 9.9, log: 10.3, end: 11.0 };
-const OPENED = [P['RAG'], P['コンテキスト']];
+const OPENED = [P['RAG'], P['コンテクスト']];
 const NEW_LINKS = [13, 14]; // the new page's links in LINKS
 const RAG_LINKS = [9, 10, 11, 12]; // written by ingest (8-5)
 

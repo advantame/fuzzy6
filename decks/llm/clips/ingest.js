@@ -16,12 +16,12 @@ const ENTRIES = [
   { role: 'user', text: 'Lewis 2020 を raw/ に入れた。取り込んで。' },
   { role: 'assistant', kind: 'call', text: 'read  raw/Lewis 2020' },
   { role: 'result', kind: 'data', text: 'Retrieval-Augmented Generation …' },
-  { role: 'assistant', kind: 'call', text: 'write wiki/RAG.md（新しい頁）\nedit  wiki/検索.md\nedit  wiki/幻覚.md\nedit  wiki/年表.md\nedit  wiki/コンテキスト.md\nedit  index.md\nappend log.md' },
+  { role: 'assistant', kind: 'call', text: 'write wiki/RAG.md（新しい頁）\nedit  wiki/検索.md\nedit  wiki/幻覚.md\nedit  wiki/年表.md\nedit  wiki/コンテクスト.md\nedit  index.md\nappend log.md' },
   { role: 'assistant', text: '1 つの資料で、5 頁と索引を直しました。' },
 ];
 const T = { raw: 0.6, user: 1.0, read: 1.6, call1: 2.2, out1: 2.6, back1: 3.2, res: 3.6, read2: 4.0, call2: 4.8, writes: 5.6, index: 10.0, log: 10.5, answer: 11.4 };
 // the pages written in turn, from T.writes, 0.8 s apart
-const WRITES = ['RAG', '検索', '幻覚', '年表', 'コンテキスト'].map((n) => P[n]);
+const WRITES = ['RAG', '検索', '幻覚', '年表', 'コンテクスト'].map((n) => P[n]);
 const NEW_LINKS = [9, 10, 11, 12]; // RAG's links in LINKS
 
 export default clip({

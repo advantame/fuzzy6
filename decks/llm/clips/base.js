@@ -2,7 +2,7 @@
 // parameters, and many texts practised with what comes next hidden, until the grid settles. Given a question alone, it may go on with more
 // questions — in a page of questions, that is what comes next. ずんだもん expected an answer.
 // Shape the text as question and answer, end it on "答え：", and the likely continuation is an
-// answer; GPT-3's paper showed this with examples in the prompt. A chatbot keeps the shape with
+// answer; GPT-3's paper showed this with examples in the context. A chatbot keeps the shape with
 // fixed marks: the labels turn into the role marks of 4-2.
 // The model's outputs, the parameters' values and the practice texts are an example.
 
@@ -55,18 +55,18 @@ export default clip({
   cast: ['metan', 'zunda'],
   script: [
     { id: 'a', text: '事前学習を終えたモデルは、{cont}文章の続きを予測することを、\n{many}たくさん学んできたわ。' },
-    { id: 'b', lead: 0.6, text: 'たとえば、このモデルに、{ask}「[日本|にほん]の首都はどこですか？」\nというプロンプトだけを与えた場面を考えてみましょう。' },
+    { id: 'b', lead: 0.6, text: 'たとえば、このモデルに、{ask}「[日本|にほん]の首都はどこですか？」\nだけをコンテクストとして与えた場面を考えてみましょう。' },
     { id: 'c', still: true, text: '答えではなく、{more}「アメリカの首都はどこですか？」のように、\n別の質問を続けることもあるの。' },
     { id: 'c2', text: '{fig}InstructGPT の論文にも、[GPT-3|ジーピーティースリー] が質問に、\n別の質問で続けた例が載っているわ。' },
     { id: 'd', by: 'zunda', text: '{q}質問したのに、答えてくれないのだ？' },
     { id: 'e', text: '事前学習で学んだのは、{why}書かれた文章に、\nどんな続きが来るか、ということなの。' },
     { id: 'e2', text: '{not}質問に答える形になるとは、限らないのよ。' },
     { id: 'f', still: true, text: 'たとえば、{book}問題集のような並びなら、\n質問の次に、また質問が来ることもあるわね。' },
-    { id: 'g', text: '逆に、{shape}プロンプトの形を整えてやると、続きも変わるわ。' },
+    { id: 'g', text: '逆に、{shape}コンテクストの形を整えてやると、続きも変わるわ。' },
     { id: 'h', text: '{qa}質問と答えの組をいくつか見せて、\n{last}最後は、新しい質問と「答え：」まで書くの。' },
     { id: 'h2', still: true, text: 'そうすると、{ans}答えの形で、続きを書きやすくなるわ。' },
-    { id: 'i', text: '2020 年の [GPT-3|ジーピーティースリー] の論文では、{few}質問と答えの例を\nプロンプトに入れて、続きを書かせる方法も試しているの。' },
-    { id: 'i2', text: 'このとき、{nofix}パラメータは変えていないわ。\n例は、プロンプトの中にあるだけなの。' },
+    { id: 'i', text: '2020 年の [GPT-3|ジーピーティースリー] の論文では、{few}質問と答えの例を\nコンテクストに入れて、続きを書かせる方法も試しているの。' },
+    { id: 'i2', text: 'このとき、{nofix}パラメータは変えていないわ。\n例は、コンテクストの中にあるだけなの。' },
     { id: 'j', tail: 0.8, text: 'チャットボットでは、{mark}だれの発言かを、\n決まった印で区切る形式も使われているわ。' },
   ],
 
@@ -89,7 +89,7 @@ export default clip({
     card(ctx, LEFT, la);
     const asked = pop('ask');
     const aw = text(ctx, ASK, LEFT.x + 28, LEFT.y + 52, { font: BODY, color: C.ink, alpha: asked });
-    tag(ctx, LEFT.x + 28 + aw + 14, LEFT.y + 26, 'プロンプト', { font: F.jp(700, 16), h: 30, padX: 10, stroke: C.accent, color: C.accent, alpha: asked });
+    tag(ctx, LEFT.x + 28 + aw + 14, LEFT.y + 26, 'コンテクスト', { font: F.jp(700, 16), h: 30, padX: 10, stroke: C.accent, color: C.accent, alpha: asked });
     const more = seg(t, at('more') - lead, at('c.end'));
     const nChars = MORE.join('').length;
     let left = Math.round(nChars * more);
@@ -142,7 +142,7 @@ export default clip({
 
     // ——— right: the text shaped as question and answer
     const ra = pop('shape');
-    text(ctx, '形を整えたプロンプト', RIGHT.x, RIGHT.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: ra });
+    text(ctx, '形を整えたコンテクスト', RIGHT.x, RIGHT.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: ra });
     card(ctx, RIGHT, ra);
     const marks = tw(t, at('mark') - lead, 0.8);
     const qaA = pop('qa');
@@ -167,8 +167,8 @@ export default clip({
     tag(ctx, RIGHT.x + 24, RIGHT.y + RIGHT.h - 56 + 70, '続きは、答えになった', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue, alpha: tw(t, at('ans') + 0.8, pace.enter) });
     // GPT-3's paper: examples in the text, then the problem
     const fa = pop('few');
-    text(ctx, 'GPT-3 の論文（2020）：質問と答えの例をプロンプトに入れる（few-shot）', RIGHT.x, RIGHT.y + RIGHT.h + 120, { font: F.jp(700, 18), color: C.ink2, alpha: fa });
-    text(ctx, 'パラメータは変えない。例は、プロンプトの中にあるだけ', RIGHT.x, RIGHT.y + RIGHT.h + 150, { font: F.jp(500, 17), color: C.ink2, alpha: pop('nofix') });
+    text(ctx, 'GPT-3 の論文（2020）：質問と答えの例をコンテクストに入れる（few-shot）', RIGHT.x, RIGHT.y + RIGHT.h + 120, { font: F.jp(700, 18), color: C.ink2, alpha: fa });
+    text(ctx, 'パラメータは変えない。例は、コンテクストの中にあるだけ', RIGHT.x, RIGHT.y + RIGHT.h + 150, { font: F.jp(500, 17), color: C.ink2, alpha: pop('nofix') });
     // the marks
     const ma = pop('mark');
     if (ma > 0) {

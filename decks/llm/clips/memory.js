@@ -1,7 +1,7 @@
 // 4-5: read again every time. A chatbot seems to remember, but the LLM's parameters do not change
 // while it answers: the app puts the conversation so far into every document it has the LLM
-// read. Turn by turn the document grows (the third answer can use what the first turns said),
-// and so does what is read each time — until it reaches the context window. Then the app leaves
+// read — the context (3-1). Turn by turn the context grows (the third answer can use what the
+// first turns said) — until it reaches the context window. Then the app leaves
 // out the oldest part or keeps a summary. Memory across conversations works the same way: saved
 // notes are written into the document. Drawn on the tool diagram's parts (lib/rig.js), with the
 // amount read each time on the right, where the tool will stand in chapter 5.
@@ -39,18 +39,18 @@ export default clip({
   script: [
     { id: 'a', text: 'チャットボットと話していると、{seem}前に話したことを、\n覚えているように見えるでしょう。' },
     { id: 'b', text: 'でも、ふつう、{fixed}答えを作るあいだは、\nLLM のパラメータを更新しないのだったわね。' },
-    { id: 'c', text: '覚えているように見えるのは、{resend}前のやりとりも、\n今回の答えを作るための入力に含めているからなの。' },
+    { id: 'c', text: '覚えているように見えるのは、{resend}前のやりとりも、\n今回のコンテクストに含めているからなの。' },
     { id: 'c2', text: '{two}履歴をアプリから渡す方法も、\n{server}サーバーに保存した履歴を使う方法もあるわ。' },
     { id: 'd', text: '{t2}たとえば 2 回目は、前の質問と答えに、\n新しい質問をつないで読ませるわ。' },
     { id: 'd2', text: '{t3}3 回目も、それまでのやりとりにつなげるの。' },
     { id: 'd3', text: '前と同じ部分の計算結果は、{reuse}使い回すこともできるわ。' },
-    { id: 'e', still: true, text: '省略せずに足し続けると、{grow}一度に読ませる入力は、\n長くなっていくの。' },
+    { id: 'e', still: true, text: '省略せずに足し続けると、{grow}一度に読ませるコンテクストは、\n長くなっていくの。' },
     { id: 'f', by: 'zunda', text: '{q}ずっと話していたら、どうなるのだ？' },
-    { id: 'g', text: 'そのまま足し続ければ、\n{limit}コンテキストウィンドウの上限に届くわ。' },
+    { id: 'g', text: 'そのまま足し続ければ、\n{limit}コンテクストウィンドウの上限に届くわ。' },
     { id: 'h', text: '続けるために、{cut}古い部分を省いたり、\n{sum}要約などで短くしたりする方法があるの。' },
     { id: 'h2', still: true, text: '{app2}上限の扱いは、アプリの仕組みによって違うわ。' },
     { id: 'i', text: '会話をまたいで、{mem}保存した情報を使うメモリー機能もあるわ。' },
-    { id: 'i2', tail: 0.8, text: 'たとえば、{pref}保存しておいた好みを、\n次の会話の入力に加える作り方があるの。' },
+    { id: 'i2', tail: 0.8, text: 'たとえば、{pref}保存しておいた好みを、\n次の会話のコンテクストに加える作り方があるの。' },
   ],
 
   prepare(ctx) {
@@ -84,7 +84,7 @@ export default clip({
 
     // ——— the app and its document
     const g = enter(t, at('a'), pace);
-    appFrame(ctx, L, g, { name: 'アプリ', note: '前のやりとりも、入力に含める', noteAlpha: pop('resend') });
+    appFrame(ctx, L, g, { name: 'アプリ', note: '前のやりとりも、コンテクストに含める', noteAlpha: pop('resend') });
     const reading = turnAt.map((x) => seg(t, x - 0.1, x + 0.9));
     const glow = Math.max(...reading.map((p) => (p > 0.3 && p < 1 ? 1 : 0)));
     llmBlock(ctx, L, g, { glow });
@@ -146,7 +146,7 @@ export default clip({
     // ——— what is read each time, against the window
     const ca = pop('t2');
     if (ca > 0) {
-      text(ctx, '1 回に読ませる量', CHART.x, CHART.y - 20, { font: F.jp(700, 19), color: C.ink2, alpha: ca });
+      text(ctx, '1 回ごとのコンテクストの長さ', CHART.x, CHART.y - 20, { font: F.jp(700, 19), color: C.ink2, alpha: ca });
       ctx.fillStyle = C.rule;
       ctx.globalAlpha = ca;
       ctx.fillRect(CHART.x, CHART.y + CHART.h, CHART.w, 2);
@@ -199,6 +199,6 @@ export default clip({
     // memory across conversations
     tag(ctx, CHART.x, CHART.y + CHART.h + 82, 'メモリー：保存した情報を使う', { font: F.jp(700, 15), h: 30, padX: 10, fill: C.ink, color: C.paper, alpha: pop('mem') });
 
-    example(ctx, L.app.x, L.app.y + L.app.h + 22, g, '会話、量、上限は説明のための例');
+    example(ctx, L.app.x, L.app.y + L.app.h + 22, g, '会話、長さ、上限は説明のための例');
   },
 });

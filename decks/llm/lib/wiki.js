@@ -25,7 +25,7 @@ export const PAGES = [
   ['検索', 0.89, 0.1],
   ['事前学習', 0.13, 0.5],
   ['Transformer', 0.41, 0.44],
-  ['コンテキスト', 0.68, 0.52],
+  ['コンテクスト', 0.68, 0.52],
   ['RAG と窓', 0.9, 0.42],
   ['トークン', 0.12, 0.86],
   ['アテンション', 0.4, 0.9],
@@ -36,13 +36,13 @@ export const P = Object.fromEntries(PAGES.map(([n], i) => [n, i]));
 
 // links between pages: the first ones exist from the start
 export const LINKS = [
-  ['年表', 'Transformer'], ['年表', '幻覚'], ['幻覚', '検索'], ['検索', 'コンテキスト'],
-  ['Transformer', '事前学習'], ['Transformer', 'アテンション'], ['Transformer', 'コンテキスト'],
+  ['年表', 'Transformer'], ['年表', '幻覚'], ['幻覚', '検索'], ['検索', 'コンテクスト'],
+  ['Transformer', '事前学習'], ['Transformer', 'アテンション'], ['Transformer', 'コンテクスト'],
   ['事前学習', 'トークン'], ['トークン', 'アテンション'],
   // added by ingesting Lewis 2020
-  ['RAG', '検索'], ['RAG', '幻覚'], ['RAG', '年表'], ['RAG', 'コンテキスト'],
+  ['RAG', '検索'], ['RAG', '幻覚'], ['RAG', '年表'], ['RAG', 'コンテクスト'],
   // added when a good answer is filed back
-  ['RAG と窓', 'RAG'], ['RAG と窓', 'コンテキスト'],
+  ['RAG と窓', 'RAG'], ['RAG と窓', 'コンテクスト'],
   // added by lint
   ['ELIZA', '年表'], ['埋め込み', '検索'], ['埋め込み', 'アテンション'],
 ].map(([a, b]) => [P[a], P[b]]);
@@ -197,7 +197,7 @@ export function wikiFolder(ctx, b, a, s = {}) {
   }
 }
 
-const BASE_PAGE = new Set([P['年表'], P['幻覚'], P['検索'], P['事前学習'], P['Transformer'], P['コンテキスト'], P['トークン'], P['アテンション'], P['ELIZA']]);
+const BASE_PAGE = new Set([P['年表'], P['幻覚'], P['検索'], P['事前学習'], P['Transformer'], P['コンテクスト'], P['トークン'], P['アテンション'], P['ELIZA']]);
 
 // paper → soft vermilion as a file is used
 function lerpHex(p) {

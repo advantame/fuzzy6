@@ -19,7 +19,7 @@ const ENTRIES = [
   { role: 'assistant', text: '9 頁の wiki を作りました。\nindex.md と log.md も直しました。' },
 ];
 // the base pages appear as they are written, in this order
-const ORDER = ['年表', 'トークン', '事前学習', 'Transformer', 'アテンション', 'コンテキスト', '幻覚', '検索', 'ELIZA'].map((n) => P[n]);
+const ORDER = ['年表', 'トークン', '事前学習', 'Transformer', 'アテンション', 'コンテクスト', '幻覚', '検索', 'ELIZA'].map((n) => P[n]);
 const BUILD = [3.6, 8.6];
 const LAYERS = { raw: 6.0, wiki: 7.6, schema: 9.2 };
 

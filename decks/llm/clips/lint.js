@@ -22,7 +22,7 @@ const ENTRIES = [
 ];
 const T = { user: 0.4, read1: 1.0, call1: 1.6, scan: 2.0, res1: 3.2, read2: 3.6, find: 4.4, call2: 6.8, raw: 7.2, fixConflict: 8.2, fixOrphan: 8.8, fixMissing: 9.4, log: 10.0, answer: 10.8, end: 11.4 };
 const FLAGS = [
-  { page: P['コンテキスト'], kind: 'conflict', at: 4.8, fix: T.fixConflict },
+  { page: P['コンテクスト'], kind: 'conflict', at: 4.8, fix: T.fixConflict },
   { page: P['年表'], kind: 'conflict', at: 4.8, fix: T.fixConflict },
   { page: P['ELIZA'], kind: 'orphan', at: 5.4, fix: T.fixOrphan },
   { page: P['埋め込み'], kind: 'missing', at: 6.0, fix: T.fixMissing },

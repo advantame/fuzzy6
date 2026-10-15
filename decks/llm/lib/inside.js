@@ -23,7 +23,8 @@ export const STAGES = [
 ];
 // After 3-3 names the list of numbers a vector, the later clips call the stage by that name.
 export const VECTOR_LABEL = 'ベクトルにする';
-export const INPUT = '書きかけの文章';
+// The text the model reads, named in 3-1 (d2): the context.
+export const INPUT = 'コンテクスト';
 export const TITLE = '自己回帰型 LLM の流れ';
 export const INNER = [1, 2, 3]; // the stages inside the model's frame
 

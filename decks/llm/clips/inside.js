@@ -1,8 +1,8 @@
 // 3-1: what happens in an autoregressive LLM, one that writes from the front. First the loop as 1-3 left it: from
 // the text so far the LLM works out the candidates for what comes next and their chances, one
 // is picked and added to the end, and the next is predicted from the longer text. ずんだもん
-// asks what goes on inside — but first, the text given at the start is named the prompt; the
-// rest is what the LLM wrote. Then the box opens into the model's three stages, with the cutting into
+// asks what goes on inside — but first, the text the LLM reads is named the context: what it was
+// given and what it wrote, both. Then the box opens into the model's three stages, with the cutting into
 // tokens before it (lib/inside.js), and the clip ends on the chapter's map: which clip takes
 // which stage. The later clips keep the map as a strip.
 
@@ -52,10 +52,11 @@ export default clip({
     { id: 'b', text: 'LLM は、{in}書きかけの文章をもとに、\n{out}次に来る言葉の候補と、その確率を計算するの。' },
     { id: 'c', text: '{pick}その中から一つを選んで、{add}文章の後ろに足したら、\n{again}足したところまでを手がかりに、また次を予測するのよ。' },
     { id: 'd', text: '{loop}これをくり返して、文章が少しずつ書き進められていくわ。' },
-    { id: 'd2', still: true, text: '{pr}最初に LLM に読ませる、この文章のことを、\n{wrote}プロンプトと呼ぶわ。' },
+    { id: 'd2', text: '{pr}次を予測するときに LLM が読む、この文章を、\nコンテクストと呼ぶわ。' },
+    { id: 'd3', still: true, text: '{wrote}LLM が書き足した部分も、コンテクストに加わるの。' },
     { id: 'e', by: 'zunda', text: '{ask}その LLM の中では、何が起きているのだ？' },
     { id: 'f', text: '{open}中をのぞくと、計算がいくつかの段階に分かれているの。' },
-    { id: 'g', text: '{s1}まず、文章をトークンという単位に切って、番号にするわ。\n{s2}その番号を、一つずつ、数の並びに変えるの。' },
+    { id: 'g', text: '{s1}まず、コンテクストをトークンという単位に切って、\n番号にするわ。{s2}その番号を、一つずつ、数の並びに変えるの。' },
     { id: 'h', text: '{s3}次に、自分と、それより前のトークンを参考にして、\nその数の並びを書き換えていくわ。' },
     { id: 'i', still: true, text: '{s4}最後に、書き換えた数の並びから、\n次に来るトークンの確率を出すのよ。' },
     { id: 'j', tail: 0.8, text: 'この章では、{each}この流れを、\n一つずつ順番にたどっていきましょう。' },
@@ -99,10 +100,12 @@ export default clip({
     const hole = words[WORDS.length + landed];
     const holeX = hole ? hole.x : words[words.length - 1].x + words[words.length - 1].w + 10;
     slot(ctx, holeX, TEXT_Y, SLOT_W, WORD.h, { alpha: g, lit: g, blink: Math.floor(t * 2.5) % 2 === 0 });
-    // sentence d2: the part given at the start is the prompt, the rest is what the LLM wrote
+    // sentence d2: the whole text the LLM reads is the context — what it wrote is ringed as part of it
     const by = TEXT_Y + WORD.h + 10;
-    under(ctx, words[0].x, words[WORDS.length - 1].x + words[WORDS.length - 1].w, by, 'プロンプト', C.accent, pop('pr'));
-    under(ctx, words[WORDS.length].x, words[words.length - 1].x + words[words.length - 1].w, by, 'LLM が書き足した部分', C.ink2, pop('wrote'));
+    const last = words[words.length - 1];
+    under(ctx, words[0].x, last.x + last.w, by, 'コンテクスト', C.accent, pop('pr'));
+    const wrote = focus(t, [at('wrote')], at('d3.end') - cue.fall, cue).level[0];
+    ring(ctx, words[WORDS.length].x - 4, TEXT_Y - 4, last.x + last.w - words[WORDS.length].x + 8, WORD.h + 8, wrote, C.accent, 10);
     // the text goes in again: a sweep along it
     const again = seg(t, at('again') - lead, at('again') + 0.6);
     if (again > 0 && again < 1) {

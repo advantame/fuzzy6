@@ -45,7 +45,7 @@ export default clip({
   kicker: 'コンパクション',
   duration: 17,
   cues: [
-    { at: 0.4, to: 5.6, text: 'セッションが長くなると、文書が\nコンテキストウィンドウに入りきらなくなる。' },
+    { at: 0.4, to: 5.6, text: 'セッションが長くなると、文書が\nコンテクストウィンドウに入りきらなくなる。' },
     { at: 5.8, to: 11.4, text: 'そこでハーネスは、古いツールの結果を消したり、\nそれまでの流れを**要約**したりして、窓に収める。' },
     { at: 11.6, to: 18, text: '変わらない決まりや手順は、CLAUDE.md や AGENTS.md に書き、\nセッションの始めに読ませる。' },
   ],
@@ -127,7 +127,7 @@ export default clip({
     ctx.lineTo(d.x + d.w - 10, limit);
     ctx.stroke();
     ctx.restore();
-    text(ctx, over ? 'あふれそう' : 'コンテキストウィンドウの上限', d.x + d.w - 18, limit + 24, { font: F.jp(700, 16), color: over ? C.red : C.accent, align: 'right', alpha: base });
+    text(ctx, over ? 'あふれそう' : 'コンテクストウィンドウの上限', d.x + d.w - 18, limit + 24, { font: F.jp(700, 16), color: over ? C.red : C.accent, align: 'right', alpha: base });
 
     // the pinned file, called out at the end
     const pa = tw(t, FACT - 0.2, 0.5);
