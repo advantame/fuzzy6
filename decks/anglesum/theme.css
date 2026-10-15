@@ -1,0 +1,240 @@
+/* Angle-sum deck — the frame of the LLM and trig decks (ink around a paper stage, the two
+   inner edges of the L lit in vermilion as they fill, spec §2), kept so the decks read as one
+   series. The stage itself is paper, drawn by the clips (lib/clip.js). */
+
+.mx {
+  --mx-bg: #121110;
+  --mx-stage-bg: #f4f1e9;
+  --mx-ink: #f4f1e9;
+  --mx-muted: #958f84;
+  --mx-rule: #3b3732;
+  --mx-accent: #ff5a1f;
+  --mx-on-accent: #121110;
+  --mx-font: 'IBM Plex Sans JP', 'IBM Plex Sans', system-ui, sans-serif;
+  --mx-font-mono: 'IBM Plex Mono', 'IBM Plex Sans JP', ui-monospace, monospace;
+  --mx-font-cond: 'IBM Plex Sans Condensed', 'IBM Plex Sans JP', sans-serif;
+}
+
+/* ——— rail ——————————————————————————————————————————————————————— */
+
+.mx-rail { padding: 46px 40px 0 44px; }
+
+.mx-crumbs { font-size: 17px; }
+.mx-crumb[data-level='deck'] {
+  font: 600 17px/1 var(--mx-font-mono);
+  letter-spacing: 0.14em;
+  color: var(--mx-ink);
+}
+.mx-crumb + .mx-crumb::before { content: '/'; margin: 0 12px; color: var(--mx-rule); }
+.mx-crumb[data-level='chapter'] { color: var(--mx-muted); }
+.mx-crumb:hover { color: var(--mx-accent); }
+.mx-crumb-no { color: var(--mx-accent); }
+
+.mx-heading { margin-top: 84px; height: 460px; }
+.mx-no {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin: 0 0 26px;
+  font: 600 22px/1 var(--mx-font-mono);
+  letter-spacing: 0.04em;
+  color: var(--mx-muted);
+}
+.mx-no-chapter { color: var(--mx-muted); }
+.mx-no-sep { margin: 0 3px; opacity: 1; color: var(--mx-rule); }
+.mx-no-clip {
+  font: 700 76px/0.8 var(--mx-font-cond);
+  letter-spacing: -0.01em;
+  color: var(--mx-accent);
+}
+.mx-title {
+  font-size: 42px;
+  line-height: 1.26;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.mx-kicker {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 2px solid var(--mx-rule);
+  font-size: 18px;
+  color: var(--mx-muted);
+  letter-spacing: 0.02em;
+}
+
+/* deck axis: the rail's right edge, which is also the stage's left edge */
+.mx-axis { top: 0; bottom: 0; width: 34px; }
+.mx-tick > button::before {
+  width: 10px;
+  height: 2px;
+  background: var(--mx-rule);
+}
+.mx-tick[data-chapter-start] > button::before { width: 20px; background: var(--mx-muted); }
+.mx-tick[data-state='past'] > button::before { background: var(--mx-accent); }
+.mx-tick[data-state='current'] > button::before {
+  width: 34px;
+  height: 4px;
+  margin-top: -2px;
+  background: var(--mx-accent);
+}
+/* the lit edge: past ticks fill their whole slot, the current one fills down to its middle */
+.mx-tick::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--mx-accent);
+  transform-origin: top;
+  transform: scaleY(0);
+  transition: transform 0.6s var(--mx-ease);
+  pointer-events: none;
+}
+.mx-tick[data-state='past']::after { transform: scaleY(1); }
+.mx-tick[data-state='current']::after { transform: scaleY(0.5); }
+.mx-tick > button:hover::after {
+  right: 46px;
+  padding: 8px 12px;
+  font: 500 15px/1 var(--mx-font);
+}
+
+/* ——— bar ——————————————————————————————————————————————————————— */
+
+.mx-seek-track { background: transparent; }
+.mx-seek-fill { top: 15px; height: 4px; margin-top: -1px; }
+.mx-seek-head {
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  box-shadow: 0 0 0 4px var(--mx-bg);
+}
+.mx-seek-mark { top: 16px; }
+.mx-seek-mark::before { top: 0; height: 12px; background: #5c5750; }
+/* a still sits on the lit edge itself */
+.mx-seek-mark[data-kind='still']::before { top: -5px; height: 10px; background: var(--mx-bg); }
+.mx-seek-mark:hover::before { background: var(--mx-accent); }
+.mx-seek-hover {
+  background: var(--mx-stage-bg);
+  color: #151412;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+.mx-seek-hover-time { color: var(--mx-accent); }
+
+.mx-time { top: 34px; right: calc(44px + var(--mx-gutter, 0px)); font-size: 16px; }
+
+.mx-subs { left: 120px; right: calc(120px + var(--mx-gutter, 0px)); top: 48px; bottom: 18px; }
+.mx-cue {
+  font-size: 37px;
+  line-height: 1.42;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+.mx-cue strong { color: var(--mx-accent); font-weight: 700; }
+
+/* ——— cast: 四国めたん on the left, ずんだもん on the right ————————————————
+   The two figures are exported at one scale, so giving each the same height per source row
+   (1600 and 1920 rows at 0.135) keeps their heads the same size. The headdress and the ears
+   rise a little over the seek bar. */
+.mx-cast { --mx-cast-w: 340px; --mx-cast-gap: 14px; }
+.mx-cast[data-id='metan'] { --mx-cast-h: 216px; }
+.mx-cast[data-id='zunda'] { --mx-cast-h: 259px; }
+/* The listener steps back less than the default: on the dark bar a deep dim turns muddy. */
+.mx-bar:has(.mx-cast[data-speaking]) .mx-cast:not([data-speaking]) { filter: brightness(0.86) saturate(0.9); }
+/* Captions take the room between the figures that are there. The deck's frame has a column
+   on the right (deck.js `frame.gutter`), so ずんだもん stands clear of the stage's corner. */
+.mx[data-cast] .mx-subs { left: 120px; right: calc(120px + var(--mx-gutter, 0px)); }
+.mx[data-cast] .mx-bar:has(.mx-cast[data-side='left']) .mx-subs { left: 318px; }
+.mx[data-cast] .mx-bar:has(.mx-cast[data-side='right']) .mx-subs { right: 282px; }
+.mx[data-cast] .mx-time { right: calc(44px + var(--mx-gutter, 0px)); }
+.mx[data-cast] .mx-bar:has(.mx-cast[data-side='right']) .mx-time { right: 292px; }
+
+/* ——— corner ——————————————————————————————————————————————————— */
+
+.mx-corner {
+  grid-template-columns: 56px 1fr 56px;
+  grid-template-rows: 1fr 46px;
+  padding: 24px 40px 22px 44px;
+}
+.mx-prev,
+.mx-next {
+  width: 56px;
+  height: 56px;
+  border-color: var(--mx-rule) !important;
+}
+.mx-count { font-size: 20px; }
+.mx-count-now { font: 700 46px/1 var(--mx-font-cond); color: var(--mx-ink); }
+.mx-count-sep { margin: 0 0.25em; }
+.mx-count-all { font: 600 20px/1 var(--mx-font-mono); }
+.mx-play { margin-left: -10px; }
+.mx-auto-label { font-size: 16px; }
+.mx-sound { justify-self: end; margin-right: 6px; }
+
+.mx-credits { padding-bottom: 30px; }
+
+
+/* ——— dives (spec §5.3) ————————————————————————————————————————— */
+
+/* the door is ずんだもん's question: a balloon at the foot of the stage beside her (clear of
+   her ear, which stands 146px into the corner), with its tail towards her */
+.mx-doors { right: 164px; bottom: 26px; }
+.mx .mx-door {
+  align-items: center;
+  gap: 16px;
+  padding: 15px 18px 15px 26px;
+  border: 3px solid var(--mx-accent);
+  border-radius: 24px 24px 6px 24px;
+  background: #fff;
+  color: #151412;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 28px rgba(21, 20, 18, 0.16);
+  transition: background 0.2s, transform 0.2s var(--mx-ease);
+}
+.mx .mx-door:hover { background: #fff3ec; transform: translateY(-2px); }
+.mx-door-hint {
+  padding: 8px 14px 9px;
+  border-radius: 999px;
+  background: var(--mx-accent);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.mx .mx-door::after {
+  content: 'Enter';
+  padding: 4px 8px;
+  border: 1.5px solid #d5cec0;
+  border-radius: 6px;
+  font: 500 14px/1 var(--mx-font-mono);
+  color: #7d776c;
+}
+
+/* inside a dive: where it hangs, and the way back */
+.mx-no-dive {
+  align-self: center;
+  margin-left: 14px;
+  padding: 6px 11px 7px;
+  border: 1.5px solid var(--mx-accent);
+  border-radius: 999px;
+  font: 700 15px/1 var(--mx-font);
+  letter-spacing: 0.08em;
+  color: var(--mx-accent);
+}
+.mx-crumb[data-level='back'] { margin-top: 14px; color: var(--mx-ink); }
+.mx-crumb + .mx-crumb[data-level='back']::before { content: '↩'; margin: 0 10px 0 0; color: var(--mx-accent); }
+.mx-index-clips > li[data-dive] .mx-index-no { color: var(--mx-accent); }
+
+/* ——— index: a printed contents page on the stage ——————————————————— */
+
+.mx-index { background: var(--mx-stage-bg); color: #151412; padding: 64px 80px; }
+.mx-index-deck { color: var(--mx-accent); }
+.mx-index-title { font-size: 36px; color: #151412; }
+.mx-index-chapter-title { border-bottom-color: #151412; color: #151412; }
+.mx-index-no { color: #7d776c; }
+.mx-index-name { color: #151412; }
+.mx-index-thumb { background: #e2dccf; box-shadow: inset 0 0 0 1px #d5cec0; }
+.mx-index-clip:hover,
+.mx-index-clip:focus-visible { background: #ebe6da; }
+.mx-index-clip[aria-current='true'] { background: #ffdccd; }
