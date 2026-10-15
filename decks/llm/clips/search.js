@@ -148,7 +148,7 @@ export default clip({
     { id: 'a', text: 'こんどは、{ask}「出張の日当は、今年の改定で変わった？」と\n聞かれたとしましょう。' },
     { id: 'b', tail: 0.3, text: '{words}質問の言葉のまま検索すると、{rule}日当の規程は見つかっても、\n{miss}改定の知らせは見つからないかもしれないわ。' },
     { id: 'c', still: true, text: 'でも、{app}いまのアプリは、{once}最初に一度だけ検索する作りだから、\n{see}その結果を見て、{redo}調べ直すことはできないの。' },
-    { id: 'd', still: true, lead: 0.7, tail: 1.0, text: 'そこで、{search}検索を、{tool}ツールの一つにするの。' },
+    { id: 'd', still: true, lead: 0.7, tail: 1.0, text: 'そこで、{search}検索を、{tool}ツールの一つにしましょう。' },
     { id: 'e', lead: 1.2, tail: 3.1, text: '{what}何を調べるかは、{llm}LLM が、{words2}検索の言葉を書いて{ask2}頼むわ。' },
     { id: 'f', lead: 0.9, tail: 3.4, text: '{read}結果を読んで、{lack}足りなければ、\n{change}言葉を変えて、{again}もう一度頼めるの。' },
     { id: 'g', still: true, lead: 1.3, tail: 1.2, text: '{found}改定の知らせが見つかったら、\n{two}二つの結果をもとに{ans}答えを書くわ。' },

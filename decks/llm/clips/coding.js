@@ -199,9 +199,9 @@ export default clip({
     { id: 'g', by: 'zunda', text: '{none}テストがなかったら、{how}どうするのだ？' },
     { id: 'h', still: true, text: 'そのときは、{want}どう動いてほしいかをもとに、\n{write2}確かめるためのテストを、{first}先に書かせることもあるわ。' },
     { id: 'i', text: '2023 年に公開された {swe}[SWE-bench|スウィーベンチ] は、\n{proj}[12 の|じゅうにの] Python のプロジェクトから作った試験よ。' },
-    { id: 'i1', text: '{real}実際に報告された課題を、{n}2,294 件集めているの。' },
+    { id: 'i1', text: '{real}実際に報告された課題が、{n}2,294 件入っているわ。' },
     { id: 'i2', still: true, text: '{fixc}コードを直して、{solved}課題を解けたかを、{bytest}テストで確かめるの。' },
-    { id: 'j', text: '{score}点の読み方には注意が要るの。\n{ch10}10 章で、くわしく見ていきましょう。' },
+    { id: 'j', text: '{score}ただ、点の読み方には、注意が要るわね。\n{ch10}10 章で、くわしく見ていきましょう。' },
   ],
 
   prepare(ctx) {

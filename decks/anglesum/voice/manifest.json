@@ -6941,7 +6941,7 @@
         "takes": {
           "1.3": {
             "file": "rotate/sub2@1.3.opus",
-            "duration": 2.411,
+            "duration": 2.603,
             "anchors": {
               "rng": 0.043
             },
@@ -7031,31 +7031,39 @@
                 "i"
               ],
               [
-                2.027,
-                "u"
+                2.091,
+                "e"
               ],
               [
-                2.197,
+                2.187,
                 "o"
               ],
               [
-                2.336,
+                2.283,
+                "u"
+              ],
+              [
+                2.379,
+                "a"
+              ],
+              [
+                2.528,
                 "x"
               ]
             ],
-            "sha256": "5a75ee7a3338d0b6f4fd7479ed5cba4299623270c8039b84d0cebf13fcde8150",
-            "generationSha256": "501379c8f2237a4233c5f3d53f9b2cbe3527e985fc4cb8f3fe6b162913eb3f0c",
+            "sha256": "2ceb3968eac704e4d2f719ebf3c521c84976d935df487e0967a72790b1729873",
+            "generationSha256": "4fd2a79d137a758efee173a4af81162313641f090e41013dbea4aeb88ad282fd",
             "master": {
               "file": "rotate/sub2@1.3.wav",
-              "sha256": "bf1d90454748ad0a72e728313e9a925602516d1bb6116a99354e74746697b002"
+              "sha256": "077e486b2a089fff40f31242347adf8568caedd8c3199bd30543ce1dcda45f47"
             }
           }
         },
         "by": "metan",
         "speaker": "四国めたん",
         "style": "ノーマル",
-        "source": "引いた結果は、0以上ニパイ未満にするの。",
-        "reading": "ヒイタ'/ケッカワ'、ゼロイジョオニパイミ'マンニ/スル'ノ"
+        "source": "引いた結果は、0以上ニパイ未満にしておくわ。",
+        "reading": "ヒイタ'/ケッカワ'、ゼロイジョオニパイミ'マンニ/_シテ'/オク'ワ"
       }
     },
     "edges": {

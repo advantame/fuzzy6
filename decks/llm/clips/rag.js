@@ -159,7 +159,7 @@ export default clip({
     { id: 'b', text: '{ask}「出張の日当はいくら？」と聞かれたら、\nどうなるかしら。' },
     { id: 'b2', text: '{rule}その会社の規程が、学習に使われていなければ、\n{know}学習した知識だけでは答えられないわ。' },
     { id: 'c', lead: 1.1, text: 'このままだと、{guess}よくある金額を、\n{plaus}もっともらしく答えてしまうかもしれないの。' },
-    { id: 'd', tail: 0.6, text: 'そこで、答えを書かせる前に、\n{app}アプリに、{search}社内の資料を検索させるの。' },
+    { id: 'd', tail: 0.6, text: 'そこで、答えを書かせる前に、\n{app}アプリに、{search}社内の資料を検索させましょう。' },
     { id: 'e', text: '{from}資料の中から、{rel}質問の答えに関係しそうな文章を、\n{few}いくつか探し出すわ。' },
     { id: 'f', still: true, tail: 0.6, text: 'その方法の一つが、{model}検索用のモデルで、質問と資料の文章を\n{vec}ベクトルに変えて、{near}近さを比べるやり方よ。' },
     { id: 'g', text: '{found}見つかった文章を、{add}質問と一緒に文書に書き足してから、\n{write}LLM に答えを書かせるのよ。' },
@@ -169,7 +169,7 @@ export default clip({
     { id: 'j', still: true, text: 'この名前は、{paper}2020 年の論文で付けられたものよ。' },
     { id: 'k', by: 'zunda', text: '{doubt}資料が見つかれば、もう間違えないのだ？' },
     { id: 'l', text: 'そうとは限らないわ。{old}見つけた資料が古かったり、\n{misread}LLM が読み違えたりすることもあるの。' },
-    { id: 'm', tail: 0.8, text: 'それに、いま作った形では、{app2}アプリが、\n{words}最初の質問の言葉で、{once}一度だけ検索するようにしてあるの。' },
+    { id: 'm', tail: 0.8, text: 'それに、いま作った形の{app2}アプリは、\n{words}最初の質問の言葉で、{once}一度しか検索しないわ。' },
   ],
 
   prepare(ctx) {
