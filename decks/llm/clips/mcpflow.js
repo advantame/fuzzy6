@@ -123,7 +123,8 @@ export default clip({
     { id: 'l', text: '{talk}MCP でやりとりするのは、{pair}ハーネスとサーバーなの。' },
     { id: 'm', still: true, text: '{n128}見つかった Issue の [#128|ヒャクニジュウハチバン] には、\n{note}時間切れの知らせはあっても、\n\n{cause}原因は、まだ書かれていないわね。' },
     { id: 'n', lead: 1.3, text: 'ただ、{many}サーバーをいくつもつないで、\n{all}すべての定義を毎回読ませると、{long}文書が長くなるわ。' },
-    { id: 'o', tail: 1.9, text: 'そこで、{finder}ツールを探すツールを用意して、\n{seek}LLM に、要るツールを探させてから、\n\n{readdef}その定義を読ませる仕組みもあるの。' },
+    { id: 'o', still: true, tail: 2.0, rest: 'long', text: 'そこで、{finder}ツールを探すツールを用意して、\n{seek}LLM に、要るツールを探させてから、\n\n{readdef}その定義を読ませる仕組みもあるの。' },
+    { id: 'back', lead: 1.5 }, // no voice: the picture of its own gives way to the main one (7-4's first frame)
   ],
 
   prepare(ctx) {
@@ -180,7 +181,7 @@ export default clip({
     const apiX = lerp(API7.x, API73.x, nar);
     // n: the picture pulls back to its own; o: and comes back as the clip ends
     const pOut = inOutCubic(seg(t, at('n'), at('n') + 1.2));
-    const pRet = inOutCubic(seg(t, at('o.end') + 0.15, at('o.end') + 1.6));
+    const pRet = inOutCubic(seg(t, at('back'), at('back') + 1.45));
     const mainA = 1 - seg(pOut, 0, 0.55);
     const backA = seg(pOut, 0.45, 1) * (1 - seg(pRet, 0, 0.45));
     const finA = seg(pRet, 0.4, 1);
@@ -584,13 +585,13 @@ function pullBack(ctx, t, s, k) {
   const hit = tw(t, endO + 0.5, 0.25);
   const rAt = at('readdef') - lead;
   const back = seg(t, rAt, rAt + 0.7);
-  const resIn = tw(t, rAt + 0.55, 0.3);
-  const readO = seg(t, rAt + 0.9, rAt + 1.7);
+  const resIn = tw(t, rAt + 0.5, 0.3);
+  const readO = seg(t, rAt + 0.8, rAt + 1.5);
   const [longLit] = lit(['long'], at('n.end'));
   const [finderLit, , readdefLit] = lit(['finder', 'seek', 'readdef'], at('o.end'));
 
   // ——— the LLM; the harness's frame with its box, the document and the hand; the servers
-  llmBlock(ctx, L7, 1, { glow: Math.max(span(t, at('all') - lead + 1.4, at('long') + 0.4), span(t, rAt + 1.4, rAt + 2.0), span(t, sAt + 0.25, endO)) });
+  llmBlock(ctx, L7, 1, { glow: Math.max(span(t, at('all') - lead + 1.4, at('long') + 0.4), span(t, rAt + 1.25, rAt + 1.7), span(t, sAt + 0.25, endO)) });
   channel(ctx, L7.read, 1, { hot: readN > 0 && readN < 1 || (readO > 0 && readO < 1) });
   channel(ctx, L7.write, 1, { hot: t >= openO && t < endO });
   appFrame(ctx, PB_L, 1, { name: '' });
@@ -683,7 +684,7 @@ function pullBack(ctx, t, s, k) {
   sweep(ctx, { doc: PBD }, readN, PBD.y + PBD.h - 30);
   send(ctx, L7.read, seg(t, allAt + 1.1, at('long') + 0.3), '', 'doc');
   sweep(ctx, { doc: PBD }, readO, ry + 60);
-  send(ctx, L7.read, seg(t, rAt + 1.2, rAt + 1.8), '', 'doc');
+  send(ctx, L7.read, seg(t, rAt + 1.0, rAt + 1.6), '', 'doc');
 
   // ——— the hand: what the servers sent, kept by the harness (apart from the document)
   rr(ctx, HAND.x, HAND.y, HAND.w, HAND.h, 14);
