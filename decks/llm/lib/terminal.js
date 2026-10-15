@@ -197,43 +197,48 @@ export function programChips(ctx) {
 }
 
 // The terminal: a dark board with its name, and the last few lines, scrolling up as new ones come.
-// lines: [{ s, cmd (typed after the prompt) | cont (a command's next line, typed) | err, red, show, type }].
-// o: { lineAlpha (the lines only, not the board) }.
+// lines: [{ s, cmd (typed after the prompt) | cont (a command's next line, typed) | err, ok, red, show, type }]
+// (ok: an output line in the prompt's green, such as a passing test's).
+// o: { lineAlpha (the lines only, not the board), box (where the board stands; TERM), rows (how many lines
+// it shows; TL.rows), trim (a line that scrolls out fades, so its descenders do not show under the rule) }.
 // Returns helpers for rings: box(k, part, before) — where line k (or a part of it) is now — and shown(k).
 export function terminal(ctx, t, a, lines, o = {}) {
   if (a <= 0.001) return null;
   const lineA = o.lineAlpha ?? 1;
+  const B = o.box ?? TERM;
+  const rows = o.rows ?? TL.rows;
+  const lx = B.x + 14; // TL.x for TERM
   const dy = (1 - a) * -10;
   ctx.save();
   ctx.globalAlpha *= clamp(a);
-  rr(ctx, TERM.x, TERM.y + dy, TERM.w, TERM.h, 12);
+  rr(ctx, B.x, B.y + dy, B.w, B.h, 12);
   ctx.fillStyle = TC.bg;
   ctx.fill();
   ctx.fillStyle = TC.rule;
-  ctx.fillRect(TERM.x + 12, TERM.y + 32 + dy, TERM.w - 24, 1.5);
+  ctx.fillRect(B.x + 12, B.y + 32 + dy, B.w - 24, 1.5);
   ctx.restore();
-  text(ctx, 'シェル（bash）', TERM.x + 14, TERM.y + 22 + dy, { font: F.jp(700, 15), color: TC.head, alpha: a });
-  const scroll = lines.reduce((sum, ln, k) => (k < TL.rows ? sum : sum + tw(t, ln.show - 0.05, 0.25, inOutCubic)), 0);
-  const yOf = (k) => TERM.y + TL.top + (k - scroll) * TL.lh + dy;
+  text(ctx, 'シェル（bash）', B.x + 14, B.y + 22 + dy, { font: F.jp(700, 15), color: TC.head, alpha: a });
+  const scroll = lines.reduce((sum, ln, k) => (k < rows ? sum : sum + tw(t, ln.show - 0.05, 0.25, inOutCubic)), 0);
+  const yOf = (k) => B.y + TL.top + (k - scroll) * TL.lh + dy;
   const shown = (k) => tw(t, lines[k].show, 0.15) * clamp(1 - Math.max(0, scroll - k) * 1.2);
   const pw = measure(ctx, TL.font, '$ ');
   ctx.save();
   ctx.beginPath();
-  ctx.rect(TERM.x, TERM.y + 36 + dy, TERM.w, TERM.h - 40);
+  ctx.rect(B.x, B.y + 36 + dy, B.w, B.h - 40);
   ctx.clip();
   let cursor = null;
   lines.forEach((ln, k) => {
-    const la = tw(t, ln.show, 0.15) * lineA;
+    const la = tw(t, ln.show, 0.15) * lineA * (o.trim ? clamp(1 - Math.max(0, scroll - k) * 1.2) : 1);
     if (la <= 0.001) return;
     const y = yOf(k);
     if (ln.cmd || ln.cont) {
-      if (ln.cmd) text(ctx, '$', TL.x, y, { font: TL.font, color: TC.prompt, alpha: a * la });
+      if (ln.cmd) text(ctx, '$', lx, y, { font: TL.font, color: TC.prompt, alpha: a * la });
       const s = typed(ln.s, seg(t, ln.type, ln.type + Math.min(0.5, 0.1 + ln.s.length * 0.025)));
-      const w = text(ctx, s, TL.x + pw, y, { font: TL.font, color: ln.red ? TC.err : TC.cmd, alpha: a * la });
+      const w = text(ctx, s, lx + pw, y, { font: TL.font, color: ln.red ? TC.err : TC.cmd, alpha: a * la });
       const next = lines[k + 1];
-      if (!next || t < next.show) cursor = { x: TL.x + pw + w + 2, y };
+      if (!next || t < next.show) cursor = { x: lx + pw + w + 2, y };
     } else {
-      text(ctx, ln.s, TL.x, y, { font: TL.font, color: ln.err ? TC.err : TC.out, alpha: a * la });
+      text(ctx, ln.s, lx, y, { font: TL.font, color: ln.err ? TC.err : ln.ok ? TC.prompt : TC.out, alpha: a * la });
     }
   });
   if (cursor && Math.floor(t * 2.5) % 2 === 0) {
@@ -246,7 +251,7 @@ export function terminal(ctx, t, a, lines, o = {}) {
     shown,
     box(k, part, before = '') {
       const ln = lines[k];
-      const x0 = TL.x + (ln.cmd || ln.cont ? pw : 0) + measure(ctx, TL.font, before);
+      const x0 = lx + (ln.cmd || ln.cont ? pw : 0) + measure(ctx, TL.font, before);
       return { x: x0, y: yOf(k) - 14, w: measure(ctx, TL.font, part ?? ln.s), h: 18 };
     },
   };
