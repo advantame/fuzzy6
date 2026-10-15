@@ -162,7 +162,7 @@ const TH = 40 / PH; // a picture in the document
 // ——— this clip's conversation (an example) ——————————————————————————————————————————————————————
 const ASK = '10月20日14時で、会議室を予約して';
 const DEFS6 = [
-  [['screenshot', F.jp(700, 17)], ['：画面を写した画像を返す', F.jp(500, 17)]],
+  [['screenshot', F.jp(700, 17)], ['：画面のスクリーンショットを返す', F.jp(500, 17)]],
   [['click', F.jp(700, 17)], ['：位置（x、y）をクリックする', F.jp(500, 17)]],
   [['type', F.jp(700, 17)], ['：文字（text）を打ち込む', F.jp(500, 17)]],
 ];
@@ -230,25 +230,25 @@ export default clip({
   bridge: 1.2, // 6-5's conversation, column, card, shell and files clear away, then the screen's place grows
   script: [
     { id: 'a', text: 'ソフトやサービスの中には、{human}人が画面で操作するようにしか、\n{only}作られていないものもあるわ。' },
-    { id: 'b', text: 'そこで、{cap}画面を画像に写したり、{mouse}マウスやキーボードを\n操作したりするプログラムを、{tool}ツールとしてつなぐの。' },
-    { id: 'b2', tail: 0.8, rest: 'short', text: 'たとえば、{ask}「10 月 20 日 14 時で、会議室を[予約して」と|よやくしてと]\n頼んだとしましょう。' },
-    { id: 'c', lead: 1.6, tail: 0.6, text: '{shot}画面を写すツールからは、\n{now}そのときの画面の画像が{back}返ってくるわ。' },
-    { id: 'd', text: '{model}画面の操作に対応したモデルに、{read}その画像を読ませて、\n{pos}ボタンや入力欄の位置を{judge}判断させるの。' },
-    { id: 'd2', still: true, text: '{miss}位置を[読み違える|よみちがえる]こともあるわ。' },
-    { id: 'e', tail: 0.5, text: '{optool}操作のツールには、{where}どこをクリックするか、\n{what}何を入力するかを、{llm}LLM に指示させましょう。' },
-    { id: 'f', tail: 0.8, text: '{run}アプリが操作を実行したら、{shot2}また画面を画像にして、\n{pass}LLM に渡すわ。' },
-    { id: 'f2', tail: 0.6, text: '{see}その画像を見て、{next}次の操作を選ばせるの。' },
+    { id: 'b', text: 'そこで、{cap}画面のスクリーンショットを撮るプログラムと、\n{mouse}マウスやキーボードを操作するプログラムを、\n\n{tool}ツールとしてつなぐの。' },
+    { id: 'b2', tail: 0.8, rest: 'short', text: 'たとえば、ユーザーが{ask}「10 月 20 日 14 時で、\n会議室を[予約して」と|よやくしてと]頼んだとしましょう。' },
+    { id: 'c', lead: 1.6, tail: 0.6, text: '{shot}スクリーンショットのツールからは、\n{now}そのときの画面の画像が{back}返ってくるわ。' },
+    { id: 'd', text: 'アプリは、{model}画面の操作に対応した LLM に、\n{read}その画像を読ませて、\n\n{pos}ボタンや入力欄の位置を{judge}判断させるの。' },
+    { id: 'd2', still: true, text: '{miss}LLM が、位置を[読み違える|よみちがえる]こともあるわ。' },
+    { id: 'e', tail: 0.5, text: 'そして、{optool}操作のツールを使うツール呼び出しに、\n\n{where}どこをクリックするか、{what}何を入力するかを、\n{llm}LLM に書かせましょう。' },
+    { id: 'f', tail: 0.8, text: '{run}アプリが操作を実行したら、{shot2}またスクリーンショットを撮って、\n{pass}LLM に渡すわ。' },
+    { id: 'f2', tail: 0.6, text: '{see}LLM に、その画像を見て、{next}次の操作を選ばせるの。' },
     { id: 'g', lead: 1.6, tail: 1.9, still: true, text: 'こうして、{job}会議室の予約のような、\n{people}人のための画面での仕事も、{go}進められるわね。' },
     { id: 'h', text: '{y24}2024 年 10 月、{anth}Anthropic は、{tool2}こうした画面の操作のための\nツールを、{beta}公開のベータとして出したわ。' },
     { id: 'i', text: '{task}画面を操作する課題を集めた試験の一つが、{osw}[OSWorld|オーエスワールド] よ。' },
-    { id: 'i2', text: '{then}そのときのモデルは、{img}画面の画像だけを使い、\n{n15}[15 回|じゅうごかい]までの操作で、{p15}[約 15%|やくじゅうごぱーせんと] の課題を解いたわ。' },
-    { id: 'i3', still: true, text: '{hum}人は、元の論文の調べで{p72}[約 72%|やくななじゅうにぱーせんと] だったけれど、\n{cond}条件は同じではないわね。' },
+    { id: 'i2', text: '{then}そのとき Anthropic が発表したモデルは、\n{img}画面の画像だけを使い、\n\n{n15}[15 回|じゅうごかい]までの操作で、{p15}[約 15%|やくじゅうごぱーせんと] の課題を解いたわ。' },
+    { id: 'i3', still: true, text: '{hum}人が解いた割合は、元の論文の測定で{p72}[約 72%|やくななじゅうにぱーせんと] だったけれど、\n{cond}条件は同じではないわね。' },
     { id: 'j', text: 'その後、{ver}課題や採点を見直した、\n{name}[OSWorld-Verified|オーエスワールドベリファイド] という版も公開されたわ。' },
-    { id: 'j1', text: '{tab}2026 年 8 月の公式の表では、\n{p86}[約 86%|やくはちじゅうろっぱーせんと] という得点も報告されているの。' },
+    { id: 'j1', text: '{tab}2026 年 8 月の公式の成績表では、\n{p86}[約 86%|やくはちじゅうろっぱーせんと] という得点も報告されているの。' },
     { id: 'j2', still: true, text: 'ただし、{diff}試験の版も条件も違うので、\n{cmp}さっきの [15%|じゅうごぱーせんと] とは、そのまま比べられないわ。' },
     { id: 'k', by: 'zunda', text: '{mine}ボクのパソコンを、{auto}勝手に操作されたら困るのだ。' },
-    { id: 'l', still: true, text: 'だから、{env}操作させる環境を、{cut}ふだんのパソコンから切り離して、\n{limit}使えるものも絞ることが勧められているの。' },
-    { id: 'l2', lead: 1.6, tail: 3.0, still: true, text: '{fix}予約の確定のように、{out}外に影響する操作は、\n{ask2}人に確かめさせることも大切ね。' },
+    { id: 'l', still: true, text: 'だから、{env}操作させる環境を、{cut}ふだんのパソコンから切り離して、\n{limit}アクセスできるものも絞ることが勧められているの。' },
+    { id: 'l2', lead: 1.6, tail: 3.0, still: true, text: '{fix}予約の確定のように、{out}外に影響する操作は、\n{ask2}実行の前にユーザーに確認することも大切ね。' },
     { id: 'm', text: '次の章では、{around}LLM のまわりで働く、\n{app}このアプリのことを、もっとくわしく見ていきましょう。' },
   ],
 
@@ -578,7 +578,7 @@ export default clip({
     const chipA = [pop('cap'), pop('mouse'), tw(t, at('mouse') - lead + pace.stagger, pace.enter)];
     chips.forEach((b, k) => progChip(ctx, b.x, b.y, b.w, 1, b.n, { a: chipA[k], lit: chipLit[k] }));
     const last = chips[2];
-    text(ctx, '写す・操作するプログラム', last.x + last.w + 12, last.y + 18, { font: F.jp(500, 13), color: C.muted, alpha: tw(t, at('mouse') - lead + 0.3, pace.enter) });
+    text(ctx, '撮る・操作するプログラム', last.x + last.w + 12, last.y + 18, { font: F.jp(500, 13), color: C.muted, alpha: tw(t, at('mouse') - lead + 0.3, pace.enter) });
     ringBox(ctx, chips.slice(1), optLit, C.accent, 3);
     ringBox(ctx, chips[1], whereLit, C.accent, 3);
     ringBox(ctx, chips[2], whatLit, C.accent, 3);
@@ -1356,7 +1356,7 @@ function card2024(ctx, o) {
   text(ctx, '、15 回まで', col + wi, b.y + 195, { font: F.jp(500, 13), color: C.ink2, alpha: a * o.n15 });
   text(ctx, '72.36%', x, b.y + 245, { font: big, color: C.ink, alpha: a * o.p72 });
   text(ctx, '人', col, b.y + 228, { font: F.jp(700, 13), color: C.ink, alpha: a * o.hum });
-  text(ctx, '元の論文（2024）の調べ', col, b.y + 246, { font: F.jp(500, 13), color: C.ink2, alpha: a * o.hum });
+  text(ctx, '元の論文（2024）の測定', col, b.y + 246, { font: F.jp(500, 13), color: C.ink2, alpha: a * o.hum });
   text(ctx, '条件は同じではない（人には回数の上限なし）', x, b.y + 270, { font: F.jp(700, 12), color: C.ink, alpha: a * o.cond });
   text(ctx, '出典：Anthropic（2024-10-22）、Xie ほか（2024）', x, b.y + b.h - 10, { font: F.jp(400, 11), color: C.muted, alpha: a * o.anth });
   ringBox(ctx, { x, y: b.y + 168, w: w15, h: 28 }, o.ring * o.p15, C.accent, 4);
@@ -1372,7 +1372,7 @@ function card2026(ctx, o) {
   const x = b.x + 16;
   text(ctx, 'OSWorld-Verified', x, b.y + 30, { font: F.sans(700, 19), color: C.ink, alpha: a * o.name });
   text(ctx, '課題や採点を見直した版', x, b.y + 51, { font: F.jp(500, 13), color: C.muted, alpha: a * o.ver });
-  text(ctx, '公式の表の得点（2026-08-01 付）', x, b.y + 76, { font: F.jp(500, 13), color: C.ink, alpha: a * o.tab });
+  text(ctx, '公式の成績表の得点（2026-08-01 付）', x, b.y + 76, { font: F.jp(500, 13), color: C.ink, alpha: a * o.tab });
   const w86 = text(ctx, '85.96%', x, b.y + 119, { font: F.cond(700, 34), color: C.ink, alpha: a * o.p86 });
   text(ctx, 'Claude Fable 5', x + w86 + 14, b.y + 102, { font: F.jp(500, 13), color: C.ink, alpha: a * o.p86 });
   text(ctx, '100 回まで', x + w86 + 14, b.y + 120, { font: F.jp(500, 13), color: C.ink2, alpha: a * o.p86 });

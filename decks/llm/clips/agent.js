@@ -155,19 +155,19 @@ export default clip({
   join: 'cut',
   bridge: 0.9, // 6-3's conversation, terminal lines and care clear away; skipped unless the clip is joined from 6-3
   script: [
-    { id: 'a', text: 'こんどは、{ask}「ログを調べて、エラーが多い日と、その中身を\n[教えて」と|おしえてと]頼んで、{leave}細かな調べ方は任せてみましょう。' },
-    { id: 'b', lead: 1.5, tail: 1.2, rest: 'short', text: '{shell}シェルをツールとして使える LLM は、まず、\n{count}日ごとのエラーの数を数えるコマンドを頼むわ。' },
-    { id: 'c', lead: 1.9, text: '{read}結果を読むと、{oct7}10 月 7 日だけが、{many}飛び抜けて多いわね。' },
-    { id: 'd', tail: 1.2, rest: 'short', text: 'そこで次に頼むのは、{that}その日のエラーの中身を見るコマンドよ。' },
-    { id: 'e', lead: 1.9, tail: 1.6, text: '{read2}前の結果を読んで、{decide}次にすることを決める。\n{repeat}これをくり返して、{goal}目的に向けて進めるのよ。' },
-    { id: 'e2', text: 'ただ、{human}途中で人に確かめたり、\n{limit}アプリが決めた上限で止まったりすることもあるわ。' },
-    { id: 'f', text: '{order}どの順に何を調べるかを、\n{all}すべて前もって決めておくわけではないの。' },
-    { id: 'f2', still: true, text: '作る人が用意した{tools}ツールと{rules}決まりの中で、\n{llm}LLM が、結果を見ながら、{next}次の行動を選ぶわ。' },
-    { id: 'g', lead: 1.5, tail: 0.3, still: true, text: '最後に、{found}調べてわかったことと、\n{unknown}まだわからないことを、{report}報告にまとめるわ。' },
+    { id: 'a', text: 'こんどは、ユーザーが{ask}「ログを調べて、エラーが多い日と、\nその中身を[教えて」と|おしえてと]頼んだとしましょう。\n\n{leave}どう調べるかの細かな手順は、LLM に任せるわ。' },
+    { id: 'b', lead: 1.5, tail: 1.2, rest: 'short', text: '{shell}シェルをツールとして使える LLM は、まず、\n\n{count}日ごとのエラーの数を数えるコマンドを、\nツール呼び出しに書くわ。' },
+    { id: 'c', lead: 1.9, text: '{read}LLM が、返ってきた結果を読むと、\n{oct7}10 月 7 日だけが、{many}飛び抜けて多いわね。' },
+    { id: 'd', tail: 1.2, rest: 'short', text: 'そこで LLM が次に書くのは、\n{that}その日のエラーの中身を見るコマンドよ。' },
+    { id: 'e', lead: 1.9, tail: 1.6, text: '{read2}LLM は、前の結果を読んで、{decide}次にすることを決める。\n{repeat}これをくり返して、{goal}目的に向けて進めるのよ。' },
+    { id: 'e2', text: 'ただ、{human}途中でユーザーに確認したり、\n{limit}アプリが決めた回数の上限で止まったりすることもあるわ。' },
+    { id: 'f', text: 'アプリを作る人が、{order}どの順に何を調べるかを、\n{all}すべて前もって決めておくわけではないの。' },
+    { id: 'f2', still: true, text: '{tools}用意されたツールと、{rules}使ってよい範囲の中で、\n{llm}LLM が、結果を見ながら、{next}次の行動を選ぶわ。' },
+    { id: 'g', lead: 1.5, tail: 0.3, still: true, text: '最後に LLM は、{found}調べてわかったことと、\n{unknown}まだわからないことを、{report}報告にまとめるわ。' },
     { id: 'h', text: 'このように、{choose}次の行動や使うツールを LLM に選ばせながら、\n{goal2}目的に向けて仕事を進める仕組みを、{name}AI エージェントと呼ぶの。' },
     { id: 'i', by: 'zunda', tail: 0.6, text: '{first}はじめに見たエージェントの中身は、{this}これだったのだ！' },
     { id: 'j', lead: 0.7, still: true, text: 'ええ。{llm2}次の行動を選ぶ LLM と、{app}ツールの実行や\n結果の受け渡しを受け持つアプリと、{tool}ツールの組み合わせよ。' },
-    { id: 'k', lead: 0.7, tail: 0.9, text: '2025 年には、{term}端末から使うエージェントが、\n{many2}次々に公開されたわ。' },
+    { id: 'k', lead: 0.7, tail: 0.9, text: '2025 年には、{term}ターミナルの中で使うエージェントが、\n{many2}次々に公開されたわ。' },
   ],
 
   prepare(ctx) {
@@ -781,9 +781,9 @@ function whoCard(ctx, { a, inner, outer, rows, innerLit }) {
     ctx.lineWidth = 2.5;
     ctx.stroke();
     ctx.restore();
-    text(ctx, '作る人が、前もって用意する', b.x + 16, b.y + 32, { font: F.jp(700, 16), color: C.purple, alpha: outer });
+    text(ctx, 'アプリを作る人が、前もって用意する', b.x + 16, b.y + 32, { font: F.jp(700, 16), color: C.purple, alpha: outer });
   }
-  ['ツール：シェル（bash）', '決まり：許すコマンド、人に確かめる所', 'くり返しの作りと、周の上限'].forEach((s, k) => {
+  ['ツール：シェル（bash）', '許す範囲：コマンド、ユーザー確認', 'くり返しの作りと、周の上限'].forEach((s, k) => {
     text(ctx, s, b.x + 16, b.y + 66 + k * 30, { font: F.jp(500, 15), color: C.ink, alpha: rows[k] });
   });
   if (inner > 0.001) {
@@ -871,7 +871,7 @@ function releases(ctx, a, note, rows) {
   ctx.stroke();
   ctx.restore();
   const w0 = text(ctx, '2025', b.x + 16, b.y + 40, { font: F.cond(700, 34), color: C.ink, alpha: a });
-  text(ctx, '端末から使うエージェント', b.x + 16 + w0 + 12, b.y + 36, { font: F.jp(700, 17), color: C.ink, alpha: a });
+  text(ctx, 'ターミナルのエージェント', b.x + 16 + w0 + 12, b.y + 36, { font: F.jp(700, 17), color: C.ink, alpha: a });
   RELEASES.forEach(([date, name, kind], k) => {
     const ra = rows[k] * a;
     const y = b.y + 80 + k * 50;
@@ -879,7 +879,7 @@ function releases(ctx, a, note, rows) {
     text(ctx, `${date}　${kind}`, b.x + 16, y + 21, { font: F.jp(400, 14), color: C.ink2, alpha: ra });
   });
   const na = note * a;
-  text(ctx, '端末で動くのは、アプリの部分。', b.x + 16, b.y + 236, { font: F.jp(500, 14), color: C.ink2, alpha: na });
+  text(ctx, 'ターミナルで動くのは、アプリの部分。', b.x + 16, b.y + 236, { font: F.jp(500, 14), color: C.ink2, alpha: na });
   text(ctx, 'LLM は、既定では、API の先の提供元で動く。', b.x + 16, b.y + 257, { font: F.jp(500, 14), color: C.ink2, alpha: na });
   text(ctx, SOURCE, b.x + 16, b.y + b.h - 12, { font: F.jp(400, 12), color: C.muted, alpha: rows[2] * a });
 }

@@ -122,7 +122,7 @@ export function searchPanel(ctx, S, lab, o = {}) {
   const q = o.query ?? {};
   if ((q.a ?? 0) > 0.001) {
     const qa = q.a;
-    const w = tag(ctx, S.query.x, S.query.y, '検索の言葉', { font: TAG.font, h: TAG.h, padX: TAG.padX, fill: '#fff', stroke: C.purple, color: C.purple, alpha: qa });
+    const w = tag(ctx, S.query.x, S.query.y, '検索キーワード', { font: TAG.font, h: TAG.h, padX: TAG.padX, fill: '#fff', stroke: C.purple, color: C.purple, alpha: qa });
     const dx = S.query.x + w + 10;
     const cy = S.query.y + TAG.h / 2;
     const dot = q.dot ?? 0;

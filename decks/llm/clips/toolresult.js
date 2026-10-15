@@ -39,7 +39,7 @@ const Q = 'あしたの京都の天気は？';
 const REQ = 'あしたの京都の天気予報を調べたい';
 const ANS51 = 'あしたの京都は晴れで、最高気温は24℃の予報です。';
 const RESULT51 = '京都　あした：晴れ　最高 24℃';
-const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', 'キーワード → 文章'], ['計算機', '式 → 答え']];
 const ROW = { x: TOOL.x + 20, y: TOOL.y + 20, w: TOOL.w - 40, h: (TOOL.h - 40 - 22) / 3, gap: 11 };
 const rowBox = (i) => ({ x: ROW.x, y: ROW.y + i * (ROW.h + ROW.gap), w: ROW.w, h: ROW.h });
 const glyphBox = (r) => ({ x: r.x + r.w - 124, y: r.y + 12, w: 110, h: r.h - 24 });
@@ -95,8 +95,8 @@ const NOTE54 = '会話、呼び出し、結果は説明のための例';
 // the two ways a generation stops, and what the app does next (sentences h, i), above the LLM
 const PANEL = { x: 36, y: 80, w: 330, h: 182 };
 const STOPS = [
-  { case: '呼び出しで止まった', value: 'tool_use', hot: true, act: 'ツールを動かす' },
-  { case: '答えを書き終えた', value: 'end_turn', hot: false, act: 'このやりとりを終える' },
+  { case: 'ツール呼び出しで止まった', value: 'tool_use', hot: true, act: 'ツールを動かす' },
+  { case: '答えを書き終えた', value: 'end_turn', hot: false, act: '答えを返して終える' },
 ];
 
 const FLY = 0.55; // a mark flying out of the app's box
@@ -121,18 +121,18 @@ export default clip({
   join: 'cut',
   bridge: 0.9, // 5-3's notes clear away; skipped unless the clip is joined from 5-3
   script: [
-    { id: 'a', tail: 1.9, text: 'アプリは、{recv}受け取った名前と入力で、{run}ツールを動かすわ。' },
-    { id: 'b', still: true, text: 'でも、{back}返ってきた結果は、{hand}アプリの手元にあるだけで、\n{unseen}LLM からは見えないの。' },
+    { id: 'a', tail: 1.9, text: 'アプリは、{recv}受け取ったツールの名前と入力で、\n{run}そのツールを動かすわ。' },
+    { id: 'b', still: true, text: 'でも、{back}ツールから返ってきた結果は、\n{hand}アプリの手元にあるだけで、{unseen}LLM からは見えないの。' },
     { id: 'c', text: 'そこで、アプリには、{mark}結果に[「ツールの結果」の印|ツールの結果の印]を付けて、\n{write}文書に書き足させましょう。' },
-    { id: 'c2', still: true, text: '{which}どの呼び出しの結果なのかも、{match}わかるようにしておくわ。' },
+    { id: 'c2', still: true, text: '{which}どのツール呼び出しへの結果なのかも、\n{match}わかるようにしておくわ。' },
     { id: 'd', text: 'そして、LLM が続きを書けるように、\n{open}アシスタントの印を、また書いておくの。' },
-    { id: 'e', tail: 0.6, text: '{add}結果を加えたこの文書を、次の生成のために、\n{read}LLM に読ませるわ。' },
+    { id: 'e', tail: 0.6, text: 'アプリは、{add}結果を書き足したこの文書を、\n{read}もう一度 LLM に読ませるわ。' },
     { id: 'f', tail: 1.0, text: 'すると LLM は、{clue}予報を手がかりにして、\n{ans}その続きに、答えを書いていくわね。' },
     { id: 'g', still: true, text: '答えを書き終えたら、こんどは、{eot}答えの終わりの印を書くの。' },
-    { id: 'h', text: 'アプリには、{why}[何で|なにで]止まったのかを見て、\n{choose}次にすることを選ばせましょう。' },
-    { id: 'i', still: true, text: '{s1}呼び出しで止まったら、{a1}ツールを動かす。\n{s2}答えを書き終えて止まったら、{a2}このやりとりを終えるわ。' },
-    { id: 'j', by: 'zunda', text: '{call2}呼び出しや結果は、{scr}画面には出ないのだ？' },
-    { id: 'k', tail: 0.8, text: '出すかどうかも、{maker}アプリを作る人が決めるわ。\n{prog}調べている途中のようすを、画面に出すアプリもあるの。' },
+    { id: 'h', text: 'アプリには、{why}LLM が[何の|なんの]印で止まったのかを見て、\n{choose}次にすることを選ばせましょう。' },
+    { id: 'i', still: true, text: '{s1}ツール呼び出しを書き終えて止まったら、\n{a1}ツールを動かす。\n\n{s2}答えを書き終えて止まったら、\n{a2}答えをユーザーに返して終えるわ。' },
+    { id: 'j', by: 'zunda', text: '{call2}ツール呼び出しや結果は、{scr}チャットの画面には出ないのだ？' },
+    { id: 'k', tail: 0.8, text: '出すかどうかも、{maker}アプリを作る人が決めるわ。\n\n{prog}ツールを使っている途中のようすを、\n画面に出すアプリもあるの。' },
   ],
 
   prepare(ctx) {
@@ -193,7 +193,7 @@ export default clip({
     const xIn = RX - wIn;
     const xName = xIn - 8 - wName;
     const xRecv = xName - 12;
-    const ways = ['自動で動かす', '人に確かめてから動かす'];
+    const ways = ['自動で動かす', 'ユーザーに確認してから動かす'];
     const wWay = ways.map((s) => tagW(s, F.jp(700, 15), 10));
     const xWay1 = RX - wWay[1];
     const xSlash = xWay1 - 10;

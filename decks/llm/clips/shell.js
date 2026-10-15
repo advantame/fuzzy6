@@ -49,7 +49,7 @@ const Q62_SCREEN = '出張の日当は、\n今年の改定で変わった？';
 const DEF62 = 'search_docs';
 const DEFS62 = [
   [[DEF62, F.jp(700, 17)], ['：社内の資料を検索する', F.jp(500, 17)]],
-  [['入力：query（検索の言葉）', F.jp(500, 17)]],
+  [['入力：query（検索キーワード）', F.jp(500, 17)]],
 ];
 const HEAD62 = [['{"', 'name', '":', ' "', 'search', '_docs', '",'], [' "', 'input', '":', ' {"', 'query', '":']];
 const CALLS62 = [[...HEAD62, [' "', '出', '張', ' 日', '当', '"}}']], [...HEAD62, [' "', '202', '6', '年', ' 日', '当', 'の', '改', '定', '"}}']]];
@@ -65,7 +65,7 @@ const FORMS = { x: 30, y: 46, w: 346 };
 const FROWS = [
   { label: '先に検索する', chain: ['検索', 'LLM'] },
   { label: 'LLM に選ばせる', chain: ['LLM', '検索', 'LLM', '検索', 'LLM'] },
-  { label: '組み合わせる', chain: ['検索', 'LLM', '検索', 'LLM'], opt: 2, note: '足りなければ、LLM が頼む' },
+  { label: '組み合わせる', chain: ['検索', 'LLM', '検索', 'LLM'], opt: 2, note: '足りなければ LLM が呼び出す' },
 ];
 const FROW_Y = (k) => FORMS.y + 50 + k * 96;
 const FORMS_H = (rows) => (rows === 2 ? FROW_Y(1) + 86 : FROW_Y(2) + 66) - FORMS.y;
@@ -114,7 +114,7 @@ const DEF_LIST = [
   ['sort', '行を並べ替える', 'file（ファイル）'],
   ['wc', '行や文字を数える', 'file（ファイル）'],
   ['sed', '文字列を置き換える', 'script、file'],
-  ['cp', 'ファイルを写す', 'from、to'],
+  ['cp', 'ファイルをコピーする', 'from、to'],
   ['mv', 'ファイルを動かす', 'from、to'],
   ['rm', 'ファイルを消す', 'path（場所）'],
   ['curl', 'Web から取ってくる', 'url'],
@@ -159,22 +159,22 @@ export default clip({
   bridge: 0.9, // 6-2's conversation, search and cards clear away; skipped unless the clip is joined from 6-2
   script: [
     { id: 'a', text: 'コンピュータで使うプログラムには、\n{find}ファイルを探すものや、{calc}計算するものなど、{many}いろいろあるわ。' },
-    { id: 'b', tail: 0.5, text: '{each}その一つ一つに、ツールの定義を書いていくのは、\n{endless}きりがないわね。' },
+    { id: 'b', tail: 0.5, text: '{each}その一つ一つについて、アプリを作る人が\nツールの定義を書いていくのは、{endless}きりがないわね。' },
     { id: 'c', text: 'そこで、{shell}シェルを、{one}一つのツールとしてつなぎましょう。' },
     { id: 'd', text: 'シェルは、{text}文字で書いた指示を受け取って、\n{run}プログラムを動かすなどの処理をする仕組みよ。' },
     { id: 'd2', still: true, text: 'その指示を、{cmd}コマンドと呼ぶわ。' },
-    { id: 'e', text: 'ここでは、{input}コマンドをツールの入力にして、\n{out}出力や{err}エラーの知らせを、{text2}文字で返すようにするわ。' },
-    { id: 'f', still: true, text: '{both}コマンドも結果も文字でやりとりするから、LLM に、\n{write}コマンドを書かせたり、{read}返った結果を読ませたりできるの。' },
-    { id: 'g', text: 'たとえば、{ask}「今日の日付と、2 の 64 乗を[教えて」と|おしえてと]頼まれたら、\n{date}日付を出すコマンドと、{calc2}計算するコマンドを、{order}順に頼めるわ。' },
-    { id: 'g2', lead: 1.8, tail: 0.2, rest: 'short', text: 'まず、{c1}[date|デイト] を頼むと、{run1}アプリがシェルで動かして、\n{out1}出力を書き足すわ。' },
-    { id: 'g3', lead: 1.8, tail: 0.7, rest: 'short', text: '次に、{c2}計算のコマンドを頼むと、{out2}2 の 64 乗が返ってくるの。' },
-    { id: 'g4', still: true, lead: 1.2, tail: 1.2, text: '{two}二つの出力がそろえば、{ans}あとは答えを書くだけよ。' },
+    { id: 'e', text: 'ここでは、{input}コマンドをツールの入力にして、\n{out}コマンドの出力や{err}エラーメッセージを、\n\n{text2}テキストで返すようにするわ。' },
+    { id: 'f', still: true, text: '{both}コマンドも結果もテキストだから、アプリは LLM に、\n{write}コマンドを書かせたり、{read}返ってきた結果を読ませたりできるの。' },
+    { id: 'g', text: 'たとえば、ユーザーから\n{ask}「今日の日付と、2 の 64 乗を[教えて」と|おしえてと]頼まれたら、\n\n{date}LLM は、日付を出すコマンドと、{calc2}計算するコマンドを、\n{order}一つずつツール呼び出しに書いて、アプリに実行させられるわ。' },
+    { id: 'g2', lead: 1.8, tail: 0.2, rest: 'short', text: 'まず、LLM が {c1}[date|デイト] のコマンドを書くと、\n{run1}アプリがシェルで実行して、\n\n{out1}その出力を文書に書き足すわ。' },
+    { id: 'g3', lead: 1.8, tail: 0.7, rest: 'short', text: '次に、LLM が{c2}計算のコマンドを書くと、\n{out2}2 の 64 乗が返ってくるの。' },
+    { id: 'g4', still: true, lead: 1.2, tail: 1.2, text: '{two}二つの出力がそろえば、{ans}あとは LLM が答えを書くだけよ。' },
     { id: 'h', text: 'コマンドの使い方は、{man}説明書や、{qa}質問への答えとして、\n{many2}たくさんの文章に書かれてきたものね。' },
     { id: 'h2', still: true, text: '{learn}そうした文章から使い方を学んだモデルなら、\n{can}コマンドを書けるわ。' },
-    { id: 'i', still: true, text: '{one2}ツールは一つでも、{beyond}その先で、\n{allowed}実行を許された、{various}いろいろなプログラムを使えるの。' },
+    { id: 'i', still: true, text: '{one2}シェルというツールは一つでも、LLM は、{beyond}その先で、\n{allowed}実行を許された、{various}いろいろなプログラムを使えるの。' },
     { id: 'j', by: 'zunda', text: '{danger}いろいろなプログラムを動かせるなら、\n危なくないのだ？' },
     { id: 'k', tail: 0.6, text: '危ないこともあるわね。{rm}ファイルを消すコマンドも、\n{perm}実行できる権限があれば、{runs}動いてしまうわ。' },
-    { id: 'l', text: 'だから、{lim}使えるファイルや操作を絞ったり、{ask2}実行の前に人に\n確かめたり、{box}ふだんの環境と分けた場所で動かしたりするの。' },
+    { id: 'l', text: 'だから、アプリを作る人は、{lim}使えるファイルや操作を絞ったり、\n{ask2}実行の前にユーザーに確認したり、\n\n{box}ふだんの環境と分けた場所で動かしたりするの。' },
     { id: 'l2', tail: 0.4, text: '{ch7}7 章で見ていきましょう。' },
   ],
 
@@ -565,7 +565,7 @@ export default clip({
     // 6-2's note beside the name, clearing away
     if (gone > 0.001) {
       const w0 = measure(ctx, F.jp(700, 22), 'の場所');
-      text(ctx, 'LLM が頼むツール', TOOL.x + lw + w0 + 14, TOOL.y - 17, { font: F.jp(700, 15), color: C.ink, alpha: gone });
+      text(ctx, 'LLM が呼び出すツール', TOOL.x + lw + w0 + 14, TOOL.y - 17, { font: F.jp(700, 15), color: C.ink, alpha: gone });
     }
     // j: is it not dangerous?
     qMark(ctx, TOOL.x + TOOL.w - 16, TOOL.y - 26, pop('danger') * (1 - tw(t, at('k'), 0.4)));
@@ -831,7 +831,7 @@ function last62Search(c, o, a) {
 function queryRow(ctx, o) {
   const a = o.a ?? 0;
   if (a <= 0.001) return;
-  const w = tag(ctx, S.query.x, S.query.y, '検索の言葉', { font: F.jp(700, 13), h: 26, padX: 9, fill: '#fff', stroke: C.purple, color: C.purple, alpha: a });
+  const w = tag(ctx, S.query.x, S.query.y, '検索キーワード', { font: F.jp(700, 13), h: 26, padX: 9, fill: '#fff', stroke: C.purple, color: C.purple, alpha: a });
   const dx = S.query.x + w + 10;
   const cy = S.query.y + 13;
   const dot = o.dot ?? 0;

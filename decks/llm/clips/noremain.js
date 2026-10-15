@@ -78,7 +78,7 @@ export default clip({
     toolBox(ctx, L, base, {
       solid: 1,
       label: 'ツールの位置',
-      draw: (cx, b, a) => searchMap(cx, b, { a, q: [0.62, 0.42], qa: tw(t, at('look'), 0.3) * (k === 0 ? gone : 1), look: look * (k === 0 ? gone : 1), k: 2, qLabel: '検索の言葉', note: '資料 1,200 件' }),
+      draw: (cx, b, a) => searchMap(cx, b, { a, q: [0.62, 0.42], qa: tw(t, at('look'), 0.3) * (k === 0 ? gone : 1), look: look * (k === 0 ? gone : 1), k: 2, qLabel: '検索キーワード', note: '資料 1,200 件' }),
     });
 
     // ——— how many times the same work was done

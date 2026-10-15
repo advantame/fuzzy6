@@ -188,19 +188,19 @@ export default clip({
   bridge: 1.2, // 6-4's conversation, columns, cards and frame clear away, then the tool's place grows
   script: [
     { id: 'a', text: 'エージェントの使い道の一つが、\n{write}プログラムを書いたり、{fix}直したりする仕事よ。' },
-    { id: 'b', tail: 2.6, rest: 'short', text: 'ここでは、{ask}「テストが通るように[直して」と|なおしてと]頼んで、\n{run}まずテストを動かすところから見てみましょう。' },
-    { id: 'c', lead: 1.5, tail: 2.6, rest: 'short', text: '{readout}失敗したテストの出力を読んで、\n{search}関係するファイルを探すの。' },
+    { id: 'b', tail: 2.6, rest: 'short', text: 'ここでは、ユーザーが\n{ask}「テストが通るように[直して」と|なおしてと]頼んだとして、\n\n{run}エージェントが、まずテストを動かすところから、\n見てみましょう。' },
+    { id: 'c', lead: 1.5, tail: 2.6, rest: 'short', text: '{readout}エージェントは、失敗したテストの出力を読んで、\n{search}関係するファイルを探すの。' },
     { id: 'c2', lead: 0.9, tail: 2.5, text: '{found}見つかったら、{open}その中身を読むわ。' },
     { id: 'd', lead: 1.4, tail: 2.1, still: true, text: '{where}直す場所がわかったら、{tool}ファイルを書き換えるツールで、\n{fixit}コードを直すわ。' },
     { id: 'e', lead: 1.0, tail: 0.4, text: 'そして、{again}もう一度テストを動かして、{pass}通ることを確かめるの。' },
     { id: 'e2', still: true, text: '{fail}通らなければ、{readout2}その出力を読んで、{refix}また直すわ。' },
-    { id: 'f', tail: 1.5, text: '{text}テストの結果も文字で返せるから、{read}LLM に読ませれば、\n{cond}書いた条件のとおりに動いたかが{know}わかるわ。' },
+    { id: 'f', tail: 1.5, text: '{text}テストの結果もテキストで返せるから、\n{read}それを LLM に読ませれば、\n\n{cond}書いた条件のとおりに動いたかが、\n{know}LLM にもわかるわ。' },
     { id: 'f2', still: true, text: 'ただ、{pass2}テストが[通っても|とおっても]、\n{all}間違いがすべてなくなったとは限らないの。' },
     { id: 'g', by: 'zunda', text: '{none}テストがなかったら、{how}どうするのだ？' },
-    { id: 'h', still: true, text: 'そのときは、{want}どう動いてほしいかをもとに、\n{write2}確かめるためのテストを、{first}先に書かせることもあるわ。' },
+    { id: 'h', still: true, text: 'そのときは、{want}ユーザーがどう動いてほしいかをもとに、\n\n{write2}確かめるためのテストを、\n{first}エージェントに先に書かせることもあるわ。' },
     { id: 'i', text: '2023 年に公開された {swe}[SWE-bench|スウィーベンチ] は、\n{proj}[12 の|じゅうにの] Python のプロジェクトから作った試験よ。' },
-    { id: 'i1', text: '{real}実際に報告された課題が、{n}2,294 件入っているわ。' },
-    { id: 'i2', still: true, text: '{fixc}コードを直して、{solved}課題を解けたかを、{bytest}テストで確かめるの。' },
+    { id: 'i1', text: '{real}実際にプロジェクトに報告された課題が、\n{n}2,294 件入っているわ。' },
+    { id: 'i2', still: true, text: '{fixc}試すモデルにコードを直させて、\n{solved}課題を解けたかを、{bytest}テストで確かめるの。' },
     { id: 'j', text: '{score}ただ、点の読み方には、注意が要るわね。\n{ch10}10 章で、くわしく見ていきましょう。' },
   ],
 
@@ -783,13 +783,13 @@ function releases64(ctx, a) {
   ctx.stroke();
   ctx.restore();
   const w0 = text(ctx, '2025', b.x + 16, b.y + 40, { font: F.cond(700, 34), color: C.ink, alpha: a });
-  text(ctx, '端末から使うエージェント', b.x + 16 + w0 + 12, b.y + 36, { font: F.jp(700, 17), color: C.ink, alpha: a });
+  text(ctx, 'ターミナルのエージェント', b.x + 16 + w0 + 12, b.y + 36, { font: F.jp(700, 17), color: C.ink, alpha: a });
   RELEASES.forEach(([date, name, kind], k) => {
     const y = b.y + 80 + k * 50;
     text(ctx, name, b.x + 16, y, { font: F.sans(600, 19), color: C.ink, alpha: a });
     text(ctx, `${date}　${kind}`, b.x + 16, y + 21, { font: F.jp(400, 14), color: C.ink2, alpha: a });
   });
-  text(ctx, '端末で動くのは、アプリの部分。', b.x + 16, b.y + 236, { font: F.jp(500, 14), color: C.ink2, alpha: a });
+  text(ctx, 'ターミナルで動くのは、アプリの部分。', b.x + 16, b.y + 236, { font: F.jp(500, 14), color: C.ink2, alpha: a });
   text(ctx, 'LLM は、既定では、API の先の提供元で動く。', b.x + 16, b.y + 257, { font: F.jp(500, 14), color: C.ink2, alpha: a });
   text(ctx, SOURCE64, b.x + 16, b.y + b.h - 12, { font: F.jp(400, 12), color: C.muted, alpha: a });
 }

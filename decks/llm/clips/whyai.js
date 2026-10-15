@@ -78,7 +78,7 @@ export default clip({
     { id: 's2', still: true, text: 'それは、言葉の中に、{human}人が知っていることや考えたことが、\n書き込まれているからよ。' },
     { id: 's3', text: '実際に、次の言葉の予測だけを学んだ、\n{big}大きさの違うモデルどうしを比べた研究があるの。' },
     { id: 's3a', still: true, text: 'その結果、大きいモデルほど、{v2}知識や{v3}計算、\n{v4}前の文脈を使う問題で、おおむね成績がよかったわ。' },
-    { id: 's3b', still: true, text: 'こうして学んだ LLM に、{tune}人の頼みに沿って答える学習を\n重ねたものが、{ai}ChatGPT の中核になっているの。' },
+    { id: 's3b', still: true, text: 'こうして学んだ LLM に、{tune}人の指示に沿って答える学習を\n重ねたものが、{ai}ChatGPT の中核になっているの。' },
     { id: 's4', text: 'ただ、{same}当てられることと、わかっていることが同じかどうかは、\n{debate}いまも議論が続いているわ。' },
     { id: 'z5', by: 'zunda', text: '「当てるだけ」の中身は、深そうなのだ。' },
   ],
@@ -235,7 +235,7 @@ export default clip({
       chatName(ctx, GOAL.x + 22, GOAL.y + 12, { size: 26, alpha: on });
       text(ctx, '中核は LLM', GOAL.x + 22, GOAL.y + 62, { font: F.jp(700, 18), color: C.accent, alpha: on });
     }
-    tag(ctx, GOAL.x + GOAL.w, GOAL.y - 44, '＋ 頼みに沿う学習', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.ink, color: C.paper, alpha: pop('tune'), align: 'right' });
+    tag(ctx, GOAL.x + GOAL.w, GOAL.y - 44, '＋ 指示に沿う学習', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.ink, color: C.paper, alpha: pop('tune'), align: 'right' });
     text(ctx, '＝ 人の知識と考え', NX, HEAD_Y, { font: F.jp(700, 20), color: C.accent, alpha: pop('human') });
 
     // ——— the caveat

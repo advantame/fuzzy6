@@ -38,11 +38,11 @@ const Q = 'あしたの京都の天気は？';
 const GUESS = ['あ', 'した', 'の', '京都', 'は', '、', 'く', 'も', 'り', 'で', '、', '最高', '気', '温', 'は', '20', '℃', 'でしょう', '。'];
 // the request in plain words: what it asks for, not its real form (that is 5-3's)
 const REQ = ['あ', 'した', 'の', '京都', 'の', '天', '気', '予', '報', 'を', '調', 'べ', 'たい'];
-const REQ_NOTE = '頼みの中身を、ふつうの言葉で表したもの（実際の形は 5-3）';
+const REQ_NOTE = 'リクエストの中身を、ふつうの言葉で表したもの（実際の形は 5-3）';
 const ANS = ['あ', 'した', 'の', '京都', 'は', '晴', 'れ', 'で', '、', '最高', '気', '温', 'は', '24', '℃', 'の', '予', '報', 'です', '。'];
 const RESULT = '京都　あした：晴れ　最高 24℃';
 // the tool's place, at the end: four kinds of tool, two by two
-const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え'], ['シェル', 'コマンド → 出力']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', 'キーワード → 文章'], ['計算機', '式 → 答え'], ['シェル', 'コマンド → 出力']];
 const CARD = { x: TOOL.x + 20, y: TOOL.y + 20, w: (TOOL.w - 54) / 2, h: (TOOL.h - 54) / 2, gap: 14 };
 const cardBox = (i) => ({ x: CARD.x + (i % 2) * (CARD.w + CARD.gap), y: CARD.y + Math.floor(i / 2) * (CARD.h + CARD.gap), w: CARD.w, h: CARD.h });
 // the room the last sentence makes at the head of the document, for the tool definitions (5-2)
@@ -67,22 +67,22 @@ export default clip({
   kicker: 'ツールとツール呼び出し',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: 'チャットボットを作っていて、{ask}「あしたの京都の天気は？」と\n聞かれたとしましょう。' },
-    { id: 'b', text: 'でも、{learn}学習で身に付けた知識だけでは、\n{tmr}あしたの京都の最新の予報は、確かめられないわ。' },
-    { id: 'c', lead: 1.1, text: 'このまま続きを書かせると、{guess}それらしい天気を、\n{plaus}もっともらしく書いてしまうかもしれないの。' },
+    { id: 'a', text: 'チャットボットを作っていて、{ask}ユーザーから、\n「あしたの京都の天気は？」と聞かれたとしましょう。' },
+    { id: 'b', text: 'でも、{learn}LLM が学習で身に付けた知識だけでは、\n{tmr}あしたの京都の最新の予報は、確かめられないわ。' },
+    { id: 'c', lead: 1.1, text: 'このまま LLM に続きを書かせると、{guess}それらしい天気を、\n{plaus}もっともらしく書いてしまうかもしれないの。' },
     { id: 'd', text: '一方で、{prog}天気の予報を返してくれるプログラムなら、\nもうあるわね。' },
-    { id: 'e', still: true, text: 'でも、{only}LLM がするのは、文章の続きを書くことだけよ。\n{cant}プログラムを動かすには、別の仕組みが要るわ。' },
+    { id: 'e', still: true, text: 'でも、{only}LLM にできるのは、文章の続きを書くことだけよ。\n{cant}プログラムを動かすには、別の仕組みが要るわ。' },
     { id: 'f', text: 'そこで、{give}プログラムを動かす役は、アプリに任せましょう。' },
-    { id: 'g', lead: 1.1, text: 'LLM には、答えの代わりに、{req}「あしたの京都の天気予報を\n調べたい」という頼みを書かせるのよ。' },
-    { id: 'h', text: 'アプリは、{read}その頼みを読んで{run}プログラムを動かし、\n{back}返ってきた予報を、文書に書き足すわ。' },
-    { id: 'i', still: true, tail: 1.5, text: 'それを{again}もう一度 LLM に読ませれば、\n{clue}予報を手がかりにして、{ans}答えを書けるわね。' },
+    { id: 'g', lead: 1.1, text: 'LLM には、答えの代わりに、{req}「あしたの京都の天気予報を\n調べたい」という、アプリへのリクエストを書かせるのよ。' },
+    { id: 'h', text: 'アプリは、{read}そのリクエストを読んで{run}天気のプログラムを動かし、\n{back}返ってきた予報を、文書に書き足すわ。' },
+    { id: 'i', still: true, tail: 1.5, text: 'アプリが、予報を書き足した文書を、\n{again}もう一度 LLM に読ませれば、\n\n{clue}LLM は、予報を手がかりにして、{ans}答えを書けるわね。' },
     { id: 'j', by: 'zunda', text: '{self}LLM が、自分で調べに行ったわけじゃないのだ？' },
-    { id: 'k', text: 'ええ。{wrote}LLM は頼みを書いただけで、\n{ran}プログラムを動かしたのは、アプリよ。' },
-    { id: 'l', text: 'こうして、{name}LLM から使えるようにつないだプログラムを、\n{tool}ツールと呼ぶわ。' },
-    { id: 'm', still: true, text: 'こうした、{need}ツールを使うための頼みを、\n{call}ツール呼び出しと呼ぶの。' },
-    { id: 'n', text: '{place}アプリから呼び出せる形につなげば、\n{any}いろいろなものを、ツールにできるわ。' },
+    { id: 'k', text: 'ええ。{wrote}LLM は、アプリへのリクエストを書いただけで、\n{ran}プログラムを動かしたのは、アプリよ。' },
+    { id: 'l', text: 'こうして、{name}LLM がリクエストを書けば使えるように、\nアプリにつないだプログラムを、{tool}ツールと呼ぶわ。' },
+    { id: 'm', still: true, text: 'そして、{need}ツールを使うために LLM がアプリに書くリクエストを、\n{call}ツール呼び出しと呼ぶの。' },
+    { id: 'n', text: '{place}アプリから動かせるようにつなげば、\n{any}いろいろなプログラムを、ツールにできるわ。' },
     { id: 'o', text: '天気のほかにも、{s1}検索、{s2}計算機、\n{s3}コマンドを打つシェルなどがあるわね。' },
-    { id: 'p', tail: 0.8, text: 'この章では、{each}この一回のやりとりを、\n順に細かく見ていきましょう。' },
+    { id: 'p', tail: 0.8, text: 'この章では、{each}ツールを一回使うときの、\nアプリと LLM のやりとりを、順に細かく見ていきましょう。' },
   ],
 
   prepare(ctx) {

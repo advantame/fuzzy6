@@ -410,7 +410,7 @@ export function careCard(ctx, { card, rows, ch7 }) {
   ctx.restore();
   const tw0 = text(ctx, '危なさへの手当て', b.x + 16, b.y + 32, { font: F.jp(700, 17), color: C.ink2, alpha: card });
   tag(ctx, b.x + 16 + tw0 + 14, b.y + 12, '7 章　ハーネス', { font: F.jp(700, 15), h: 30, padX: 11, fill: C.ink, color: C.paper, alpha: ch7 });
-  const ROWS = ['使えるファイルや操作を絞る', '実行の前に、人に確かめる', 'ふだんの環境と分けた場所で動かす'];
+  const ROWS = ['使えるファイルや操作を絞る', '実行の前に、ユーザーに確認する', 'ふだんの環境と分けた場所で動かす'];
   ROWS.forEach((s, k) => {
     const a = rows[k] * card;
     if (a <= 0.001) return;

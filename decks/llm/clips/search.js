@@ -48,7 +48,7 @@ const Q61 = '出張の日当はいくら？';
 const FOUND61 = '［1］旅費規程 第5条\n　　出張の日当は、1日2,000円とする。\n［2］出張の手引き\n　　日当は、精算のときに支払う。\n［3］2026年4月の改定\n　　宿泊費の上限を変える。';
 const MISSED = ['［4］2026年4月の改定', '出張の日当を、1日2,500円にする。'];
 const ANS61 = '1日2,000円です［1］。';
-const STEPS = ['質問の言葉で、資料を検索する', '見つけた文章を、文書に書き足す', 'LLM に読ませて、答えを書かせる'];
+const STEPS = ['質問の文のまま、資料を検索する', '見つけた文章を、文書に書き足す', 'LLM に読ませて、答えを書かせる'];
 const CARD = { x: 30, y: 58, w: 346, h: 160 };
 const STEP_Y = (k) => CARD.y + 66 + k * 32;
 const NAME = { x: 36, y: 604 };
@@ -70,7 +70,7 @@ const Q_CHIP = ['出張の日当は、', '今年の改定で変わった？'];
 const DEF_NAME = 'search_docs';
 const DEFS = [
   [[DEF_NAME, F.jp(700, 17)], ['：社内の資料を検索する', F.jp(500, 17)]],
-  [['入力：query（検索の言葉）', F.jp(500, 17)]],
+  [['入力：query（検索キーワード）', F.jp(500, 17)]],
 ];
 // the LLM's two calls, row by row, as o200k_base cuts them (19 and 23 tokens); the search words are the
 // last row's tokens after its opening quote
@@ -107,7 +107,7 @@ const FORMS = { x: 30, y: 46, w: 346 };
 const FROWS = [
   { label: '先に検索する', chain: ['検索', 'LLM'] },
   { label: 'LLM に選ばせる', chain: ['LLM', '検索', 'LLM', '検索', 'LLM'] },
-  { label: '組み合わせる', chain: ['検索', 'LLM', '検索', 'LLM'], opt: 2, note: '足りなければ、LLM が頼む' },
+  { label: '組み合わせる', chain: ['検索', 'LLM', '検索', 'LLM'], opt: 2, note: '足りなければ LLM が呼び出す' },
 ];
 const FROW_Y = (k) => FORMS.y + 50 + k * 96;
 // the card's height: two rows with the brackets under them (i), then the third row (j2)
@@ -145,17 +145,17 @@ export default clip({
   join: 'cut',
   bridge: 0.9, // 6-1's conversation and notes clear away; skipped unless the clip is joined from 6-1
   script: [
-    { id: 'a', text: 'こんどは、{ask}「出張の日当は、今年の改定で変わった？」と\n聞かれたとしましょう。' },
-    { id: 'b', tail: 0.3, text: '{words}質問の言葉のまま検索すると、{rule}日当の規程は見つかっても、\n{miss}改定の知らせは見つからないかもしれないわ。' },
+    { id: 'a', text: 'こんどは、社員から、{ask}「出張の日当は、\n今年の改定で変わった？」と聞かれたとしましょう。' },
+    { id: 'b', tail: 0.3, text: '{words}アプリが質問の文のまま検索すると、\n{rule}日当の規程は見つかっても、\n\n{miss}改定のお知らせは見つからないかもしれないわ。' },
     { id: 'c', still: true, text: 'でも、{app}いまのアプリは、{once}最初に一度だけ検索する作りだから、\n{see}その結果を見て、{redo}調べ直すことはできないの。' },
     { id: 'd', still: true, lead: 0.7, tail: 1.0, text: 'そこで、{search}検索を、{tool}ツールの一つにしましょう。' },
-    { id: 'e', lead: 1.2, tail: 3.1, text: '{what}何を調べるかは、{llm}LLM が、{words2}検索の言葉を書いて{ask2}頼むわ。' },
-    { id: 'f', lead: 0.9, tail: 3.4, text: '{read}結果を読んで、{lack}足りなければ、\n{change}言葉を変えて、{again}もう一度頼めるの。' },
-    { id: 'g', still: true, lead: 1.3, tail: 1.2, text: '{found}改定の知らせが見つかったら、\n{two}二つの結果をもとに{ans}答えを書くわ。' },
-    { id: 'h', by: 'zunda', text: '{always}じゃあ、いつもツールにすればいいのだ？' },
-    { id: 'i', text: 'ただ、{more}検索や LLM とのやりとりが増えると、\n{time}答えが出るまでの時間や、{cost}費用も増えやすいわ。' },
-    { id: 'j', text: '{pre}先に検索する形にするか、\n{pick}検索の言葉やタイミングを LLM に選ばせるか。' },
-    { id: 'j2', still: true, text: '{mix}組み合わせることも含めて、{maker}作る人が選ぶのよ。' },
+    { id: 'e', lead: 1.2, tail: 3.1, text: '{what}何を調べるかは、{llm}LLM が決めるわ。\n{words2}検索キーワードを選んで、{ask2}検索のツール呼び出しを書くの。' },
+    { id: 'f', lead: 0.9, tail: 3.4, text: '{read}返ってきた結果を読んで、{lack}足りなければ、\n\n{change}キーワードを変えて、\n{again}もう一度ツール呼び出しを書くこともできるわ。' },
+    { id: 'g', still: true, lead: 1.3, tail: 1.2, text: '{found}改定のお知らせが見つかったら、\n{two}二つの検索結果をもとに、{ans}答えを書くわね。' },
+    { id: 'h', by: 'zunda', text: '{always}じゃあ、検索は、いつもツールにすればいいのだ？' },
+    { id: 'i', text: 'ただ、{more}検索や、LLM に文書を読ませる回数が増えると、\n{time}答えが出るまでの時間や、{cost}費用も増えやすいわ。' },
+    { id: 'j', text: '{pre}アプリが先に検索する形にするか、\n{pick}検索キーワードやタイミングを、LLM に選ばせるか。' },
+    { id: 'j2', still: true, text: '{mix}組み合わせることも含めて、{maker}アプリを作る人が選ぶのよ。' },
     { id: 'k', text: '{broad}検索をツールにする形も、広い意味では、\n{rag}[RAG|ラグ] と呼ばれることがあるわ。' },
     { id: 'l', tail: 0.6, text: '{web}Web を検索するツールも、{y25}2025 年に、\n{api}OpenAI と Anthropic の API で使えるようになったの。' },
   ],
@@ -493,11 +493,11 @@ export default clip({
     const w0 = measure(ctx, F.jp(700, 22), 'の場所');
     const nx = TOOL.x + lw + w0 + 14;
     text(ctx, 'アプリが直接使う', nx, TOOL.y - 17, { font: F.jp(500, 15), color: C.muted, alpha: 1 - swap });
-    const nw = text(ctx, 'LLM が頼むツール', nx, TOOL.y - 17, { font: F.jp(700, 15), color: C.ink, alpha: swap });
+    const nw = text(ctx, 'LLM が呼び出すツール', nx, TOOL.y - 17, { font: F.jp(700, 15), color: C.ink, alpha: swap });
     ringBox(ctx, { x: nx, y: TOOL.y - 33, w: nw, h: 21 }, Math.max(toolLit, alwaysLit), C.accent);
     // 6-1's note on other ways to search, clearing away
     if (gone > 0.001) {
-      text(ctx, 'ほかに、言葉の一致で探す方法や、', TOOL.x, TOOL.y + TOOL.h + 28, { font: F.jp(500, 14), color: C.muted, alpha: gone });
+      text(ctx, 'ほかに、キーワードの一致で探す方法や、', TOOL.x, TOOL.y + TOOL.h + 28, { font: F.jp(500, 14), color: C.muted, alpha: gone });
       text(ctx, '両方を組み合わせる方法もある', TOOL.x, TOOL.y + TOOL.h + 48, { font: F.jp(500, 14), color: C.muted, alpha: gone });
     }
 
@@ -711,7 +711,7 @@ const QDOT = 7;
 function queryRow(ctx, o) {
   const a = o.a ?? 0;
   if (a <= 0.001) return null;
-  const w = tag(ctx, S.query.x, S.query.y, '検索の言葉', { font: F.jp(700, 13), h: 26, padX: 9, fill: '#fff', stroke: C.purple, color: C.purple, alpha: a });
+  const w = tag(ctx, S.query.x, S.query.y, '検索キーワード', { font: F.jp(700, 13), h: 26, padX: 9, fill: '#fff', stroke: C.purple, color: C.purple, alpha: a });
   const dx = S.query.x + w + 10;
   const cy = S.query.y + 13;
   const dot = o.dot ?? 0;

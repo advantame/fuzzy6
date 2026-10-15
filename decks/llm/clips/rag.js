@@ -47,7 +47,7 @@ const SCREEN5 = T5.SCREEN;
 const LOOP = T5.LOOP;
 const TOOL5 = L5.tool;
 const DOC = L5.doc;
-const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', 'キーワード → 文章'], ['計算機', '式 → 答え']];
 const ROW = { x: TOOL5.x + 20, y: TOOL5.y + 20, w: TOOL5.w - 40, h: (TOOL5.h - 40 - 22) / 3, gap: 11 };
 const rowBox = (i) => ({ x: ROW.x, y: ROW.y + i * (ROW.h + ROW.gap), w: ROW.w, h: ROW.h });
 const glyphBox = (r) => ({ x: r.x + r.w - 124, y: r.y + 12, w: 110, h: r.h - 24 });
@@ -85,22 +85,22 @@ const CF = F.jp(500, 16);
 const LINES = [
   { s: 'くり返す', ind: 0, head: true },
   { s: 'LLM に文書を読ませる', ind: 1 },
-  { s: '呼び出しで止まったら', ind: 1, value: 'tool_use', hot: true },
+  { s: 'ツール呼び出しで止まったら', ind: 1, value: 'tool_use', hot: true },
   { s: 'ツールを動かして、結果を書き足す', ind: 2 },
   { s: '答えを書き終えたら', ind: 1, value: 'end_turn' },
   { s: 'くり返しを抜ける', ind: 2 },
   { s: 'それ以外で止まったら', ind: 1, note: '（長さの上限など）' },
-  { s: '止めて知らせる', ind: 2 },
+  { s: '止めて、ユーザーに伝える', ind: 2 },
   { s: '周の数が上限に着いたら', ind: 1 },
-  { s: '止めて知らせる', ind: 2 },
+  { s: '止めて、ユーザーに伝える', ind: 2 },
 ];
 const lineY = (i) => CODE_Y0 + i * CODE_LH;
 const lineX = (i) => CODE_X0 + LINES[i].ind * INDENT;
 const BRACKET_X = CODE.x + 17;
 const TRK = { x: 36, y: 570, w: 330 };
 const ROWS = [
-  { y: TRK.y, label: '雨の予報なら', chips: [['天気を頼む', 'call'], ['検索を頼む', 'call'], ['答える', 'ans']] },
-  { y: TRK.y + 62, label: '晴れの予報なら', chips: [['天気を頼む', 'call'], ['答える', 'ans']] },
+  { y: TRK.y, label: '雨の予報なら', chips: [['天気の呼び出し', 'call'], ['検索の呼び出し', 'call'], ['答える', 'ans']] },
+  { y: TRK.y + 62, label: '晴れの予報なら', chips: [['天気の呼び出し', 'call'], ['答える', 'ans']] },
 ];
 const CHIP = { font: F.jp(700, 14), h: 28, padX: 10, gap: 26 };
 const MULTI = ['この例では、1 周に呼び出しは一つ。', '一度に複数の呼び出しを書けるモデルもある'];
@@ -125,7 +125,7 @@ const ANS = ['1', '日', '2', ',', '000', '円', 'です', '［', '1', '］', '�
 const ANS_PRE = '1日2,000円です';
 const CITE = '［1］';
 // the app's work, summed up (sentence i) above the LLM
-const STEPS = ['質問の言葉で、資料を検索する', '見つけた文章を、文書に書き足す', 'LLM に読ませて、答えを書かせる'];
+const STEPS = ['質問の文のまま、資料を検索する', '見つけた文章を、文書に書き足す', 'LLM に読ませて、答えを書かせる'];
 const CARD = { x: 30, y: 58, w: 346, h: 160 };
 const STEP_Y = (k) => CARD.y + 66 + k * 32;
 // what the LLM knew (sentence b2), above it, as 5-1 has it
@@ -155,21 +155,21 @@ export default clip({
   join: 'cut',
   bridge: 1.2, // 5-5's notes clear away and the tool's place grows; skipped unless the clip is joined from 5-5
   script: [
-    { id: 'a', text: '会社の中で、{rules}社内の決まりに答える\n{bot}チャットボットを作るとしましょう。' },
-    { id: 'b', text: '{ask}「出張の日当はいくら？」と聞かれたら、\nどうなるかしら。' },
-    { id: 'b2', text: '{rule}その会社の規程が、学習に使われていなければ、\n{know}学習した知識だけでは答えられないわ。' },
+    { id: 'a', text: '会社の中で、{rules}社内の決まりについての質問に答える、\n{bot}社員向けのチャットボットを作るとしましょう。' },
+    { id: 'b', text: '社員から{ask}「出張の日当はいくら？」と聞かれたら、\nどうなるかしら。' },
+    { id: 'b2', text: '{rule}その会社の規程が、LLM の学習に使われていなければ、\n{know}LLM は、学習した知識だけでは答えられないわ。' },
     { id: 'c', lead: 1.1, text: 'このままだと、{guess}よくある金額を、\n{plaus}もっともらしく答えてしまうかもしれないの。' },
-    { id: 'd', tail: 0.6, text: 'そこで、答えを書かせる前に、\n{app}アプリに、{search}社内の資料を検索させましょう。' },
-    { id: 'e', text: '{from}資料の中から、{rel}質問の答えに関係しそうな文章を、\n{few}いくつか探し出すわ。' },
+    { id: 'd', tail: 0.6, text: 'そこで、LLM に答えを書かせる前に、\n{app}アプリに、{search}社内の資料を検索させましょう。' },
+    { id: 'e', text: 'アプリは、{from}資料の中から、{rel}質問の答えに関係しそうな文章を、\n{few}いくつか探し出すわ。' },
     { id: 'f', still: true, tail: 0.6, text: 'その方法の一つが、{model}検索用のモデルで、質問と資料の文章を\n{vec}ベクトルに変えて、{near}近さを比べるやり方よ。' },
-    { id: 'g', text: '{found}見つかった文章を、{add}質問と一緒に文書に書き足してから、\n{write}LLM に答えを書かせるのよ。' },
+    { id: 'g', text: 'アプリが、{found}見つかった文章を、{add}質問と一緒に\n文書に書き足してから、{write}LLM に答えを書かせるのよ。' },
     { id: 'h', tail: 0.6, text: 'すると LLM は、{amount}資料に書かれた金額をもとに\n{ans}答えられるわね。' },
-    { id: 'h2', still: true, text: '{cite}どの資料に書いてあったかも、添えられるわ。' },
+    { id: 'h2', still: true, text: '{cite}答えには、どの資料に書いてあったかも、添えられるわ。' },
     { id: 'i', text: 'このように、{s1}検索で見つけた資料を{s2}加えてから\n{s3}答えを書かせるやり方を、{name}検索拡張生成、{rag}[RAG|ラグ] と呼ぶわ。' },
     { id: 'j', still: true, text: 'この名前は、{paper}2020 年の論文で付けられたものよ。' },
     { id: 'k', by: 'zunda', text: '{doubt}資料が見つかれば、もう間違えないのだ？' },
     { id: 'l', text: 'そうとは限らないわ。{old}見つけた資料が古かったり、\n{misread}LLM が読み違えたりすることもあるの。' },
-    { id: 'm', tail: 0.8, text: 'それに、いま作った形の{app2}アプリは、\n{words}最初の質問の言葉で、{once}一度しか検索しないわ。' },
+    { id: 'm', tail: 0.8, text: 'それに、いま作った形の{app2}アプリは、\n{words}社員の質問の文をそのまま使って、{once}一度しか検索しないわ。' },
   ],
 
   prepare(ctx) {
@@ -455,7 +455,7 @@ export default clip({
     }
     // f: there are other ways to search
     const other = tw(t, at('f.end'), pace.enter);
-    text(ctx, 'ほかに、言葉の一致で探す方法や、', TOOL.x, TOOL.y + TOOL.h + 28, { font: F.jp(500, 14), color: C.muted, alpha: other });
+    text(ctx, 'ほかに、キーワードの一致で探す方法や、', TOOL.x, TOOL.y + TOOL.h + 28, { font: F.jp(500, 14), color: C.muted, alpha: other });
     text(ctx, '両方を組み合わせる方法もある', TOOL.x, TOOL.y + TOOL.h + 48, { font: F.jp(500, 14), color: C.muted, alpha: other });
 
     // ——— above the LLM: what it learned (b2), then the app's work (i, m)

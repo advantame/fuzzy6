@@ -40,10 +40,10 @@ const DOC = L.doc;
 // ——— 5-2's picture, as toolspec.js has it (its last frame is this clip's first)
 const Q = 'あしたの京都の天気は？';
 const REQ = 'あしたの京都の天気予報を調べたい';
-const REQ_NOTE = '頼みの中身を、ふつうの言葉で表したもの（実際の形は 5-3）';
+const REQ_NOTE = 'リクエストの中身を、ふつうの言葉で表したもの（実際の形は 5-3）';
 const ANS = 'あしたの京都は晴れで、最高気温は24℃の予報です。';
 const RESULT = '京都　あした：晴れ　最高 24℃';
-const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', 'キーワード → 文章'], ['計算機', '式 → 答え']];
 const ROW = { x: TOOL.x + 20, y: TOOL.y + 20, w: TOOL.w - 40, h: (TOOL.h - 40 - 22) / 3, gap: 11 };
 const rowBox = (i) => ({ x: ROW.x, y: ROW.y + i * (ROW.h + ROW.gap), w: ROW.w, h: ROW.h });
 const glyphBox = (r) => ({ x: r.x + r.w - 124, y: r.y + 12, w: 110, h: r.h - 24 });
@@ -60,7 +60,7 @@ const DEFS = [
   { indent: true, segs: [['入力：city（都市）、day（日）', 'input']] },
   { indent: true, segs: [['使うとき：天気を聞かれたとき', 'use']] },
   { segs: [['search_web', 'name'], ['：', ''], ['Web を検索して、関係する文章を返す', 'desc']] },
-  { indent: true, segs: [['入力：query（検索の言葉）', 'input']] },
+  { indent: true, segs: [['入力：query（検索キーワード）', 'input']] },
   { segs: [['calculate', 'name'], ['：', ''], ['式を計算する', 'desc']] },
   { indent: true, segs: [['入力：expression（式）', 'input']] },
   { ghost: [96, 200], label: 'ほかのツールの定義' },
@@ -119,21 +119,21 @@ export default clip({
   bridge: 0.9, // 5-2's definitions fold up; skipped unless the clip is joined from 5-2
   script: [
     { id: 'a', text: '次は、{form}ツール呼び出しを、\nどんな形で書かせるかを決めましょう。' },
-    { id: 'b', text: '頼みを、{plain}ふつうの文章だけで書かせたら、どうなるかしら。' },
-    { id: 'c', text: '{look}アプリには、{ans}それが答えなのか、{req}ツールへの頼みなのか、\n{hard}区別しにくくなるわね。' },
-    { id: 'd', still: true, text: '頼みだとわかっても、{which}どのツールに{what}何を渡せばいいのかを、\n{free}自由な文章から読み取るのは大変ね。' },
-    { id: 'e', text: 'そこで、{decide}ツール呼び出しを書く形を、決めておくの。' },
-    { id: 'f', text: '{fig}この図では、{marks}呼び出しの印で挟んで、\n[その間に|そのあいだに]、{nm}ツールの名前と{inp}入力を書くわ。' },
-    { id: 'g', still: true, text: '中身は、{easy}プログラムが読み取りやすい、\n{json}[JSON|ジェイソン] という形よ。' },
-    { id: 'h', text: 'モデルを作る側は、{form2}この形で呼び出しを書けるように、\n{train}LLM を学習させておくわ。' },
-    { id: 'i', lead: 1.0, text: '{same}ツール呼び出しも、ふつうの文章と同じで、\n{one}次のトークンを一つずつ選んで書いていくの。' },
-    { id: 'j', tail: 1.2, text: 'まず{open}呼び出しの印を書き、続けて、\n{body}ツールの名前と入力を、トークンごとに書いていくわ。' },
-    { id: 'k', text: '{fin}終わりの印が出たところで{stop}書かせるのを止めれば、\n{take}アプリが、ツールの名前と入力を受け取れるわね。' },
-    { id: 'k2', still: true, text: '{like}答えの終わりの印で止めたのと、同じやり方よ。' },
-    { id: 'l', text: '{api}Anthropic の API では、呼び出しで止まったことを、\n{use}[tool_use|ツールユース] という[値|あたい]で知らせてくれるわ。' },
-    { id: 'm', by: 'zunda', text: '{wr}呼び出しを書いたら、{run}それだけでツールが動くのだ？' },
-    { id: 'n', text: 'いいえ。{app}動かすのは、モデルの外にあるアプリよ。' },
-    { id: 'n2', still: true, text: '{auto}自動で動かすか、{ask}人に確かめてから動かすかも、\n{own}アプリの側で決めておくの。' },
+    { id: 'b', text: 'もし、{plain}ツール呼び出しを、ふつうの文章で書かせたら、\nどうなるかしら。' },
+    { id: 'c', text: '{look}アプリには、LLM が書いたものが、\n{ans}ユーザーへの答えなのか、{req}ツール呼び出しなのか、\n\n{hard}区別しにくくなるわね。' },
+    { id: 'd', still: true, text: 'ツール呼び出しだとわかっても、{which}どのツールに、\n{what}何を入力として渡せばいいのかを、\n\n{free}自由な文章から読み取るのは、大変ね。' },
+    { id: 'e', text: 'そこで、{decide}ツール呼び出しを書くときの形式を、決めておくの。' },
+    { id: 'f', text: '{fig}この図の形式では、{marks}呼び出しの始まりと終わりに印を書いて、\n[その間に|そのあいだに]、{nm}ツールの名前と{inp}入力を書くわ。' },
+    { id: 'g', still: true, text: 'その中身は、{easy}アプリが読み取りやすい、\n{json}[JSON|ジェイソン] という形式よ。' },
+    { id: 'h', text: 'モデルを作る側は、{form2}この形式でツール呼び出しを書けるように、\n{train}LLM を学習させておくわ。' },
+    { id: 'i', lead: 1.0, text: 'LLM は、{same}ツール呼び出しも、ふつうの文章と同じように、\n{one}次のトークンを一つずつ選んで書いていくの。' },
+    { id: 'j', tail: 1.2, text: 'まず{open}始まりの印を書き、続けて、\n{body}ツールの名前と入力を、トークンごとに書いていくわ。' },
+    { id: 'k', text: 'LLM が{fin}終わりの印を書いたところで、\n{stop}アプリが LLM に書かせるのを止めれば、\n\n{take}ツールの名前と入力を、そのまま受け取れるわね。' },
+    { id: 'k2', still: true, text: '{like}4 章で、答えの終わりの印で止めたのと、同じやり方よ。' },
+    { id: 'l', text: '{api}Anthropic の API は、ツール呼び出しで止まったことを、\n{use}[tool_use|ツールユース] という[値|あたい]で、アプリに知らせてくれるわ。' },
+    { id: 'm', by: 'zunda', text: '{wr}LLM がツール呼び出しを書いたら、\n{run}それだけでツールが動くのだ？' },
+    { id: 'n', text: 'いいえ。{app}ツールを動かすのは、LLM の外にあるアプリよ。' },
+    { id: 'n2', still: true, text: '{auto}自動で動かすか、{ask}ユーザーに確認してから動かすかも、\n{own}アプリを作る人が決めておくの。' },
     { id: 'o', lead: 0.8, text: '{vary}印や名前の書き方は、モデルによって違うわ。\n{oss}[右上|みぎうえ]は、[gpt-oss|ジーピーティーオーエスエス] というモデルの形式に合わせた例よ。' },
     { id: 'o2', tail: 1.0, text: 'この形式では、{dest}ツールの名前を宛先に、{body2}入力を本文に書くの。' },
   ],
@@ -197,7 +197,7 @@ export default clip({
     const xIn = RX - wIn;
     const xName = xIn - 8 - wName;
     const xRecv = xName - 12;
-    const ways = ['自動で動かす', '人に確かめてから動かす'];
+    const ways = ['自動で動かす', 'ユーザーに確認してから動かす'];
     const wWay = ways.map((s) => tagW(s, F.jp(700, 15), 10));
     const xWay1 = RX - wWay[1];
     const xSlash = xWay1 - 10;

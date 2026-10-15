@@ -38,10 +38,10 @@ const DOC = L.doc;
 // ——— 5-1's picture, as tools.js has it (its last frame is this clip's first)
 const Q = 'あしたの京都の天気は？';
 const REQ = ['あ', 'した', 'の', '京都', 'の', '天', '気', '予', '報', 'を', '調', 'べ', 'たい'];
-const REQ_NOTE = '頼みの中身を、ふつうの言葉で表したもの（実際の形は 5-3）';
+const REQ_NOTE = 'リクエストの中身を、ふつうの言葉で表したもの（実際の形は 5-3）';
 const ANS = ['あ', 'した', 'の', '京都', 'は', '晴', 'れ', 'で', '、', '最高', '気', '温', 'は', '24', '℃', 'の', '予', '報', 'です', '。'];
 const RESULT = '京都　あした：晴れ　最高 24℃';
-const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え'], ['シェル', 'コマンド → 出力']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', 'キーワード → 文章'], ['計算機', '式 → 答え'], ['シェル', 'コマンド → 出力']];
 const CARD = { x: TOOL.x + 20, y: TOOL.y + 20, w: (TOOL.w - 54) / 2, h: (TOOL.h - 54) / 2, gap: 14 };
 const cardBox = (i) => ({ x: CARD.x + (i % 2) * (CARD.w + CARD.gap), y: CARD.y + Math.floor(i / 2) * (CARD.h + CARD.gap), w: CARD.w, h: CARD.h });
 const HEAD = 64;
@@ -69,7 +69,7 @@ const DEFS = [
   { indent: true, segs: [['入力：city（都市）、day（日）', 'input']] },
   { indent: true, segs: [['使うとき：天気を聞かれたとき', 'use']] },
   { segs: [['search_web', 'name'], ['：', ''], ['Web を検索して、関係する文章を返す', 'desc']] },
-  { indent: true, segs: [['入力：query（検索の言葉）', 'input']] },
+  { indent: true, segs: [['入力：query（検索キーワード）', 'input']] },
   { segs: [['calculate', 'name'], ['：', ''], ['式を計算する', 'desc']] },
   { indent: true, segs: [['入力：expression（式）', 'input']] },
   { ghost: [96, 200], label: 'ほかのツールの定義' },
@@ -110,16 +110,16 @@ export default clip({
   bridge: 0.9, // 5-1's last picture clears; skipped unless the clip is joined from 5-1
   script: [
     { id: 'a', text: 'LLM に{call}ツール呼び出しを書かせるには、\n{miss}まだ足りないものがあるの。' },
-    { id: 'b', text: 'でも、{which}このアプリにあるツールと、{how}その頼み方は、\n{learn}学習で身に付けた知識からは{nok}わからないわ。' },
+    { id: 'b', text: 'このアプリに{which}どんなツールがあって、\n{how}それぞれをどんな入力で呼び出せばいいのかは、\n\n{learn}LLM が学習で身に付けた知識からは、{nok}わからないわ。' },
     { id: 'c', text: 'そこで、{put}アプリには、{desc}使えるツールの説明を、\n{ctx}コンテクストに入れさせましょう。' },
     { id: 'd', text: '説明には、{nm}ツールの名前と、{wh}何をするのか、\n{in}どんな入力を受け取るのかを書くわ。' },
     { id: 'e', still: true, text: 'こうして{one}一つのツールを説明したものを、\n{def}ツールの定義と呼ぶの。' },
     { id: 'f', lead: 0.7, text: 'この例では、{maker}アプリを作る人が、\n定義を、{data}決まった形のデータで用意するわ。' },
-    { id: 'g', still: true, text: '渡すときには、{it}それを、{fmt}モデルが学習で見てきた書き方の文字に\n整えてから、{into}コンテクストに入れるのよ。' },
-    { id: 'h', lead: 0.7, tail: 2.4, still: true, text: '天気のほかに、{s2}検索や{s3}計算のツールも並べておけば、\n{llm}LLM は、{fit}質問に合うものを{pick}選んで{req}頼めるわね。' },
+    { id: 'g', still: true, text: 'LLM に渡すときには、アプリが、{it}そのデータを、\n\n{fmt}モデルが学習で見てきた形式のテキストに直して、\n{into}コンテクストに入れるのよ。' },
+    { id: 'h', lead: 0.7, tail: 2.4, still: true, text: '天気のほかに、{s2}検索や{s3}計算のツールも並べておけば、\n\n{llm}LLM は、{fit}ユーザーの質問に合うツールを{pick}選んで、\n{req}ツール呼び出しを書けるわね。' },
     { id: 'i', by: 'zunda', text: '{prog}ツールの中のプログラムは、LLM には見えないのだ？' },
-    { id: 'j', still: true, text: '{nosee}定義を渡しただけでは、中のプログラムまでは見えないわ。\n{clue}LLM が選ぶときの手がかりは、定義に書かれた説明よ。' },
-    { id: 'k', text: 'だから、{clear}何をするツールで、{when}どんなときに使うのかを、\n{write}定義にわかりやすく書いておくことが大切ね。' },
+    { id: 'j', still: true, text: '{nosee}定義を渡しただけでは、中のプログラムまでは見えないわ。\n{clue}LLM がツールを選ぶときの手がかりは、定義に書かれた説明よ。' },
+    { id: 'k', text: 'だから、アプリを作る人は、\n{clear}何をするツールで、{when}どんなときに使うのかを、\n\n{write}定義にわかりやすく書いておくことが大切ね。' },
     { id: 'l', tail: 0.8, text: '{part}定義もコンテクストの一部だから、\n{more}一度に渡す定義を増やすほど、{long}読ませる文書も長くなるわ。' },
   ],
 

@@ -42,7 +42,7 @@ const Q54 = 'あしたの京都の天気は？';
 const REQ = 'あしたの京都の天気予報を調べたい';
 const ANS51 = 'あしたの京都は晴れで、最高気温は24℃の予報です。';
 const RESULT51 = '京都　あした：晴れ　最高 24℃';
-const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', '言葉 → 文章'], ['計算機', '式 → 答え']];
+const KINDS = [['天気予報', '都市と日 → 予報'], ['検索', 'キーワード → 文章'], ['計算機', '式 → 答え']];
 const ROW = { x: TOOL.x + 20, y: TOOL.y + 20, w: TOOL.w - 40, h: (TOOL.h - 40 - 22) / 3, gap: 11 };
 const rowBox = (i) => ({ x: ROW.x, y: ROW.y + i * (ROW.h + ROW.gap), w: ROW.w, h: ROW.h });
 const glyphBox = (r) => ({ x: r.x + r.w - 124, y: r.y + 12, w: 110, h: r.h - 24 });
@@ -70,8 +70,8 @@ const PROG = '天気予報を調べました';
 const NOTE54 = '会話、呼び出し、結果は説明のための例';
 const PANEL = { x: 36, y: 80, w: 330, h: 182 };
 const STOPS = [
-  { case: '呼び出しで止まった', value: 'tool_use', hot: true, act: 'ツールを動かす' },
-  { case: '答えを書き終えた', value: 'end_turn', hot: false, act: 'このやりとりを終える' },
+  { case: 'ツール呼び出しで止まった', value: 'tool_use', hot: true, act: 'ツールを動かす' },
+  { case: '答えを書き終えた', value: 'end_turn', hot: false, act: '答えを返して終える' },
 ];
 
 // ——— this clip
@@ -110,14 +110,14 @@ const CF = F.jp(500, 16);
 const LINES = [
   { s: 'くり返す', ind: 0, head: true },
   { s: 'LLM に文書を読ませる', ind: 1 },
-  { s: '呼び出しで止まったら', ind: 1, value: 'tool_use', hot: true },
+  { s: 'ツール呼び出しで止まったら', ind: 1, value: 'tool_use', hot: true },
   { s: 'ツールを動かして、結果を書き足す', ind: 2 },
   { s: '答えを書き終えたら', ind: 1, value: 'end_turn' },
   { s: 'くり返しを抜ける', ind: 2 },
   { s: 'それ以外で止まったら', ind: 1, note: '（長さの上限など）' },
-  { s: '止めて知らせる', ind: 2 },
+  { s: '止めて、ユーザーに伝える', ind: 2 },
   { s: '周の数が上限に着いたら', ind: 1 },
-  { s: '止めて知らせる', ind: 2 },
+  { s: '止めて、ユーザーに伝える', ind: 2 },
 ];
 const lineY = (i) => CODE_Y0 + i * CODE_LH;
 const lineX = (i) => CODE_X0 + LINES[i].ind * INDENT;
@@ -126,8 +126,8 @@ const BRACKET_X = CODE.x + 17;
 // Under the LLM: the rounds of this example and of a sunny one, counted apart; then the years.
 const TRK = { x: 36, y: 570, w: 330 };
 const ROWS = [
-  { y: TRK.y, label: '雨の予報なら', chips: [['天気を頼む', 'call'], ['検索を頼む', 'call'], ['答える', 'ans']] },
-  { y: TRK.y + 62, label: '晴れの予報なら', chips: [['天気を頼む', 'call'], ['答える', 'ans']] },
+  { y: TRK.y, label: '雨の予報なら', chips: [['天気の呼び出し', 'call'], ['検索の呼び出し', 'call'], ['答える', 'ans']] },
+  { y: TRK.y + 62, label: '晴れの予報なら', chips: [['天気の呼び出し', 'call'], ['答える', 'ans']] },
 ];
 const CHIP = { font: F.jp(700, 14), h: 28, padX: 10, gap: 26 };
 const MULTI = ['この例では、1 周に呼び出しは一つ。', '一度に複数の呼び出しを書けるモデルもある'];
@@ -159,22 +159,22 @@ export default clip({
   join: 'cut',
   bridge: 0.9, // 5-4's conversation and notes clear away; skipped unless the clip is joined from 5-4
   script: [
-    { id: 'a', text: 'こんどは、{ask}「あしたの京都が雨なら、\n屋内で楽しめる所を[教えて」と|おしえてと]聞かれたとしましょう。' },
-    { id: 'b', text: 'この例では、まず{w}天気を調べて、{rain}雨なら、\n{s}屋内の場所も検索することになるわね。' },
-    { id: 'c', text: '{next}次に何を頼むかは、{res}返ってきた結果によって変わるの。' },
+    { id: 'a', text: 'こんどは、ユーザーから、{ask}「あしたの京都が雨なら、\n屋内で楽しめる所を[教えて」と|おしえてと]聞かれたとしましょう。' },
+    { id: 'b', text: 'これに答えるには、まず{w}天気を調べて、{rain}雨なら、\n{s}屋内の場所も検索することになるわね。' },
+    { id: 'c', text: '{next}LLM が次にどんなツール呼び出しを書くかは、\n{res}その前に返ってきた結果によって変わるの。' },
     { id: 'd', text: 'そこで、{code}アプリの動きを、{loop}くり返しの形に書いておきましょう。' },
-    { id: 'e', text: '{read}LLM に文書を読ませて、{call}呼び出しで止まったら、\n{run}ツールを動かして結果を書き足し、{again}また読ませるわ。' },
-    { id: 'f', still: true, tail: 0.6, text: '{fin}答えを書き終えたら、{exit}くり返しを抜けるのよ。' },
-    { id: 'g', lead: 2.4, tail: 1.1, text: '{r1}一周めでは、{w1}LLM が天気のツールを頼んで、\n{rain1}雨の予報が返ってくるわ。' },
-    { id: 'h', lead: 1.5, tail: 2.0, text: '{r2}二周めでは、{read2}それを読んだ LLM が、\n{q2}屋内の見どころを検索するよう頼むの。' },
-    { id: 'i', still: true, lead: 1.5, tail: 1.8, text: '{r3}三周めで、{two}二つの結果をもとに{ans}答えを書いて、{done}終わるわ。' },
+    { id: 'e', text: 'アプリは、{read}LLM に文書を読ませて、\n{call}ツール呼び出しで止まったら、\n\n{run}ツールを動かして結果を書き足し、\n{again}また LLM に読ませるわ。' },
+    { id: 'f', still: true, tail: 0.6, text: '{fin}LLM が答えを書き終えたら、{exit}くり返しを抜けるのよ。' },
+    { id: 'g', lead: 2.4, tail: 1.1, text: '{r1}一周めでは、{w1}LLM が、天気予報を調べる\nツール呼び出しを書いて、{rain1}雨の予報が返ってくるわ。' },
+    { id: 'h', lead: 1.5, tail: 2.0, text: '{r2}二周めでは、{read2}その予報を読んだ LLM が、\n{q2}屋内の見どころを検索するツール呼び出しを書くの。' },
+    { id: 'i', still: true, lead: 1.5, tail: 1.8, text: '{r3}三周めで、LLM が{two}二つの結果をもとに{ans}答えを書いて、{done}終わるわ。' },
     { id: 'j', still: true, text: '{sun}晴れの予報なら、{two2}二周めで、\n検索せずに答えを書いて終わるわね。' },
     { id: 'k', by: 'zunda', text: '{who}何回まわるかは、だれが決めているのだ？' },
-    { id: 'l', text: '{wrote}LLM が次の呼び出しを書くか、{fin2}答えを書き終えるかを見て、\n{app}アプリが次へ進めるの。' },
-    { id: 'm', still: true, text: 'ただ、いつまでも終わらないと困るから、\n{limit}回る回数に、上限を付けておくこともできるわ。' },
-    { id: 'n', text: '{y23}OpenAI は 2023 年に、関数呼び出しを API に加えたわ。' },
-    { id: 'n2', text: '{y24}Anthropic も 2024 年に、\nツールを使う API を、一般に提供したの。' },
-    { id: 'o', tail: 0.8, text: '次の章では、{place}このツールの場所に、\n{many}いろいろなものをつないでいきましょう。' },
+    { id: 'l', text: '回る回数は、{wrote}LLM が次のツール呼び出しを書くか、\n{fin2}答えを書き終えるかで決まるわ。\n\n{app}アプリは、それを見て、次の周へ進むかどうかを決めるの。' },
+    { id: 'm', still: true, text: 'ただ、いつまでも終わらないと困るから、\n\n{limit}アプリを作る人が、回る回数に、\n上限を付けておくこともできるわ。' },
+    { id: 'n', text: '{y23}OpenAI は 2023 年に、ツール呼び出しにあたる機能を、\n関数呼び出しという名前で API に加えたわ。' },
+    { id: 'n2', text: '{y24}Anthropic も 2024 年に、\nLLM にツールを使わせる API の機能を、一般に提供したの。' },
+    { id: 'o', tail: 0.8, text: '次の章では、{place}この図のツールの場所に、\n{many}いろいろなプログラムをつないでいきましょう。' },
   ],
 
   prepare(ctx) {
@@ -469,7 +469,7 @@ export default clip({
       }
       // the input to the tool, the result back into its place, and the result's mark out of the app's box
       const band = { tx: c.band.x, w: c.band.w, y: c.band.y, h: c.band.h };
-      chipFlight(ctx, seg(t, r.go, r.go + GO), toTool(T, band), k ? '検索の言葉' : '京都、あした', C.accent);
+      chipFlight(ctx, seg(t, r.go, r.go + GO), toTool(T, band), k ? '検索キーワード' : '京都、あした', C.accent);
       chipFlight(ctx, seg(t, r.back, r.back + BACK), fromTool(T, R, 0, R.tx + 120), k ? '見どころ 3 件' : '雨　最高 19℃', C.green);
       flyMark(ctx, T, R, seg(t, r.resMark, r.resMark + FLY), ROLE.result, { edge: WRITER.result });
     });
