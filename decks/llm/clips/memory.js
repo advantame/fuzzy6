@@ -1,6 +1,6 @@
 // 4-5: read again every time. A chatbot seems to remember, but the LLM's parameters do not change
 // while it answers, and it reads only the document it is given. Told from the designer's side
-// (Boss, 2026-10-15): pass on only what came in, and the LLM cannot tell what「二日」is about
+// (Boss, 2026-10-15): pass on only what came in, and the LLM cannot tell what「二日間」is about
 // (staged on the chat screen); so have the app join the whole conversation and have it read
 // from the head every time — the LLM can then answer as its continuation. The same front part
 // need not be worked out again (chapter 9). Joined like this, the context grows turn by turn
@@ -33,17 +33,17 @@ const CARD = { x: L.app.x + 22, y: ACT.y, w: 300, h: ACT.h };
 const KEY = { x: L.llm.x, y: 690 };
 
 const Q1 = '週末、京都に行きます';
-const A1 = 'いいですね。何日の予定ですか？';
-const Q2 = '二日です';
+const A1 = 'いいですね。何日間の予定ですか？';
+const Q2 = '二日間です';
 // what the LLM writes, one token at a time (as o200k_base cuts it)
-const BAD = ['何', 'が', '二', '日', 'です', 'か', '？'];
+const BAD = ['何', 'が', '二', '日', '間', 'です', 'か', '？'];
 const A2 = ['それ', 'なら', '、一', '日', 'め', 'は', '東', '山', 'がお', 'すすめ', 'です', '。'];
 const Q3 = 'お昼のおすすめは？';
 const A3 = ['東', '山', 'なら', '、', '豆', '腐', '料理', 'のお', '店', 'が', '近', 'い', 'ですよ', '。'];
 // ずっと話していたら: more turns, drawn as grey lines (their words do not matter here)
 const MORE = [['user', 5], ['assistant', 16], ['user', 7], ['assistant', 13]];
-const SUMMARY = '（要約）京都に二日。一日めは東山を歩く';
-const MEMO = '週末、京都に二日行く';
+const SUMMARY = '（要約）京都に二日間。一日めは東山';
+const MEMO = '週末、京都に二日間行く';
 const QM = 'お土産は何がいい？';
 const AM = ['京都', 'のお', '土', '産', 'なら', '、', '八', 'ツ', '橋', 'は', 'どう', 'でしょう', '。'];
 // how long each read is, in an example unit: three turns, then one far on; the window holds WIN
@@ -66,9 +66,9 @@ export default clip({
   kicker: '会話の記憶',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: 'チャットボットと話すときは、{seem}「二日です」のように、\n相手が前の話を覚えているつもりで、返事をするわね。' },
+    { id: 'a', text: 'チャットボットと話すときは、{seem}「二日間です」のように、\n相手が前の話を覚えているつもりで、返事をするわね。' },
     { id: 'b', text: 'でも、{fixed}答えを作るあいだ、パラメータは変わらないし、\n{only}LLM が読めるのは、渡された文書だけだったわね。' },
-    { id: 'b2', text: 'だから、{naive}届いた発言だけを、そのまま渡すと、\n{lost}LLM には、何が二日なのか、わからないの。' },
+    { id: 'b2', text: 'だから、{naive}届いた発言だけを、そのまま渡すと、\n{lost}LLM には、何が二日間なのか、わからないの。' },
     { id: 'b3', by: 'zunda', text: '{huh}何日か聞いてきたのは、そっちなのだ！' },
     { id: 'c', text: 'そこで、アプリには、{all}それまでのやりとりも全部つないで、\n{again}毎回、頭から読ませるの。' },
     { id: 'c1', text: '{prev}前の話が書いてあれば、{fit}LLM は、\nその続きとして答えを書けるわね。' },
@@ -223,7 +223,7 @@ export default clip({
       }
       bubble(ctx, b.x, b.y, b.L, { fill, alpha: a, chars: bubChars[i] });
     });
-    // the answer to「二日です」alone, until sentence c takes it back
+    // the answer to「二日間です」alone, until sentence c takes it back
     bubble(ctx, bad.x, bad.y, bad.L, { fill: C.panel, alpha: tw(t, badAt[0] + TOK, 0.25) * rewind, chars: landedBad(t - 0.12) });
     // rings: sentence a (the user answers the question), b3 (the question it forgot)
     const seem = lit(['seem'], at('a.end'))[0];
