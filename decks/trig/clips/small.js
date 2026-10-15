@@ -21,7 +21,7 @@ import { focus, ringBox, enter } from '../../../src/kit/cue.js';
 import { rect, segment } from '../../../src/kit/place.js';
 import { treeTriangle, TREE } from '../lib/scene.js';
 import { corners, mixPose, drawTri, ghostTri, angleArc, angleAt, angleShape, placeLabel, label, vertexLabel, triShapes, NAME, RAD } from '../lib/tri.js';
-import { math, row, frac, tag, pt, shade } from '../lib/math.js';
+import { math, row, frac, tag, pt, shade, v, box as mathBox } from '../lib/math.js';
 import { protractor, pill, formulaBox } from '../lib/parts.js';
 
 const BIG0 = { x: TREE.A.x, y: TREE.A.y, s: 1 };
@@ -45,16 +45,18 @@ const PROPERTY = [
 ];
 
 // A copy of a corner's name on its way from the figure (box `from`, as vertexLabel drew it)
-// into a formula (the tagged piece `to`), p 0 → 1. It is set like the name at first and like
-// the formula at the end, so that the formula's own letter can take over where it lands.
+// into a formula (the tagged piece `to`), p 0 → 1. Both are the same italic capital, so the copy
+// only changes size and ink on the way, and the formula's own letter takes over where it lands.
 function flyName(ctx, s, from, to, p) {
   if (p <= 0 || p >= 1) return;
-  const x = lerp(from.x + from.w / 2, to.x + to.w / 2, p);
-  const base = lerp(from.y + from.h / 2 + NAME.size * 0.36, to.base, p);
+  const name = v(s);
+  const fromBase = from.y + mathBox(name, NAME.size).asc;
+  const x = lerp(from.x, to.ox, p);
+  const base = lerp(fromBase, to.base, p);
   const size = lerp(NAME.size, to.size, p);
-  const q = seg(p, 0.3, 0.9);
-  text(ctx, s, x, base, { font: NAME.font(size), color: NAME.color, align: 'center', alpha: 1 - q });
-  text(ctx, s, x, base, { font: F.sans(400, size), color: C.ink, align: 'center', alpha: q });
+  const q = seg(p, 0.2, 0.9);
+  math(ctx, name, x, base, { size, color: NAME.color, alpha: 1 - q });
+  math(ctx, name, x, base, { size, color: C.ink, alpha: q });
 }
 
 const script = [

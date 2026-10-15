@@ -14,7 +14,7 @@ import { clamp, lerp } from '../../../src/kit/ease.js';
 import { text, measure, rr } from '../../../src/kit/draw.js';
 import { segment, arc as arcShape, rect as rectShape, place, placeAround, grow } from '../../../src/kit/place.js';
 import { C as COL, F } from './theme.js';
-import { math, box as mathBox } from './math.js';
+import { math, row, box as mathBox } from './math.js';
 
 export const RAD = Math.PI / 180;
 
@@ -184,17 +184,22 @@ export function triShapes(T, w = SIDE_W) {
 
 // ——— labels ——————————————————————————————————————————————————————————
 
-const CJK = /[　-鿿＀-￯]/;
 let scratch = null;
 const ctx0 = () => (scratch ??= document.createElement('canvas').getContext('2d'));
 const fontOf = (o, size) => o.font ?? F.jp(o.weight ?? 700, size);
+// A label with a number, a Latin or Greek letter or a sign in it is set as a formula (TeX):
+// 「38°」「18 m」「約 7.8 マス」「E」. One in Japanese only is drawn as text.
+const MATHY = /[0-9A-Za-zα-ωθ°%√]/;
+const asMath = (s, o) => (typeof s === 'string' ? (MATHY.test(s) ? row(s) : null) : s);
 
-// The size of a label: a plain string in the Japanese face, or a math node. The height is
-// that of the glyphs, not of the line, so the gap to a line looks the same above and below.
+// The size of a label: Japanese text, or a formula (a math node, or a string with numbers or
+// letters in it). The height is that of the glyphs, not of the line, so the gap to a line looks
+// the same above and below.
 export function labelSize(s, o = {}) {
   const size = o.size ?? 32;
-  if (typeof s === 'string') return { w: measure(ctx0(), fontOf(o, size), s), h: size * (CJK.test(s) ? 0.92 : 0.74) };
-  const b = mathBox(s, size);
+  const m = asMath(s, o);
+  if (!m) return { w: measure(ctx0(), fontOf(o, size), s), h: size * 0.92 };
+  const b = mathBox(m, size);
   return { w: b.w, h: b.asc + b.desc };
 }
 
@@ -216,11 +221,13 @@ export function label(ctx, s, x, y, o = {}) {
     ctx.fill();
     ctx.restore();
   }
-  if (typeof s === 'string') {
+  const m = asMath(s, o);
+  if (!m) {
     text(ctx, s, x, y + size * 0.36, { font: fontOf(o, size), color: o.color ?? COL.ink, align: 'center', alpha: a });
   } else {
-    const mb = mathBox(s, size);
-    math(ctx, s, x, y + (mb.asc - mb.desc) / 2, { size, color: o.color ?? COL.ink, align: 'center', alpha: a });
+    const mb = mathBox(m, size);
+    // the Japanese in a formula at the weight of its numbers, not the bold of a label
+    math(ctx, m, x, y + (mb.asc - mb.desc) / 2, { size, color: o.color ?? COL.ink, align: 'center', alpha: a, weight: o.mathWeight ?? 500 });
   }
   return b;
 }
@@ -375,16 +382,17 @@ export function dim(ctx, P, Q, n, off, s, o = {}) {
 // ——— corners —————————————————————————————————————————————————————————
 
 const OTHERS = { A: ['B', 'C'], B: ['A', 'C'], C: ['A', 'B'] };
-// how a corner's name is set: for a copy of it that travels into a formula
-export const NAME = { size: 36, font: (size) => F.sans(600, size), color: COL.ink2 };
+// how a corner's name is set (an italic capital, as in a formula): for a copy of it that
+// travels into one
+export const NAME = { size: 36, color: COL.ink2 };
 
 // The name of a corner of T ('A', 'B' or 'C'; the name drawn is s, so a second triangle can
 // call its corners D, E, F) outside the triangle: out from the corner, away from both sides,
 // and round the right angle's square and anything in o.avoid (placeAround in
 // src/kit/place.js). Other words nearby (o.text, their boxes) are kept farther off than lines
 // (o.textGap), so that a name sits nearer its corner than to any word and is read as the
-// corner's, not as one more of a row of numbers. Upright capitals in dark ink unless o.font or
-// o.color says otherwise. o: label options and { gap, avoid, text, textGap, sideW }. Returns
+// corner's, not as one more of a row of numbers. Italic capitals, as in a formula, in dark ink
+// unless o.color says otherwise. o: label options and { gap, avoid, text, textGap, sideW }. Returns
 // its box.
 export function vertexLabel(ctx, T, corner, s, o = {}) {
   const V = T[corner];
@@ -394,7 +402,7 @@ export function vertexLabel(ctx, T, corner, s, o = {}) {
   const out = unit({ x: 0, y: 0 }, { x: u.x + w.x, y: u.y + w.y });
   const size = o.size ?? NAME.size;
   const gap = o.gap ?? 6;
-  const lo = { size, font: NAME.font(size), color: NAME.color, ...o };
+  const lo = { size, color: NAME.color, ...o };
   const words = (o.text ?? []).filter(Boolean).map((b) => grow(b, Math.max(0, (o.textGap ?? size * 0.8) - gap)));
   const shapes = [...triShapes(T, o.sideW), ...(o.avoid ?? []), ...boxes(...words)];
   const at = placeAround(V, out, labelSize(s, lo), shapes, { gap, to: 200 });

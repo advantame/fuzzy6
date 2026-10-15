@@ -24,17 +24,23 @@ export const C = {
   white: '#ffffff',
 };
 
+// Numbers and Latin letters are set in Computer Modern, as formulas are (KaTeX's faces; the
+// formulas themselves are drawn by MathJax, lib/math.js), and Japanese in IBM Plex Sans JP: the
+// faces are listed in that order, so a label like 「約 14 m」 takes each character from the right
+// one. KaTeX_Main has two weights: up to 500 reads as regular, 600 and up as bold.
+const MATH = '"KaTeX_Main"';
 const FAMILY = {
-  jp: '"IBM Plex Sans JP", "IBM Plex Sans", sans-serif',
-  sans: '"IBM Plex Sans", "IBM Plex Sans JP", sans-serif',
+  jp: `${MATH}, "IBM Plex Sans JP", sans-serif`,
+  sans: `${MATH}, "IBM Plex Sans JP", serif`,
   cond: '"IBM Plex Sans Condensed", "IBM Plex Sans JP", sans-serif',
-  mono: '"IBM Plex Mono", "IBM Plex Sans JP", monospace',
+  mono: `${MATH}, "IBM Plex Sans JP", serif`,
 };
 
-// F.jp(700, 48) → '700 48px "IBM Plex Sans JP", …'. F.it is the italic for letters in formulas.
+// F.jp(700, 48) → '700 48px "KaTeX_Main", "IBM Plex Sans JP", …'. F.it is the italic of letters
+// in formulas (a point's name in a figure).
 export const F = {
   ...Object.fromEntries(Object.entries(FAMILY).map(([k, fam]) => [k, (w, px) => `${w} ${px}px ${fam}`])),
-  it: (w, px) => `italic ${w} ${px}px ${FAMILY.sans}`,
+  it: (w, px) => `italic ${w} ${px}px "KaTeX_Math", ${FAMILY.sans}`,
 };
 
 // Every face the clips draw with, loaded before the first frame (spec §6.4). The Japanese
@@ -42,6 +48,8 @@ export const F = {
 const ASCII = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i)).join('');
 const SYMBOLS = 'θαβ°²³√−×÷±·…“”’–—→←↑↓≈';
 export const FONTS = [
+  ...[400, 700].map((w) => [`${w} 32px "KaTeX_Main"`, ASCII + SYMBOLS]),
+  ['italic 400 32px "KaTeX_Math"', ASCII],
   ...[400, 500, 700].map((w) => [`${w} 32px "IBM Plex Sans JP"`, ASCII + chars]),
   ...[400, 500, 600].map((w) => [`${w} 32px "IBM Plex Sans"`, ASCII + SYMBOLS]),
   ...[400, 500].map((w) => [`italic ${w} 32px "IBM Plex Sans"`, ASCII + SYMBOLS]),

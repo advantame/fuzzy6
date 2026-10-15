@@ -11,7 +11,7 @@ docs/environment.md     道具と環境の記録（語りの合成、立ち絵�
 docs/publishing.md      公開のしかた（基盤、反映の手順、イメージとサーバ、GitHub）
 docs/next-deck.md       次のデッキ（高校数学）の構想
 src/explorer/           engine。spec の実装（index.js が createExplorer、pace.js が歩調の既定値）
-src/kit/                canvas で描くクリップのための道具（緩急、種付き乱数、文字、図形、強調、図の文字の置き場所）
+src/kit/                canvas で描くクリップのための道具（緩急、種付き乱数、文字、図形、強調、図の文字の置き場所、TeX の式）
 decks/<id>/             一つのデッキ。deck.js, clips/, lib/, voice/, README.md
 decks/<id>/script.md    語りの原稿を、デッキの順に一つにまとめた台本。クリップの script から作る（手で直さない）
 index.html, src/home/   デッキの一覧

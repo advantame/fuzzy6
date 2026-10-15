@@ -41,7 +41,7 @@ export function trigTable(ctx, x, y, o = {}) {
   ctx.globalAlpha *= a;
   card(ctx, x, y, w, h, { r: 10 });
   // head
-  text(ctx, 'θ', x + degW / 2, y + rowH * 0.7, { font: F.sans(400, 26), color: C.ink, align: 'center' });
+  math(ctx, 'θ', x + degW / 2, y + rowH * 0.7, { size: 26, color: C.ink, align: 'center' });
   cols.forEach((c, i) => math(ctx, row(c, 'θ'), x + degW + colW * (i + 0.5), y + rowH * 0.7, { size: 26, color: COLOR[c], align: 'center' }));
   ctx.fillStyle = C.ink;
   ctx.fillRect(x + 10, y + headH - 2, w - 20, 2);

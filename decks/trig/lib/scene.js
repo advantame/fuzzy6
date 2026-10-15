@@ -200,7 +200,8 @@ export function mark(ctx, x, y, s, p, color = C.accent) {
   circle(ctx, x, y, r);
   ctx.fill();
   ctx.stroke();
-  text(ctx, s, x, y + r * 0.42, { font: F.sans(600, r * 1.25), color, align: 'center' });
+  // a mark (!, ?), not a letter of a formula: in the sans face
+  text(ctx, s, x, y + r * 0.42, { font: F.cond(700, r * 1.25), color, align: 'center' });
   ctx.restore();
 }
 

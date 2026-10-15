@@ -10,7 +10,7 @@ import { seg, tw, inOutCubic, clamp, lerp } from '../../../src/kit/ease.js';
 import { text } from '../../../src/kit/draw.js';
 import { focus, ring, ringBox } from '../../../src/kit/cue.js';
 import { corners, drawTri, angleAt, sideLabel, RAD } from '../lib/tri.js';
-import { math, row, frac, jp, sup, colored, tag } from '../lib/math.js';
+import { math, row, frac, jp, sup, colored, tag, box as mathBox } from '../lib/math.js';
 import { definition } from '../lib/board.js';
 import { workLine } from '../lib/drill.js';
 import { formulaBox, strike } from '../lib/parts.js';
@@ -76,13 +76,16 @@ export default clip({
     const divA = tw(t, at('div') - lead, 0.5) * defs;
     if (divA > 0) {
       // sin θ / cos θ = (高さ/斜辺) / (底辺/斜辺), the 斜辺s struck out as they cancel
-      const line = workLine(ctx, row(frac(row('sin', 'θ'), row('cos', 'θ')), tag('eq', '='), frac(frac(jp('高さ', C.sin), tag('d1', jp('斜辺'))), frac(jp('底辺', C.cos), tag('d2', jp('斜辺'))))), X, 340, divA, { size: 50 });
+      const first = row(frac(row('sin', 'θ'), row('cos', 'θ')), tag('eq', '='), frac(frac(jp('高さ', C.sin), tag('d1', jp('斜辺'))), frac(jp('底辺', C.cos), tag('d2', jp('斜辺')))));
+      const line = workLine(ctx, first, X, 340, divA, { size: 50 });
       const struck = seg(t, at('cancel') - 0.05, at('cancel') + 0.5);
       strike(ctx, line.parts.d1, struck, { alpha: divA });
       strike(ctx, line.parts.d2, struck, { alpha: divA });
-      // = 高さ / 底辺 = tan θ, its = under the first
+      // = 高さ / 底辺 = tan θ, its = under the first, a line's gap below the first line
       const left = tw(t, at('left') - lead, 0.5) * defs;
-      workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('底辺', C.cos)), ...(t > at('tan') - lead ? ['=', colored(C.tan, 'tan θ')] : [])), line.parts.eq.x, 540, left, { size: 50 });
+      const ratio = frac(jp('高さ', C.sin), jp('底辺', C.cos));
+      const y2 = 340 + mathBox(first, 50).desc + 40 + mathBox(ratio, 50).asc;
+      workLine(ctx, row('=', ratio, ...(t > at('tan') - lead ? ['=', colored(C.tan, 'tan θ')] : [])), line.parts.eq.ox, y2, left, { size: 50 });
     }
     // m1: the relation, boxed
     const eq = tw(t, at('eq') - lead, 0.5) * (1 - tw(t, at('q') - 0.3, 0.5));
