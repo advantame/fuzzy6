@@ -7,11 +7,12 @@
 import { clip } from '../lib/clip.js';
 import { C, F } from '../lib/theme.js';
 import { seg, tw, inOutCubic, outBack, clamp, lerp } from '../../../src/kit/ease.js';
-import { text, rr } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { drawTri, angleArc, sideLabel, mixTri, corners, label } from '../lib/tri.js';
+import { text } from '../../../src/kit/draw.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { drawTri, angleAt, sideLabel, mixTri, corners, label, triBox } from '../lib/tri.js';
 import { math, row, frac, sqrt } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
+import { tick, stamp, card } from '../lib/parts.js';
 
 // the 45° triangle (legs 300 px = 1)
 const T45 = corners(45, 300, { x: 150, y: 470 });
@@ -74,14 +75,17 @@ export default clip({
     const t45 = to45;
     if (t45 > 0) {
       drawTri(ctx, T45, { lw: 5, alpha: t45 });
-      angleArc(ctx, T45.A, T45.C, T45.B, { r: 60, label: '45°', size: 28, alpha: t45, labelR: 104 });
-      angleArc(ctx, T45.B, T45.A, T45.C, { r: 50, label: '45°', size: 24, alpha: t45, color: C.muted, labelColor: C.muted });
+      angleAt(ctx, T45, 'A', { r: 60, label: '45°', size: 28, alpha: t45 });
+      angleAt(ctx, T45, 'B', { r: 50, label: '45°', size: 24, alpha: t45, color: C.muted, labelColor: C.muted });
       const eq = focus(t, [at('eq')], at('c.end'), cue).level[0];
-      tick(ctx, T45.A, T45.C, eq > 0 ? C.accent : C.ink2, t45);
-      tick(ctx, T45.C, T45.B, eq > 0 ? C.accent : C.ink2, t45);
-      sideLabel(ctx, T45, 'base', '1', { off: 30, size: 32, alpha: tw(t, at('one') - lead, 0.5) });
-      sideLabel(ctx, T45, 'height', '1', { off: 30, size: 32, alpha: tw(t, at('one') - lead, 0.5) });
-      sideLabel(ctx, T45, 'hyp', sqrt('2'), { off: 44, size: 34, color: C.ink, alpha: tw(t, at('r2') - lead, 0.5, outBack) });
+      const ticks = [
+        tick(ctx, T45.A, T45.C, { color: eq > 0 ? C.accent : C.ink2, alpha: t45 }),
+        tick(ctx, T45.C, T45.B, { color: eq > 0 ? C.accent : C.ink2, alpha: t45 }),
+      ];
+      const lo = { size: 32, alpha: tw(t, at('one') - lead, 0.5), avoid: ticks };
+      sideLabel(ctx, T45, 'base', '1', lo);
+      sideLabel(ctx, T45, 'height', '1', lo);
+      sideLabel(ctx, T45, 'hyp', sqrt('2'), { size: 34, color: C.ink, alpha: tw(t, at('r2') - lead, 0.5, outBack) });
     }
 
     // e, f: the equilateral triangle, cut in half; 2, 1, √3
@@ -109,11 +113,11 @@ export default clip({
       ctx.restore();
       const halfA = eqA * tw(t, at('half') + 0.5, 0.4);
       drawTri(ctx, HALF, { lw: 6, alpha: halfA });
-      angleArc(ctx, HALF.A, HALF.C, HALF.B, { r: 50, label: '60°', size: 26, alpha: halfA, labelR: 88 });
-      angleArc(ctx, HALF.B, HALF.A, HALF.C, { r: 50, label: '30°', size: 26, alpha: halfA, labelR: 84 });
-      sideLabel(ctx, HALF, 'hyp', '2', { off: 34, size: 32, color: C.ink, alpha: eqA * tw(t, at('two') - lead, 0.5) });
-      sideLabel(ctx, HALF, 'base', '1', { off: 30, size: 32, alpha: eqA * tw(t, at('one2') - lead, 0.5) });
-      sideLabel(ctx, HALF, 'height', sqrt('3'), { off: 46, size: 32, color: C.sin, alpha: eqA * tw(t, at('r3') - lead, 0.5, outBack) });
+      angleAt(ctx, HALF, 'A', { r: 50, label: '60°', size: 26, alpha: halfA });
+      angleAt(ctx, HALF, 'B', { r: 50, label: '30°', size: 26, alpha: halfA });
+      sideLabel(ctx, HALF, 'hyp', '2', { size: 32, color: C.ink, alpha: eqA * tw(t, at('two') - lead, 0.5) });
+      sideLabel(ctx, HALF, 'base', '1', { size: 32, alpha: eqA * tw(t, at('one2') - lead, 0.5) });
+      sideLabel(ctx, HALF, 'height', sqrt('3'), { size: 32, color: C.sin, alpha: eqA * tw(t, at('r3') - lead, 0.5, outBack) });
     }
 
     // m2, g: the two ways to look at it
@@ -125,11 +129,11 @@ export default clip({
       const g = focus(t, [at('v30'), at('v60')], at('g.end'), cue);
       for (const [U, deg, lit, labels] of [[from30, 30, g.level[0], ['1', sqrt('3')]], [from60, 60, g.level[1], [sqrt('3'), '1']]]) {
         drawTri(ctx, U, { lw: 6, plain: look < 0.5 });
-        angleArc(ctx, U.A, U.C, U.B, { r: 46, label: `${deg}°`, size: 26, alpha: look, labelR: deg === 30 ? 112 : 86 });
-        sideLabel(ctx, U, 'height', labels[0], { off: 40, size: 30, alpha: look });
-        sideLabel(ctx, U, 'base', labels[1], { off: 30, size: 30, alpha: look });
-        sideLabel(ctx, U, 'hyp', '2', { off: 34, size: 30, color: C.ink, alpha: look });
-        if (lit > 0) ring(ctx, U.A.x - 20, U.B.y - 20, U.C.x - U.A.x + 90, U.A.y - U.B.y + 70, lit, C.accent);
+        angleAt(ctx, U, 'A', { r: 46, label: `${deg}°`, size: 26, alpha: look });
+        const hb = sideLabel(ctx, U, 'height', labels[0], { size: 30, alpha: look });
+        const bb = sideLabel(ctx, U, 'base', labels[1], { size: 30, alpha: look });
+        const cb = sideLabel(ctx, U, 'hyp', '2', { size: 30, color: C.ink, alpha: look });
+        ringBox(ctx, [triBox(U), hb, bb, cb], lit, C.accent, 10);
       }
     }
 
@@ -139,20 +143,7 @@ export default clip({
     const frame = tw(t, at('drum') - lead, 0.4, outBack);
     exactTable(ctx, tbl, fill, clamp(frame));
     // h: the stamp
-    const stamp = tw(t, at('again') - 0.05, 0.3, outBack);
-    if (stamp > 0) {
-      ctx.save();
-      ctx.globalAlpha *= clamp(stamp);
-      ctx.translate(TBL.x + TBL.degW + TBL.colW * 3 - 30, TBL.y - 6);
-      ctx.rotate(0.18);
-      ctx.scale(lerp(1.6, 1, clamp(stamp)), lerp(1.6, 1, clamp(stamp)));
-      rr(ctx, -70, -28, 140, 56, 10);
-      ctx.strokeStyle = C.accent;
-      ctx.lineWidth = 4;
-      ctx.stroke();
-      text(ctx, '暗記', 0, 13, { font: F.jp(700, 34), color: C.accent, align: 'center' });
-      ctx.restore();
-    }
+    stamp(ctx, '暗記', TBL.x + TBL.degW + TBL.colW * 3 - 30, TBL.y - 6, tw(t, at('again') - 0.05, 0.3, outBack));
   },
 });
 
@@ -163,12 +154,7 @@ function exactTable(ctx, a, fill, frame) {
   const h = headH + rowH * 3;
   ctx.save();
   ctx.globalAlpha *= a;
-  rr(ctx, x, y, w, h, 14);
-  ctx.fillStyle = C.white;
-  ctx.fill();
-  ctx.strokeStyle = frame > 0 ? C.accent : C.rule;
-  ctx.lineWidth = frame > 0 ? 3 + 3 * frame : 2;
-  ctx.stroke();
+  card(ctx, x, y, w, h, { stroke: frame > 0 ? C.accent : C.rule, lw: frame > 0 ? 3 + 3 * frame : 2 });
   text(ctx, 'θ', x + degW / 2, y + 46, { font: F.sans(400, 30), color: C.ink, align: 'center' });
   ['sin', 'cos', 'tan'].forEach((c, i) => math(ctx, row(c, 'θ'), x + degW + colW * (i + 0.5), y + 46, { size: 30, color: { sin: C.sin, cos: C.cos, tan: C.tan }[c], align: 'center' }));
   ctx.fillStyle = C.ink;
@@ -202,22 +188,6 @@ function plate(ctx, T, a) {
   ctx.fill('evenodd');
   ctx.strokeStyle = '#6f97b8';
   ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
-}
-
-// A small mark across the middle of a side: sides with the same mark are equal.
-function tick(ctx, p, q, color, a) {
-  const m = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
-  const l = Math.hypot(q.x - p.x, q.y - p.y);
-  const n = { x: -(q.y - p.y) / l, y: (q.x - p.x) / l };
-  ctx.save();
-  ctx.globalAlpha *= a;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(m.x - n.x * 12, m.y - n.y * 12);
-  ctx.lineTo(m.x + n.x * 12, m.y + n.y * 12);
   ctx.stroke();
   ctx.restore();
 }

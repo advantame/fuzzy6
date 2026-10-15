@@ -2,9 +2,10 @@
 // are computed here and printed to four places; tan 90° has no value.
 
 import { clamp } from '../../../src/kit/ease.js';
-import { text, rr } from '../../../src/kit/draw.js';
+import { text } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
 import { math, row } from './math.js';
+import { card } from './parts.js';
 
 const RAD = Math.PI / 180;
 export const value = (col, deg) => {
@@ -17,7 +18,8 @@ const COLOR = { sin: C.sin, cos: C.cos, tan: C.tan };
 // Draw the table with its top-left at (x, y). o: { rows (degrees), cols, rowH, colW, degW,
 // alpha, scroll (rows scrolled, may be fractional), show (rows visible), hi: { deg, col,
 // level } (a row lit, and one cell in vermilion), find: { deg, level } (a faint row lit) }.
-// Returns { w, h, rowY(deg) }.
+// Returns { w, h, rowY(deg), rowBox(deg), cell(deg, col) } — the top of a row, and the boxes of
+// a row and of one cell, for rings and pointers.
 export function trigTable(ctx, x, y, o = {}) {
   const rows = o.rows ?? [];
   const cols = o.cols ?? ['sin', 'cos', 'tan'];
@@ -31,16 +33,13 @@ export function trigTable(ctx, x, y, o = {}) {
   const headH = rowH + 6;
   const h = headH + rowH * show;
   const rowY = (deg) => y + headH + (rows.indexOf(deg) - scroll) * rowH;
-  if (a <= 0.001) return { w, h, rowY };
+  const rowBox = (deg) => ({ x, y: rowY(deg), w, h: rowH });
+  const cell = (deg, col) => ({ x: x + degW + colW * cols.indexOf(col), y: rowY(deg), w: colW, h: rowH });
+  const out = { w, h, rowY, rowBox, cell };
+  if (a <= 0.001) return out;
   ctx.save();
   ctx.globalAlpha *= a;
-  // sheet
-  rr(ctx, x, y, w, h, 10);
-  ctx.fillStyle = C.white;
-  ctx.fill();
-  ctx.strokeStyle = C.rule;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  card(ctx, x, y, w, h, { r: 10 });
   // head
   text(ctx, 'θ', x + degW / 2, y + rowH * 0.7, { font: F.sans(400, 26), color: C.ink, align: 'center' });
   cols.forEach((c, i) => math(ctx, row(c, 'θ'), x + degW + colW * (i + 0.5), y + rowH * 0.7, { size: 26, color: COLOR[c], align: 'center' }));
@@ -78,5 +77,5 @@ export function trigTable(ctx, x, y, o = {}) {
   });
   ctx.restore();
   ctx.restore();
-  return { w, h, rowY };
+  return out;
 }

@@ -33,8 +33,8 @@ export function example(ctx, x, y, a = 1, note = '場面と数値は例') {
   ctx.restore();
 }
 
-// A line of working: a formula that fades in and rises a little as it comes.
+// A line of working: a formula that fades in and rises a little as it comes. Returns what
+// math() returns (its rect and tagged parts), also before it shows.
 export function workLine(ctx, node, x, y, a, o = {}) {
-  if (a <= 0.001) return null;
   return math(ctx, node, x, y + (1 - clamp(a)) * 10, { size: o.size ?? 42, alpha: clamp(a), color: o.color, align: o.align });
 }

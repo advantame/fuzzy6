@@ -8,20 +8,23 @@
 // - memo(): めたん's sheet to remember (1-3), three triangles with the cursive s, c, t and
 //   the three definitions under them. It stays in the top right corner through the exercises.
 
-import { clamp, lerp } from '../../../src/kit/ease.js';
+import { clamp } from '../../../src/kit/ease.js';
 import { rr, text } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
-import { corners, drawTri, angleArc, sideLabel, rightMark } from './tri.js';
-import { math, row, frac, jp, box } from './math.js';
+import { corners, drawTri, angleAt, sideLabel } from './tri.js';
+import { math, row, frac, jp, tag, box } from './math.js';
 import { cursive, LETTER_COLOR } from './cursive.js';
+import { card, pill } from './parts.js';
 
 // ——— ずんだもん's board (1-2 → 1-3) —————————————————————————————————————
 
 export const BOARD_TRI = { deg: 38, base: 440, pose: { x: 160, y: 660 } };
-export const boardCorners = (base = BOARD_TRI.base, pose = BOARD_TRI.pose) => corners(BOARD_TRI.deg, base, pose);
+export const boardCorners = (base = BOARD_TRI.base, pose = BOARD_TRI.pose) => corners(BOARD_TRI.deg, base ?? BOARD_TRI.base, pose);
 
-// the three cards, in the order she finds them: height ÷ base, height ÷ slant, base ÷ slant
-export const CARD = { x: 720, w: 470, h: 84, y: [150, 256, 362] };
+// the three cards, in the order she finds them: height / base, height / slant, base / slant
+export const CARD = { x: 720, w: 470, h: 104, y: [130, 250, 370] };
+// where her name for the first ratio is written: beside the first card
+export const TATE = { x: 1214, y: 196 };
 export const CARD_VALUES = ['0.78', '0.62', '0.79'];
 const CARD_PARTS = [
   ['height', 'base'],
@@ -34,26 +37,23 @@ export const ZUNDA_NAMES = { height: '縦', base: '底辺', hyp: '斜め' };
 export const METAN_NAMES = { height: '高さ', base: '底辺', hyp: '斜辺' };
 
 // A white card with a ratio on it. names: the words for the sides; value: shown after '='.
+// Returns what math() returns for the ratio: parts.value is the value's box.
 export function ratioCard(ctx, x, y, i, o = {}) {
   const a = o.alpha ?? 1;
-  if (a <= 0.001) return;
   const w = o.w ?? CARD.w;
   const h = CARD.h;
   const [p, q] = CARD_PARTS[i];
   const names = o.names ?? ZUNDA_NAMES;
-  ctx.save();
-  ctx.globalAlpha *= a;
-  rr(ctx, x, y, w, h, 14);
-  ctx.fillStyle = C.white;
-  ctx.fill();
-  ctx.strokeStyle = o.lit ? C.accent : C.rule;
-  ctx.lineWidth = o.lit ? 3 : 2;
-  ctx.stroke();
-  const parts = [jp(names[p], COLOR[p]), '÷', jp(names[q], COLOR[q])];
-  if (o.value !== false) parts.push('=', o.value ?? CARD_VALUES[i]);
-  math(ctx, row(...parts), x + 30, y + h / 2 + 14, { size: 38 });
-  ctx.restore();
+  card(ctx, x, y, w, h, { stroke: o.lit ? C.accent : C.rule, lw: o.lit ? 3 : 2, alpha: a });
+  const parts = [ratio(p, q, names)];
+  if (o.value !== false) parts.push('=', tag('value', o.value ?? CARD_VALUES[i]));
+  const nd = row(...parts);
+  const b = box(nd, 38);
+  return math(ctx, nd, x + 30, y + h / 2 + (b.asc - b.desc) / 2, { size: 38, alpha: a });
 }
+
+// One side over another, in their colours.
+const ratio = (p, q, names) => frac(jp(names[p], COLOR[p]), jp(names[q], COLOR[q]));
 
 // The table of ratios by angle she wants to keep: only the 38° row is filled.
 const TABLE_ROWS = [20, 30, 38, 45, 60];
@@ -63,25 +63,23 @@ export function ratioTable(ctx, x, y, o = {}) {
   const names = o.names ?? ZUNDA_NAMES;
   const colW = 200;
   const degW = 120;
-  const rowH = 46;
+  const headH = 80;
+  const rowH = 44;
   const w = degW + colW * 3;
-  const h = rowH * (TABLE_ROWS.length + 1) + 8;
+  const h = headH + rowH * TABLE_ROWS.length + 10;
   ctx.save();
   ctx.globalAlpha *= a;
-  rr(ctx, x, y, w, h, 12);
-  ctx.fillStyle = C.white;
-  ctx.fill();
-  ctx.strokeStyle = C.rule;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  text(ctx, '角度', x + degW / 2, y + 32, { font: F.jp(700, 22), color: C.ink2, align: 'center' });
+  card(ctx, x, y, w, h, { r: 12 });
+  text(ctx, '角度', x + degW / 2, y + headH / 2 + 8, { font: F.jp(700, 22), color: C.ink2, align: 'center' });
   CARD_PARTS.forEach(([p, q], i) => {
-    math(ctx, row(jp(names[p], COLOR[p]), '÷', jp(names[q], COLOR[q])), x + degW + colW * (i + 0.5), y + 32, { size: 24, align: 'center' });
+    const nd = ratio(p, q, names);
+    const b = box(nd, 27);
+    math(ctx, nd, x + degW + colW * (i + 0.5), y + headH / 2 + (b.asc - b.desc) / 2, { size: 27, align: 'center' });
   });
   ctx.fillStyle = C.ink;
-  ctx.fillRect(x + 10, y + rowH + 2, w - 20, 2);
+  ctx.fillRect(x + 10, y + headH, w - 20, 2);
   TABLE_ROWS.forEach((deg, r) => {
-    const ry = y + rowH * (r + 1) + 6;
+    const ry = y + headH + 4 + rowH * r;
     const mine = deg === 38;
     text(ctx, `${deg}°`, x + degW / 2, ry + 30, { font: F.mono(500, 24), color: mine ? C.ink : C.muted, align: 'center' });
     CARD_VALUES.forEach((val, i) => {
@@ -121,32 +119,38 @@ export function tatesoko(ctx, x, y, o = {}) {
   ctx.restore();
 }
 
-// The whole board as 1-2 leaves it. o: { alpha, names, cards, table, tate } — the parts'
-// alphas (and table: its 38° row's fill).
+// The whole board as 1-2 leaves it. o: { base (the base's length, to grow and shrink the
+// triangle in place), tri (alpha), other (alpha of the 52°), angle (θ's label), metan,
+// nameMix (see sideNames) }. Returns { T, angle, other, names } — the triangle and the boxes of
+// its labels.
 export function board(ctx, o = {}) {
-  const T = boardCorners();
-  drawTri(ctx, T, { lw: 6, alpha: o.tri ?? 1 });
-  angleArc(ctx, T.A, T.C, T.B, { r: 70, label: o.angle ?? '38°', size: 32, alpha: o.tri ?? 1 });
-  angleArc(ctx, T.B, T.A, T.C, { r: 54, label: '52°', size: 26, alpha: (o.tri ?? 1) * (o.other ?? 1), color: C.muted, labelColor: C.muted });
-  sideNames(ctx, T, o.tri ?? 1, o.metan ?? 0, o.nameMix ?? {});
-  return T;
+  const T = boardCorners(o.base);
+  const a = o.tri ?? 1;
+  drawTri(ctx, T, { lw: 6, alpha: a });
+  const angle = angleAt(ctx, T, 'A', { r: 70, label: o.angle ?? '38°', size: 32, alpha: a });
+  const other = angleAt(ctx, T, 'B', { r: 54, label: '52°', size: 26, alpha: a * (o.other ?? 1), color: C.muted, labelColor: C.muted });
+  const names = sideNames(ctx, T, a, o.metan ?? 0, o.nameMix ?? {});
+  return { T, angle, other, names };
 }
 
 // The names on the sides. m (0–1) cross-fades from her words to めたん's; o.height, o.base,
-// o.hyp set the cross-fade side by side.
+// o.hyp set the cross-fade side by side. Returns the boxes of the names shown, by side.
 export function sideNames(ctx, T, a = 1, m = 0, o = {}) {
   const z = { height: '縦の辺', base: '底辺', hyp: '斜めの辺' };
   const mt = { height: '高さ', base: '底辺', hyp: '斜辺' };
+  const out = {};
   for (const side of ['height', 'base', 'hyp']) {
-    const lo = { off: side === 'height' ? 70 : side === 'base' ? 34 : 48, size: 30 };
+    const lo = { size: 30, gap: 12 };
     const am = clamp(o[side] ?? m);
     if (z[side] === mt[side]) {
-      sideLabel(ctx, T, side, z[side], { ...lo, alpha: a });
+      out[side] = sideLabel(ctx, T, side, z[side], { ...lo, alpha: a });
       continue;
     }
-    sideLabel(ctx, T, side, z[side], { ...lo, alpha: a * (1 - am) });
-    sideLabel(ctx, T, side, mt[side], { ...lo, alpha: a * am });
+    const zb = sideLabel(ctx, T, side, z[side], { ...lo, alpha: a * (1 - am) });
+    const mb = sideLabel(ctx, T, side, mt[side], { ...lo, alpha: a * am });
+    out[side] = am > 0.5 ? mb : zb;
   }
+  return out;
 }
 
 // ——— めたん's sheet to remember: the cursive s, c, t (1-3) ——————————————————
@@ -161,11 +165,11 @@ export function memoPanel(i) {
   return { x, T: corners(38, 330, { x: x + 34, y: 470 }), fx: x + 205, fy: 640 };
 }
 
-// A definition, e.g. sin θ = 高さ / 斜辺, with its parts coloured. lit: { num, den } (0–1)
-// rings the numerator or the denominator in vermilion.
+// A definition, e.g. sin θ = 高さ / 斜辺, with its parts coloured. The numerator and the
+// denominator are tagged 'num' and 'den' (math() reports their boxes).
 export function definition(letter, names = METAN_NAMES) {
   const [p, q] = DEF[letter];
-  return row(FN[letter], 'θ', '=', frac(jp(names[p], COLOR[p]), jp(names[q], COLOR[q])));
+  return row(FN[letter], 'θ', '=', frac(tag('num', jp(names[p], COLOR[p])), tag('den', jp(names[q], COLOR[q]))));
 }
 
 // Draw the sheet. o: { x, y, s (placement of the whole sheet), alpha, write: [ps, pc, pt]
@@ -178,22 +182,12 @@ export function memo(ctx, o = {}) {
   ctx.globalAlpha *= a;
   ctx.translate(o.x ?? 0, o.y ?? 0);
   ctx.scale(o.s ?? 1, o.s ?? 1);
-  if ((o.frame ?? 0) > 0) {
-    ctx.save();
-    ctx.globalAlpha *= o.frame;
-    rr(ctx, 90, 150, 1420, 570, 26);
-    ctx.fillStyle = C.white;
-    ctx.fill();
-    ctx.strokeStyle = C.accent;
-    ctx.lineWidth = 6;
-    ctx.stroke();
-    ctx.restore();
-  }
+  card(ctx, 90, 150, 1420, 570, { r: 26, stroke: C.accent, lw: 6, alpha: o.frame ?? 0 });
   LETTERS.forEach((L, i) => {
     const P = memoPanel(i);
     const lit = o.lit === L ? 1 : 0;
     drawTri(ctx, P.T, { lw: 5, alpha: 1 });
-    angleArc(ctx, P.T.A, P.T.C, P.T.B, { r: 58, label: 'θ', size: 30 });
+    angleAt(ctx, P.T, 'A', { r: 58, label: 'θ', size: 30 });
     cursive(ctx, P.T, L, (o.write ?? [1, 1, 1])[i], { lw: 9, numbers: o.numbers ?? 1 });
     math(ctx, definition(L), P.fx, P.fy, { size: 44, align: 'center', alpha: o.defs ?? 1 });
     if (lit > 0) {
@@ -211,19 +205,10 @@ export function memo(ctx, o = {}) {
 // Where the sheet sits during the exercises: small, in the top right corner.
 export const MEMO_CORNER = { x: 1160, y: 4, s: 0.27 };
 
-export { lerp, box, rightMark };
 
 // The tab in the top left that marks the exercises: 「演習」, then 「演習 1」 and so on.
 export function drillTag(ctx, s, a = 1) {
-  if (a <= 0.001) return;
-  ctx.save();
-  ctx.globalAlpha *= a;
-  const w = s.length > 2 ? 170 : 124;
-  rr(ctx, 64, 44, w, 58, 29);
-  ctx.fillStyle = C.accent;
-  ctx.fill();
-  text(ctx, s, 64 + w / 2, 84, { font: F.jp(700, 30), color: C.white, align: 'center' });
-  ctx.restore();
+  pill(ctx, s, 64, 73, { size: 30, w: s.length > 2 ? 170 : 124, alpha: a });
 }
 
 // A definition on a white card (1-3): the card that held a ratio becomes its definition.
@@ -235,12 +220,7 @@ export function defCard(ctx, j, letter, o = {}) {
   const y = o.y ?? DEF_SLOT.y[j];
   ctx.save();
   ctx.globalAlpha *= a;
-  rr(ctx, x, y, DEF_SLOT.w, DEF_SLOT.h, 16);
-  ctx.fillStyle = C.white;
-  ctx.fill();
-  ctx.strokeStyle = o.lit ? LETTER_COLOR[letter] : C.rule;
-  ctx.lineWidth = o.lit ? 4 : 2;
-  ctx.stroke();
+  card(ctx, x, y, DEF_SLOT.w, DEF_SLOT.h, { r: 16, stroke: o.lit ? LETTER_COLOR[letter] : C.rule, lw: o.lit ? 4 : 2 });
   math(ctx, definition(letter), x + 34, y + DEF_SLOT.h / 2 + 16, { size: 46 });
   if (o.name) text(ctx, o.name, x + DEF_SLOT.w - 26, y + 40, { font: F.jp(700, 24), color: LETTER_COLOR[letter], align: 'right' });
   ctx.restore();

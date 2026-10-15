@@ -6,7 +6,10 @@
 //
 // Strings inside row/frac/sqrt are split on spaces and each piece is typed by its look:
 // 'sin' → function, '0.78' or '38°' → number, '=' → operator, 'θ' → letter, '高さ' → Japanese.
-// math() draws with the left end of the baseline at (x, y) and returns the box.
+// math() draws with the left end of the baseline at (x, y) and returns where it went: rect is
+// the whole formula, and parts the pieces wrapped in tag('name', …), so a ring can go round
+// exactly the denominator or the 2 of sin² without measuring by hand. pt('E') is a point's
+// name and shade(a, …) a piece drawn at alpha a, for a formula that fills in as it is said.
 
 import { measure } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
@@ -18,14 +21,22 @@ export const fn = (s, color) => ({ t: 'text', s, face: 'up', kind: 'fn', color }
 export const v = (s, color) => ({ t: 'text', s, face: 'it', kind: 'var', color });
 export const n = (s, color) => ({ t: 'text', s, face: 'up', kind: 'num', color });
 export const op = (s, color) => ({ t: 'text', s, face: 'up', kind: 'op', color });
-export const jp = (s, color) => ({ t: 'text', s, face: 'jp', kind: 'jp', color });
-export const up = (s, color) => ({ t: 'text', s, face: 'up', kind: 'up', color });
+export const jp = (s, color, weight) => ({ t: 'text', s, face: 'jp', kind: 'jp', color, weight });
+export const up = (s, color, weight) => ({ t: 'text', s, face: 'up', kind: 'up', color, weight });
+// The name of a point of a figure (A, B, …), upright as the figure writes it. Names side by side
+// close up into a segment's name (EF), so each letter can be tagged on its own.
+export const pt = (s, color) => ({ t: 'text', s, face: 'up', kind: 'pt', color });
 export const frac = (num, den, color) => ({ t: 'frac', num: node(num), den: node(den), color });
 export const sqrt = (a, color) => ({ t: 'sqrt', a: node(a), color });
 export const sup = (a, s, color) => ({ t: 'sup', a: node(a), s: node(s), color });
 export const paren = (...items) => row('(', ...items, ')');
 export const row = (...items) => ({ t: 'row', items: items.flatMap(split) });
 export const colored = (color, ...items) => ({ ...row(...items), color });
+// A piece of a formula whose place math() reports under parts[name].
+export const tag = (name, ...items) => ({ t: 'tag', name, a: items.length === 1 ? node(items[0]) : row(...items) });
+// A piece drawn at alpha a (0–1) that keeps its place: a formula that fills in piece by piece,
+// or a piece that something is still carrying into place.
+export const shade = (a, ...items) => ({ t: 'shade', alpha: a, a: items.length === 1 ? node(items[0]) : row(...items) });
 
 function node(x) {
   if (typeof x !== 'string') return x;
@@ -39,6 +50,7 @@ function split(x) {
 }
 
 function word(s) {
+  if (s === '∽') return { t: 'sim' };
   if (FN.has(s)) return fn(s);
   if (OPS.has(s)) return op(s);
   if (/^[−-]?[0-9][0-9.,]*°?$/.test(s) || s === '°') return n(s);
@@ -50,13 +62,13 @@ function word(s) {
   return up(s);
 }
 
-const fontOf = (face, size) => (face === 'it' ? F.it(400, size) : face === 'jp' ? F.jp(500, size) : F.sans(400, size));
+const fontOf = (face, size, weight) => (face === 'it' ? F.it(400, size) : face === 'jp' ? F.jp(weight ?? 500, size) : F.sans(weight ?? 400, size));
 
 // Layout: every node becomes { w, asc, desc, draw(ctx, x, y, color) }.
 function layout(nd, size, inherited) {
   const color = nd.color ?? inherited;
   if (nd.t === 'text') {
-    const font = fontOf(nd.face, size);
+    const font = fontOf(nd.face, size, nd.weight);
     const w = measure(ctx0(), font, nd.s);
     return {
       w,
@@ -90,16 +102,82 @@ function layout(nd, size, inherited) {
           cx += b.w;
         });
       },
+      parts(x, y, out) {
+        let cx = x;
+        boxes.forEach((b, i) => {
+          cx += gaps[i];
+          b.parts?.(cx, y, out);
+          cx += b.w;
+        });
+      },
+    };
+  }
+  if (nd.t === 'tag') {
+    const b = layout(nd.a, size, color);
+    return {
+      ...b,
+      parts(x, y, out) {
+        // base and size: where and how large the piece's text is set, for something that
+        // carries a copy of it into place
+        out[nd.name] = { x, y: y - b.asc, w: b.w, h: b.asc + b.desc, base: y, size };
+        b.parts?.(x, y, out);
+      },
+    };
+  }
+  if (nd.t === 'sim') {
+    // the sign of similarity, drawn: the face's own ∽ closes into loops and reads as ∞. A
+    // reversed tilde: in from the upper left, down, up through the middle, over and down
+    const w = size * 0.78;
+    const amp = size * 0.12;
+    return {
+      w,
+      asc: size * 0.74,
+      desc: size * 0.22,
+      kind: 'op',
+      draw(ctx, x, y) {
+        const mid = y - size * 0.3;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, size * 0.065);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let i = 0; i <= 32; i++) {
+          const u = -0.1 + (1.2 * i) / 32;
+          const px = x + size * 0.06 + (w - size * 0.12) * ((u + 0.1) / 1.2);
+          const py = mid + amp * Math.sin(2 * Math.PI * u);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      },
+    };
+  }
+  if (nd.t === 'shade') {
+    const b = layout(nd.a, size, color);
+    return {
+      ...b,
+      draw(ctx, x, y) {
+        if (nd.alpha <= 0.001) return;
+        ctx.save();
+        ctx.globalAlpha *= Math.min(1, nd.alpha);
+        b.draw(ctx, x, y);
+        ctx.restore();
+      },
     };
   }
   if (nd.t === 'frac') {
     const s2 = size * 0.86;
     const a = layout(nd.num, s2, color);
     const b = layout(nd.den, s2, color);
-    const pad = size * 0.14;
+    // a fraction of fractions: its own bar reaches well past theirs, with more room, so the
+    // main bar reads as the main one
+    const nested = a.kind === 'frac' || b.kind === 'frac';
+    const pad = size * (nested ? 0.34 : 0.14);
     const w = Math.max(a.w, b.w) + pad * 2;
     const axis = size * 0.3; // the bar sits this far above the baseline
-    const g = size * 0.14;
+    const g = size * (nested ? 0.2 : 0.14);
     return {
       w,
       asc: axis + g + a.desc + a.asc,
@@ -111,6 +189,11 @@ function layout(nd, size, inherited) {
         b.draw(ctx, x + (w - b.w) / 2, bar + g + b.asc);
         ctx.fillStyle = color;
         ctx.fillRect(x, bar - Math.max(1.5, size * 0.035), w, Math.max(3, size * 0.07));
+      },
+      parts(x, y, out) {
+        const bar = y - axis;
+        a.parts?.(x + (w - a.w) / 2, bar - g - a.desc, out);
+        b.parts?.(x + (w - b.w) / 2, bar + g + b.asc, out);
       },
     };
   }
@@ -137,6 +220,9 @@ function layout(nd, size, inherited) {
         ctx.stroke();
         a.draw(ctx, x + hook + size * 0.02, y);
       },
+      parts(x, y, out) {
+        a.parts?.(x + hook + size * 0.02, y, out);
+      },
     };
   }
   if (nd.t === 'sup') {
@@ -152,6 +238,10 @@ function layout(nd, size, inherited) {
         a.draw(ctx, x, y);
         s.draw(ctx, x + a.w + size * 0.04, y - raise);
       },
+      parts(x, y, out) {
+        a.parts?.(x, y, out);
+        s.parts?.(x + a.w + size * 0.04, y - raise, out);
+      },
     };
   }
   throw new Error(`unknown math node ${nd.t}`);
@@ -159,6 +249,7 @@ function layout(nd, size, inherited) {
 
 // Space between two neighbours: a little after a function name, more around operators.
 function gap(a, b, size) {
+  if (a.kind === 'pt' && b.kind === 'pt') return 0;
   if (a.kind === 'op' || b.kind === 'op') return size * 0.3;
   if (a.kind === 'fn') return size * 0.18;
   if (b.s === ')' || a.s === '(') return size * 0.04;
@@ -177,16 +268,22 @@ export function box(nd, size = 44) {
   return layout(nd, size, C.ink);
 }
 
-// Draw a formula. o: { size, color, alpha, align: 'left' | 'center' | 'right' }.
+// Draw a formula. o: { size, color, alpha, align: 'left' | 'center' | 'right' }. Returns its
+// box (w, asc, desc), x (the left end), rect ({ x, y, w, h } on the stage) and parts (the rects
+// of the tagged pieces) — also when alpha is 0, so a clip can lay out around what is not shown
+// yet.
 export function math(ctx, nd, x, y, o = {}) {
   const size = o.size ?? 44;
   const b = layout(nd, size, o.color ?? C.ink);
   const a = o.alpha ?? 1;
-  if (a <= 0.001) return b;
   const x0 = o.align === 'center' ? x - b.w / 2 : o.align === 'right' ? x - b.w : x;
+  const parts = {};
+  b.parts?.(x0, y, parts);
+  const out = { ...b, x: x0, rect: { x: x0, y: y - b.asc, w: b.w, h: b.asc + b.desc }, parts };
+  if (a <= 0.001) return out;
   ctx.save();
   ctx.globalAlpha *= a;
   b.draw(ctx, x0, y);
   ctx.restore();
-  return { ...b, x: x0 };
+  return out;
 }

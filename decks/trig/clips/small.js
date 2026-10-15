@@ -5,21 +5,57 @@
 //
 // One square of her drawing is one square of the stage's paper (40 px), so the counting
 // happens on the grid the viewer sees.
+//
+// The corners are named so that the names say which corner matches which: the tree's triangle
+// is ABC (A where the angle is measured, B the top, C the right angle) and her drawing DEF,
+// D, E, F answering to A, B, C. Each of her corners is named as she draws it. The names are
+// what her ratio is written in: copies of them fly down into EF/DF = 7.8/10 = 0.78, and the
+// property of similar triangles that carries the ratio over to the tree, BC/AC = EF/DF, is
+// framed between the two triangles as she says 形が同じなら.
 
 import { clip } from '../lib/clip.js';
 import { C, F, SQ } from '../lib/theme.js';
 import { seg, tw, lerp, inOutCubic, outBack, clamp } from '../../../src/kit/ease.js';
-import { text, rr } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
+import { text } from '../../../src/kit/draw.js';
+import { focus, ringBox, enter } from '../../../src/kit/cue.js';
+import { rect, segment } from '../../../src/kit/place.js';
 import { treeTriangle, TREE } from '../lib/scene.js';
-import { corners, mixPose, drawTri, angleArc, label, RAD } from '../lib/tri.js';
-import { math, row } from '../lib/math.js';
+import { corners, mixPose, drawTri, ghostTri, angleArc, angleAt, angleShape, placeLabel, label, vertexLabel, triShapes, NAME, RAD } from '../lib/tri.js';
+import { math, row, frac, tag, pt, shade } from '../lib/math.js';
+import { protractor, pill, formulaBox } from '../lib/parts.js';
 
 const BIG0 = { x: TREE.A.x, y: TREE.A.y, s: 1 };
 const BIG1 = { x: 120, y: 600, s: 0.6 };
 // her drawing: A on a grid crossing, a base of 10 squares
 const SMALL = { x: 800, y: 680, base: 10 * SQ };
 const H78 = SMALL.base * Math.tan(38 * RAD); // 7.81 squares
+// how long she takes to draw the two other sides (the hypotenuse is the first 0.55 of it),
+// and the protractor's radius
+const DRAW = 1.4;
+const HYP = 0.55;
+const PROT = 150;
+// the formulas under the triangles, and how long a corner's name takes to fly into one
+const EQ = { y: 820, size: 44 };
+const FLY = 0.8;
+
+// The property of similar figures she relies on, with the corners' names of the two triangles.
+const PROPERTY = [
+  { node: row('△ABC', '∽', '△DEF', 'ならば'), size: 32 },
+  row(frac('BC', 'AC'), '=', frac('EF', 'DF')),
+];
+
+// A copy of a corner's name on its way from the figure (box `from`, as vertexLabel drew it)
+// into a formula (the tagged piece `to`), p 0 → 1. It is set like the name at first and like
+// the formula at the end, so that the formula's own letter can take over where it lands.
+function flyName(ctx, s, from, to, p) {
+  if (p <= 0 || p >= 1) return;
+  const x = lerp(from.x + from.w / 2, to.x + to.w / 2, p);
+  const base = lerp(from.y + from.h / 2 + NAME.size * 0.36, to.base, p);
+  const size = lerp(NAME.size, to.size, p);
+  const q = seg(p, 0.3, 0.9);
+  text(ctx, s, x, base, { font: NAME.font(size), color: NAME.color, align: 'center', alpha: 1 - q });
+  text(ctx, s, x, base, { font: F.sans(400, size), color: C.ink, align: 'center', alpha: q });
+}
 
 const script = [
   { id: 'a', label: '18 m と 38°', text: '木までの距離は{d18} 18 メートルで、見上げる角度は{d38} 38 度。知りたいのは、{ask}この縦の[辺|ヘン]の長さなのだ。' },
@@ -27,8 +63,8 @@ const script = [
   { id: 'c', label: '相似', text: '{same}角度が同じなら、形も同じになる。中学でやった、{sim}相似なのだ。' },
   { id: 'd', label: '方眼紙に描く', tail: 0.8, text: '方眼紙に、{base}底辺を 10 マスにして、{deg}38 度の角をはかって{draw}描くのだ。' },
   { id: 'e', label: '7.8 マス', text: '縦の[辺|ヘン]のマスを{count}数えると……{n78}だいたい [7.8|ナナテンハチ] マスなのだ。' },
-  { id: 'f', label: '0.78 倍', text: 'つまり、縦の[辺|ヘン]は、{ratio}底辺のだいたい [0.78|レイテンナナハチ] 倍になっているのだ。' },
-  { id: 'g', label: '木も 0.78 倍', text: '形が同じなら、{big}大きい三角形でも、縦の[辺|ヘン]は底辺の [0.78|レイテンナナハチ] 倍。{mul}木の高さは、18 メートルの [0.78|レイテンナナハチ] 倍で……' },
+  { id: 'f', label: '0.78 倍', text: 'つまり、{tate}縦の[辺|ヘン]は、{ratio}底辺のだいたい {r78}[0.78|レイテンナナハチ] 倍になっているのだ。' },
+  { id: 'g', label: '木も 0.78 倍', text: '{shape}形が同じなら、{big}大きい三角形でも、縦の[辺|ヘン]は底辺の [0.78|レイテンナナハチ] 倍。{mul}木の高さは、18 メートルの [0.78|レイテンナナハチ] 倍で……' },
   { id: 'h', label: '約 14 m', speed: 'fast', text: '{ans}だいたい 14 メートルなのだ！　{yay}登らずに、わかったのだ！' },
 ];
 
@@ -50,29 +86,27 @@ export default clip({
     const answer = tw(t, ans - cue.lead, 0.5, outBack);
     const lit = focus(t, [at('d18'), at('d38'), at('ask')], at('a.end'), cue);
     const bigLit = tw(t, at('big') - cue.lead, cue.rise) * (1 - tw(t, at('g.end'), cue.fall));
-    const T = treeTriangle(ctx, {
+    const { T, box } = treeTriangle(ctx, {
       pose,
       height: answer > 0.5 ? '約 14 m' : '？',
       heightColor: answer > 0.5 ? C.accent : C.sin,
       heightSize: lerp(40, 34, move),
-      heightOff: answer > 0.5 ? 92 : 50,
+      // the names are ground: in with the first sentence, after the cut from the opening
+      names: enter(t, at('a'), pace),
     });
     // the three facts, pointed at as she names them
     const k = Math.max(0.6, pose.s);
-    ring(ctx, (T.A.x + T.C.x) / 2 - 60, T.A.y + 56 * k + 6, 120, 52, lit.level[0], C.accent);
-    ring(ctx, T.A.x + 70 * k, T.A.y - 70 * k, 92, 50, lit.level[1], C.accent);
-    ring(ctx, T.C.x + 56 * k + 20, (T.B.y + T.C.y) / 2 - 34, answer > 0.5 ? 150 : 64, 68, Math.max(lit.level[2], bigLit, answer * (1 - tw(t, at('h.end') - cue.fall, cue.fall))), C.accent);
+    ringBox(ctx, box.dist, lit.level[0], C.accent);
+    ringBox(ctx, box.ang, lit.level[1], C.accent);
+    ringBox(ctx, box.height, Math.max(lit.level[2], bigLit, answer * (1 - tw(t, at('h.end') - cue.fall, cue.fall))), C.accent);
 
     // ——— the plan: a copy of the big triangle shrinks onto the paper
     const smallT = corners(38, SMALL.base, { x: SMALL.x, y: SMALL.y });
     const ghostGo = inOutCubic(seg(t, at('small') - 0.2, at('small') + 0.8));
-    const drawn = seg(t, at('draw'), at('draw') + 1.4);
+    const drawn = seg(t, at('draw'), at('draw') + DRAW);
     if (ghostGo > 0) {
       const G = corners(38, TREE.base, mixPose(BIG1, { x: SMALL.x, y: SMALL.y, s: SMALL.base / TREE.base }, ghostGo));
-      ctx.save();
-      ctx.setLineDash([10, 9]);
-      drawTri(ctx, G, { plain: true, plainColor: C.muted, lw: 3, right: 0, alpha: 1 - 0.85 * clamp(drawn * 1.5) });
-      ctx.restore();
+      ghostTri(ctx, G, { alpha: 1 - 0.85 * clamp(drawn * 1.5) });
     }
 
     // similar: the same angle marked twice, and the word
@@ -81,37 +115,28 @@ export default clip({
       angleArc(ctx, T.A, T.C, T.B, { r: 46 * k, double: true, color: C.accent, alpha: same * (1 - tw(t, at('d'), 0.4)) });
       angleArc(ctx, smallT.A, smallT.C, smallT.B, { r: 46, double: true, color: C.accent, alpha: same * (1 - tw(t, at('d'), 0.4)) });
     }
-    const sim = tw(t, at('sim') - cue.lead, 0.5, outBack) * (1 - tw(t, at('d'), 0.5));
-    if (sim > 0) {
-      ctx.save();
-      ctx.globalAlpha *= clamp(sim);
-      rr(ctx, 610, 560, 120, 56, 28);
-      ctx.fillStyle = C.accent;
-      ctx.fill();
-      text(ctx, '相似', 670, 600, { font: F.jp(700, 30), color: C.white, align: 'center' });
-      ctx.restore();
-    }
+    pill(ctx, '相似', 670, 588, { align: 'center', alpha: tw(t, at('sim') - cue.lead, 0.5, outBack) * (1 - tw(t, at('d'), 0.5)) });
 
     // ——— her drawing, in the order she draws it
     // the base, counted out square by square
     const base = at('base');
     const baseP = seg(t, base - 0.1, base + 1.1);
     const baseCount = Math.floor(baseP * 10 + 1e-6);
-    drawTri(ctx, smallT, { lw: 5, right: tw(t, at('draw') + 1.2, 0.3), base: { p: baseP }, hyp: { p: seg(drawn, 0, 0.55) }, height: { p: seg(drawn, 0.55, 1) } });
+    drawTri(ctx, smallT, { lw: 5, right: tw(t, at('draw') + 1.2, 0.3), base: { p: baseP }, hyp: { p: seg(drawn, 0, HYP) }, height: { p: seg(drawn, HYP, 1) } });
+    const nums = [];
     for (let i = 1; i <= 10; i++) {
       const on = clamp((baseP * 10 - (i - 1)) * 2);
-      if (on <= 0) continue;
-      text(ctx, String(i), SMALL.x + (i - 0.5) * SQ, SMALL.y + 30, { font: F.mono(500, 18), color: C.cos, align: 'center', alpha: on * (1 - tw(t, at('g'), 0.5) * 0.6) });
+      nums.push(label(ctx, String(i), SMALL.x + (i - 0.5) * SQ, SMALL.y + 30 - 18 * 0.36, { size: 18, font: F.mono(500, 18), color: C.cos, alpha: on * (1 - tw(t, at('g'), 0.5) * 0.6) }));
     }
     if (baseCount >= 10) text(ctx, '10 マス', SMALL.x + SMALL.base / 2, SMALL.y + 64, { font: F.jp(700, 26), color: C.cos, align: 'center', alpha: tw(t, base + 1.1, 0.3) });
 
     // the 38° from a protractor
     const deg = at('deg');
     const prot = tw(t, deg - 0.2, 0.4) * (1 - tw(t, at('draw') + 0.8, 0.4));
-    if (prot > 0) protractor(ctx, smallT.A, prot);
+    protractor(ctx, smallT.A, { r: PROT, alpha: prot });
     const markA = tw(t, deg + 0.3, 0.3);
     if (markA > 0) {
-      const r = 150;
+      const r = PROT;
       const mx = smallT.A.x + Math.cos(-38 * RAD) * r;
       const my = smallT.A.y + Math.sin(-38 * RAD) * r;
       ctx.save();
@@ -122,7 +147,7 @@ export default clip({
       ctx.fill();
       ctx.restore();
     }
-    angleArc(ctx, smallT.A, smallT.C, smallT.B, { r: 64, label: '38°', size: 28, alpha: tw(t, deg + 0.3, 0.4) });
+    const deg38 = angleAt(ctx, smallT, 'A', { r: 64, label: '38°', size: 28, alpha: tw(t, deg + 0.3, 0.4) });
 
     // the height, counted up the right side: seven whole squares and most of the eighth
     const count = at('count');
@@ -139,47 +164,73 @@ export default clip({
       ctx.restore();
       if (i < 8) text(ctx, String(i), smallT.C.x + SQ / 2, y1 + SQ * 0.68, { font: F.mono(500, 18), color: C.sin, align: 'center', alpha: on * (1 - tw(t, at('g'), 0.5) * 0.6) });
     }
+    // beside the column of counted squares
+    const column = rect(smallT.C.x, smallT.B.y, SQ, smallT.C.y - smallT.B.y);
     const v78 = tw(t, n78 - cue.lead, 0.4, outBack);
-    if (v78 > 0) label(ctx, '約 7.8 マス', smallT.C.x + SQ + 92, (smallT.B.y + smallT.C.y) / 2, { size: 28, color: C.sin, alpha: clamp(v78) });
+    const n78box = placeLabel(ctx, '約 7.8 マス', { x: smallT.C.x, y: (smallT.B.y + smallT.C.y) / 2 }, { x: 1, y: 0 }, [column, ...triShapes(smallT)], { size: 28, color: C.sin, alpha: clamp(v78), gap: 14 });
 
-    // 7.8 ÷ 10 = 0.78, under her drawing
-    const ratio = tw(t, at('ratio') - cue.lead, 0.5);
-    const rLit = focus(t, [at('ratio')], at('f.end'), cue).level[0];
-    math(ctx, row('7.8', '÷', '10', '=', '0.78'), SMALL.x + SMALL.base / 2, 820, { size: 44, align: 'center', alpha: ratio });
-    if (rLit > 0) ring(ctx, SMALL.x + SMALL.base / 2 + 60, 784, 112, 50, rLit, C.accent);
+    // her corners' names, each as she draws the corner: D where she starts the base, F where
+    // the base ends, E where the slanted side meets the height. They keep clear of the counted
+    // squares, the numbers and the protractor's edge.
+    const avoid = [column, segment({ x: smallT.A.x - PROT, y: smallT.A.y }, { x: smallT.A.x + PROT, y: smallT.A.y }, 2), angleShape(smallT.A, smallT.C, smallT.B, 64)];
+    const words = [...nums, deg38, n78box];
+    const names = {
+      D: vertexLabel(ctx, smallT, 'A', 'D', { avoid, text: words, alpha: tw(t, base - 0.1, 0.3) }),
+      F: vertexLabel(ctx, smallT, 'C', 'F', { avoid, text: words, alpha: tw(t, base + 1.1, 0.3) }),
+      E: vertexLabel(ctx, smallT, 'B', 'E', { avoid, text: words, alpha: tw(t, at('draw') + DRAW * HYP, 0.3) }),
+    };
+
+    // EF/DF = 7.8/10 = 0.78, under her drawing. The names come down from the figure and land
+    // as she says the side: E and F in the numerator at 縦の辺 (they leave as the sentence
+    // starts), D and F in the denominator at 底辺. The numbers fill in as the denominator
+    // lands, and 0.78 comes as she says it.
+    const fly = (from) => inOutCubic(seg(t, from, from + FLY));
+    const up = Math.max(at('f'), at('tate') - FLY);
+    const down = Math.max(up + FLY, at('ratio') - FLY);
+    const go = {
+      nE: fly(up),
+      nF: fly(up + pace.stagger),
+      dD: fly(down),
+      dF: fly(down + pace.stagger),
+    };
+    const landed = (k) => (go[k] >= 1 ? 1 : 0);
+    const letter = (k, s) => tag(k, shade(landed(k), pt(s)));
+    // the bar comes as the first names leave the figure
+    const setUp = tw(t, up, pace.enter);
+    const numbers = tw(t, down + FLY, pace.enter);
+    const value = tw(t, at('r78') - cue.lead, pace.enter);
+    const mine = math(
+      ctx,
+      row(
+        shade(setUp, frac(row(letter('nE', 'E'), letter('nF', 'F')), row(letter('dD', 'D'), letter('dF', 'F')))),
+        shade(numbers, '='),
+        shade(numbers, frac('7.8', '10')),
+        shade(value, '='),
+        shade(value, tag('r', '0.78')),
+      ),
+      SMALL.x + SMALL.base / 2,
+      EQ.y,
+      { size: EQ.size, align: 'center' },
+    );
+    for (const k of Object.keys(go)) flyName(ctx, k[1], names[k[1]], mine.parts[k], go[k]);
+    ringBox(ctx, mine.parts.r, focus(t, [at('r78')], at('f.end'), cue).level[0], C.accent);
+
+    // the property she relies on, framed, in the open space between the two triangles
+    const propA = tw(t, at('shape') - cue.lead, pace.enter);
+    const prop0 = formulaBox(ctx, PROPERTY, 0, 0, { title: '相似の性質', align: 'center', alpha: 0 });
+    formulaBox(ctx, PROPERTY, 800 - prop0.rect.w / 2 - prop0.rect.x, 60 - prop0.rect.y, { title: '相似の性質', align: 'center', alpha: propA });
 
     // the same 0.78 carried over to the tree: 18 × 0.78
     const mul = tw(t, at('mul') - cue.lead, 0.5);
     const carry = inOutCubic(seg(t, at('mul') - 0.2, at('mul') + 0.6));
+    const tree = math(ctx, row('18', '×', tag('r', '0.78'), ...(answer > 0 ? ['≒', '14'] : [])), 300, EQ.y, { size: EQ.size, align: 'center', alpha: mul });
     if (carry > 0 && carry < 1) {
       // a chip with 0.78 travels from her formula to the tree's
-      const x = lerp(SMALL.x + SMALL.base / 2 + 116, 330, carry);
-      const y = lerp(806, 790, carry) - Math.sin(Math.PI * carry) * 120;
-      text(ctx, '0.78', x, y, { font: F.sans(500, 40), color: C.accent, align: 'center' });
+      const from = mine.parts.r;
+      const to = tree.parts.r;
+      const x = lerp(from.x + from.w / 2, to.x + to.w / 2, carry);
+      const y = lerp(from.y + from.h / 2, to.y + to.h / 2, carry) - Math.sin(Math.PI * carry) * 120;
+      text(ctx, '0.78', x, y + 15, { font: F.sans(500, 40), color: C.accent, align: 'center' });
     }
-    math(ctx, row('18', '×', '0.78', ...(answer > 0 ? ['≒', '14'] : [])), 300, 820, { size: 44, align: 'center', alpha: mul });
   },
 });
-
-function protractor(ctx, A, a) {
-  ctx.save();
-  ctx.globalAlpha *= a * 0.9;
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.strokeStyle = C.ink2;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(A.x, A.y, 150, Math.PI, 2 * Math.PI);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  for (let d = 0; d <= 180; d += 5) {
-    const r0 = d % 10 ? 140 : d % 30 ? 132 : 124;
-    const ang = Math.PI + (d * Math.PI) / 180;
-    ctx.beginPath();
-    ctx.moveTo(A.x + Math.cos(ang) * r0, A.y + Math.sin(ang) * r0);
-    ctx.lineTo(A.x + Math.cos(ang) * 150, A.y + Math.sin(ang) * 150);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-

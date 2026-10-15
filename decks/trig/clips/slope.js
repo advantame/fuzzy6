@@ -7,10 +7,11 @@ import { clip } from '../lib/clip.js';
 import { C, F } from '../lib/theme.js';
 import { seg, tw, inOutCubic, outBack, clamp, lerp } from '../../../src/kit/ease.js';
 import { text } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { corners, drawTri, angleArc, dim, label, RAD } from '../lib/tri.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { segment } from '../../../src/kit/place.js';
+import { corners, drawTri, angleAt, angleArc, dim, RAD } from '../lib/tri.js';
 import { cursive } from '../lib/cursive.js';
-import { row, jp } from '../lib/math.js';
+import { row, jp, frac } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
 import { cornerMemo, tab, example, workLine } from '../lib/drill.js';
 import { mark } from '../lib/scene.js';
@@ -60,24 +61,23 @@ export default clip({
     ctx.save();
     ctx.globalAlpha *= away;
     drawTri(ctx, S, { lw: 5, base: { p: run }, height: { p: rise }, hyp: { p: seg(t, at('ask') - 0.2, at('ask') + 0.5) }, right: rise, alpha: tw(t, at('run') - 0.2, 0.3) });
-    dim(ctx, S.A, S.C, { x: 0, y: 1 }, 40, '水平に 100 m', { p: run, size: 28, labelOff: 30, color: C.cos, labelColor: C.cos, font: F.jp(700, 28) });
-    dim(ctx, S.C, S.B, { x: 1, y: 0 }, 40, '10 m', { p: rise, size: 28, labelOff: 46, color: C.sin, labelColor: C.sin });
+    dim(ctx, S.A, S.C, { x: 0, y: 1 }, 40, '水平に 100 m', { p: run, size: 28, color: C.cos, labelColor: C.cos });
+    dim(ctx, S.C, S.B, { x: 1, y: 0 }, 40, '10 m', { p: rise, size: 28, color: C.sin, labelColor: C.sin });
     const v57 = tw(t, at('v57') - lead, 0.5, outBack);
-    angleArc(ctx, S.A, S.C, S.B, { r: 300, label: v57 > 0.5 ? '約 5.7°' : 'θ', size: 30, labelR: 380, alpha: tw(t, at('ask') - lead, 0.5), color: v57 > 0.5 ? C.accent : C.ink });
+    const angle = angleAt(ctx, S, 'A', { r: 300, label: v57 > 0.5 ? '約 5.7°' : 'θ', size: 30, alpha: tw(t, at('ask') - lead, 0.5), color: v57 > 0.5 ? C.accent : C.ink });
     cursive(ctx, S, 't', seg(t, at('t') - 0.1, at('t') + 1.1), { lw: 6, numbers: 0, alpha: 1 - 0.8 * tw(t, at('a1.end'), 0.6) });
-    const small = focus(t, [at('small')], at('a4.end'), cue).level[0];
-    ring(ctx, S.A.x + 200, S.A.y - 70, 220, 90, small, C.accent);
+    ringBox(ctx, angle, focus(t, [at('small')], at('a4.end'), cue).level[0], C.accent, 10);
 
     // the working
-    workLine(ctx, row('tan', 'θ', '=', '10', '÷', '100', '=', '0.1'), 150, 470, tw(t, at('tv') - lead, 0.5), { size: 42 });
+    workLine(ctx, row('tan', 'θ', '=', frac('10', '100'), '=', '0.1'), 150, 450, tw(t, at('tv') - lead, 0.5), { size: 42 });
     // m2: how a calculator does it
-    text(ctx, '角度は、関数電卓の tan⁻¹ で（角度の単位は「度」に設定）', 150, 512, { font: F.jp(500, 22), color: C.muted, alpha: tw(t, at('calc') - lead, 0.5) });
+    text(ctx, '角度は、関数電卓の tan⁻¹ で（角度の単位は「度」に設定）', 150, 524, { font: F.jp(500, 22), color: C.muted, alpha: tw(t, at('calc') - lead, 0.5) });
     // m1: what each number is
     const notang = tw(t, at('notang') - lead, 0.5);
     if (notang > 0) {
-      text(ctx, '10%', 150, 560, { font: F.sans(600, 40), color: C.ink, alpha: notang });
-      workLine(ctx, row('=', jp('高さ', C.sin), '÷', jp('水平の距離', C.cos), '×', '100'), 250, 560, tw(t, at('ratio') - lead, 0.5), { size: 36 });
-      text(ctx, 'θ ＝ 角度', 150, 620, { font: F.jp(500, 32), color: C.ink2, alpha: notang });
+      const pct = text(ctx, '10%', 150, 600, { font: F.sans(600, 40), color: C.ink, alpha: notang });
+      workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('水平の距離', C.cos)), '×', '100'), 150 + pct + 14, 600, tw(t, at('ratio') - lead, 0.5), { size: 36 });
+      text(ctx, 'θ ＝ 角度', 150, 668, { font: F.jp(500, 32), color: C.ink2, alpha: notang });
     }
     // a5: both ways
     const both = tw(t, at('both') - lead, 0.5);
@@ -94,13 +94,16 @@ export default clip({
     const hi5 = focus(t, [at('t5'), at('t6')], at('a3.end'), cue);
     const tb = trigTable(ctx, TABLE.x, TABLE.y, { rows: ROWS, cols: ['tan'], colW: 170, degW: 96, alpha: tbl, hi: { deg: hi5.level[1] > hi5.level[0] ? 6 : 5, col: 'tan', level: Math.max(...hi5.level) } });
     if (tbl > 0 && search > 0 && search < 1) {
-      const y = lerp(tb.rowY(1), tb.rowY(5), search) + 23;
-      text(ctx, '0.1 →', TABLE.x - 16, y + 8, { font: F.sans(600, 26), color: C.accent, align: 'right', alpha: tbl });
+      const r1 = tb.rowBox(1);
+      const y = lerp(r1.y, tb.rowBox(5).y, search) + r1.h / 2;
+      text(ctx, '0.1 →', TABLE.x - 16, y + 9, { font: F.sans(600, 26), color: C.accent, align: 'right', alpha: tbl });
     }
     const near = tw(t, at('near6') - lead, 0.5) * away;
     if (near > 0) {
-      text(ctx, '0.1 はこのあいだ', TABLE.x + 280, tb.rowY(6) + 8, { font: F.jp(700, 24), color: C.accent, alpha: near });
-      ring(ctx, TABLE.x - 6, tb.rowY(5) - 4, 278, 96, near, C.accent);
+      // left of the table, where the search pointer was: the right of the stage is too narrow
+      const r6 = tb.rowBox(6);
+      text(ctx, '0.1 はこのあいだ', r6.x - 18, r6.y + 8, { font: F.jp(700, 24), color: C.accent, align: 'right', alpha: near });
+      ringBox(ctx, [tb.rowBox(5), r6], near, C.accent, 0);
     }
 
     // ——— a6: open the angle past 90°
@@ -115,10 +118,10 @@ export default clip({
       ctx.globalAlpha *= open;
       ctx.fillStyle = C.ink2;
       ctx.fillRect(O.x - 400, O.y, 800, 3);
+      const ground = { x: O.x + 400, y: O.y };
       if (phi < 89.5) {
         const T = corners(phi, R * Math.cos(rad), { x: O.x, y: O.y });
         drawTri(ctx, T, { lw: 6 });
-        angleArc(ctx, T.A, T.C, T.B, { r: 70, label: `${Math.round(phi)}°`, size: 30 });
       } else {
         // no right triangle any more: the hypotenuse alone, dashed
         ctx.setLineDash([14, 10]);
@@ -129,13 +132,8 @@ export default clip({
         ctx.lineTo(tip.x, tip.y);
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.strokeStyle = C.ink;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(O.x, O.y, 70, -rad, 0);
-        ctx.stroke();
-        label(ctx, `${Math.round(phi)}°`, O.x + 100, O.y - 90, { size: 30 });
       }
+      angleArc(ctx, O, ground, tip, { r: 70, label: `${Math.round(phi)}°`, size: 30, avoid: [segment({ x: O.x - 400, y: O.y }, ground, 3)] });
       ctx.restore();
       mark(ctx, tip.x - 40, tip.y - 50, '？', tw(t, at('more') + 0.4, 0.4, outBack) * open);
     }

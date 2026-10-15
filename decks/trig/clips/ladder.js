@@ -6,8 +6,9 @@
 import { clip } from '../lib/clip.js';
 import { C } from '../lib/theme.js';
 import { seg, tw, inOutCubic, outBack, lerp } from '../../../src/kit/ease.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { corners, drawTri, angleArc, dim, sideLabel, unit } from '../lib/tri.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { segment } from '../../../src/kit/place.js';
+import { corners, drawTri, angleAt, dim, sideLabel, unit, pointBox } from '../lib/tri.js';
 import { cursive } from '../lib/cursive.js';
 import { row, jp, colored } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
@@ -75,31 +76,32 @@ export default clip({
     // the triangle in it: the base along the ground, the height up the wall
     const tri = tw(t, at('top') - lead, 0.6);
     drawTri(ctx, T, { lw: 5, alpha: tri, hyp: { alpha: 0 } });
-    angleArc(ctx, T.A, T.C, T.B, { r: 80, label: '70°', size: 32, alpha: tw(t, at('a70') - lead, 0.5) });
-    sideLabel(ctx, T, 'hyp', '5 m', { off: 52, size: 34, alpha: tw(t, at('l5') - lead, 0.5), color: C.ink });
+    // the ladder stands for the hypotenuse: labels keep clear of its full width
+    const rails = [segment(T.A, T.B, 44)];
+    const angle = angleAt(ctx, T, 'A', { r: 80, label: '70°', size: 32, alpha: tw(t, at('a70') - lead, 0.5), avoid: rails });
+    const five = sideLabel(ctx, T, 'hyp', '5 m', { size: 34, alpha: tw(t, at('l5') - lead, 0.5), color: C.ink, avoid: rails });
 
     // the height: a question, then the answer
     const ans = tw(t, at('ans') - lead, 0.5, outBack);
-    dim(ctx, T.C, T.B, { x: 1, y: 0 }, 86, ans > 0.5 ? '約 4.7 m' : '？', { alpha: tri, size: 36, labelOff: ans > 0.5 ? 96 : 40, color: C.sin, labelColor: ans > 0.5 ? C.accent : C.sin });
+    const height = dim(ctx, T.C, T.B, { x: 1, y: 0 }, 86, ans > 0.5 ? '約 4.7 m' : '？', { alpha: tri, size: 36, color: C.sin, labelColor: ans > 0.5 ? C.accent : C.sin }).box;
     // the base: asked in q3
     const ans2 = tw(t, at('ans2') - lead, 0.5, outBack);
-    dim(ctx, T.A, T.C, { x: 0, y: 1 }, 48, ans2 > 0.5 ? '約 1.7 m' : '？', { alpha: tw(t, at('wall') - lead, 0.5), size: 34, labelOff: 30, color: C.cos, labelColor: ans2 > 0.5 ? C.accent : C.cos });
+    dim(ctx, T.A, T.C, { x: 0, y: 1 }, 48, ans2 > 0.5 ? '約 1.7 m' : '？', { alpha: tw(t, at('wall') - lead, 0.5), size: 34, color: C.cos, labelColor: ans2 > 0.5 ? C.accent : C.cos });
 
     // her reading: hypotenuse and height, the s
     const parts = focus(t, [at('hyp'), at('h')], at('s'), cue);
-    const u = unit(T.A, T.B);
-    ring(ctx, (T.A.x + T.B.x) / 2 - 80 - u.y * 0, (T.A.y + T.B.y) / 2 - 40, 120, 80, parts.level[0], C.accent);
-    ring(ctx, T.C.x + 40, (T.B.y + T.C.y) / 2 - 40, 120, 80, parts.level[1], C.accent);
+    ringBox(ctx, five, parts.level[0], C.accent);
+    ringBox(ctx, height, parts.level[1], C.accent);
     cursive(ctx, T, 's', seg(t, at('s') - 0.1, at('s') + 1.1), { lw: 7, numbers: 0, alpha: 1 - 0.8 * tw(t, at('a1.end'), 0.6) });
     cursive(ctx, T, 'c', seg(t, at('c') - 0.1, at('c') + 1.1), { lw: 7, numbers: 0, alpha: 1 - 0.8 * tw(t, at('a4.end'), 0.6) });
 
     // the working, on the left
     const sin70 = row('sin', '70°');
     const cos70 = row('cos', '70°');
-    workLine(ctx, row(jp('高さ', C.sin), '=', '5', '×', sin70), 80, 330, tw(t, at('eq') - lead, 0.5), { size: 38 });
-    workLine(ctx, row('=', '5', '×', '0.9397', '≒', colored(C.accent, '4.7')), 150, 400, tw(t, at('ans') - lead, 0.5), { size: 38 });
-    workLine(ctx, row(jp('底辺', C.cos), '=', '5', '×', cos70), 80, 520, tw(t, at('c') - lead, 0.5), { size: 38 });
-    workLine(ctx, row('=', '5', '×', '0.3420', '≒', colored(C.accent, '1.7')), 150, 590, tw(t, at('ans2') - lead, 0.5), { size: 38 });
+    const w1 = workLine(ctx, row(jp('高さ', C.sin), '=', '5', '×', sin70), 80, 330, tw(t, at('eq') - lead, 0.5), { size: 38 });
+    const w2 = workLine(ctx, row('=', '5', '×', '0.9397', '≒', colored(C.accent, '4.7')), 150, 400, tw(t, at('ans') - lead, 0.5), { size: 38 });
+    const w3 = workLine(ctx, row(jp('底辺', C.cos), '=', '5', '×', cos70), 80, 520, tw(t, at('c') - lead, 0.5), { size: 38 });
+    const w4 = workLine(ctx, row('=', '5', '×', '0.3420', '≒', colored(C.accent, '1.7')), 150, 590, tw(t, at('ans2') - lead, 0.5), { size: 38 });
 
     // the table at 70°: sin, then cos
     const look = tw(t, at('look') - lead, 0.6);
@@ -112,9 +114,9 @@ export default clip({
 
     // m: the hypotenuse and the angle settle both other sides
     const two = focus(t, [at('two'), at('rest')], at('m.end') - cue.fall, cue);
-    ring(ctx, 60, 280, 430, 150, two.level[1], C.sin);
-    ring(ctx, 60, 470, 430, 150, two.level[1], C.cos);
-    ring(ctx, T.A.x - 30, T.A.y - 110, 150, 120, two.level[0], C.accent);
+    ringBox(ctx, [w1.rect, w2.rect], two.level[1], C.sin, 10);
+    ringBox(ctx, [w3.rect, w4.rect], two.level[1], C.cos, 10);
+    ringBox(ctx, [pointBox(T.A), angle, five], two.level[0], C.accent);
   },
 });
 
