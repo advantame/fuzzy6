@@ -13,7 +13,7 @@ import { corners, drawTri, angleAt, sideLabel, RAD } from '../lib/tri.js';
 import { math, row, frac, jp, sup, colored, tag } from '../lib/math.js';
 import { definition } from '../lib/board.js';
 import { workLine } from '../lib/drill.js';
-import { boxed, strike } from '../lib/parts.js';
+import { formulaBox, strike } from '../lib/parts.js';
 
 const R = 300; // the hypotenuse, as 1
 const A0 = { x: 250, y: 560 };
@@ -87,13 +87,13 @@ export default clip({
     // m1: the relation, boxed
     const eq = tw(t, at('eq') - lead, 0.5) * (1 - tw(t, at('q') - 0.3, 0.5));
     const eqY = lerp(700, 220, inOutCubic(seg(t, at('c'), at('c') + 0.8)));
-    boxed(ctx, row('tan', 'θ', '=', frac(row('sin', 'θ'), row('cos', 'θ'))), X, eqY, { size: 46, stroke: C.tan, padY: 12, alpha: eq });
+    formulaBox(ctx, row('tan', 'θ', '=', frac(row('sin', 'θ'), row('cos', 'θ'))), X, eqY, { size: 46, stroke: C.tan, padY: 12, alpha: eq });
 
     // ——— d, m2: sin²θ + cos²θ = 1
     const pyth = tw(t, at('one2') - lead, 0.5) * (1 - tw(t, at('q') - 0.3, 0.5));
     const sqNode = row(sup('sin', tag('two', '2')), 'θ', '+', sup('cos', '2'), 'θ', '=', '1');
     if (pyth > 0) {
-      const m = boxed(ctx, sqNode, X, 460, { size: 54, padY: 18, alpha: pyth });
+      const m = formulaBox(ctx, sqNode, X, 460, { size: 54, padY: 18, alpha: pyth });
       const sqLit = focus(t, [at('sq')], at('m2.end'), cue).level[0];
       ringBox(ctx, m.parts.two, sqLit, C.accent);
       if (sqLit > 0 || t > at('sq')) {

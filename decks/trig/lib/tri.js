@@ -375,6 +375,8 @@ export function dim(ctx, P, Q, n, off, s, o = {}) {
 // ——— corners —————————————————————————————————————————————————————————
 
 const OTHERS = { A: ['B', 'C'], B: ['A', 'C'], C: ['A', 'B'] };
+// how a corner's name is set: for a copy of it that travels into a formula
+export const NAME = { size: 36, font: (size) => F.sans(600, size), color: COL.ink2 };
 
 // The name of a corner of T ('A', 'B' or 'C'; the name drawn is s, so a second triangle can
 // call its corners D, E, F) outside the triangle: out from the corner, away from both sides,
@@ -390,9 +392,9 @@ export function vertexLabel(ctx, T, corner, s, o = {}) {
   const u = unit(T[p], V);
   const w = unit(T[q], V);
   const out = unit({ x: 0, y: 0 }, { x: u.x + w.x, y: u.y + w.y });
-  const size = o.size ?? 36;
+  const size = o.size ?? NAME.size;
   const gap = o.gap ?? 6;
-  const lo = { size, font: F.sans(600, size), color: COL.ink2, ...o };
+  const lo = { size, font: NAME.font(size), color: NAME.color, ...o };
   const words = (o.text ?? []).filter(Boolean).map((b) => grow(b, Math.max(0, (o.textGap ?? size * 0.8) - gap)));
   const shapes = [...triShapes(T, o.sideW), ...(o.avoid ?? []), ...boxes(...words)];
   const at = placeAround(V, out, labelSize(s, lo), shapes, { gap, to: 200 });

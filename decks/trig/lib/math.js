@@ -8,7 +8,8 @@
 // 'sin' → function, '0.78' or '38°' → number, '=' → operator, 'θ' → letter, '高さ' → Japanese.
 // math() draws with the left end of the baseline at (x, y) and returns where it went: rect is
 // the whole formula, and parts the pieces wrapped in tag('name', …), so a ring can go round
-// exactly the denominator or the 2 of sin² without measuring by hand.
+// exactly the denominator or the 2 of sin² without measuring by hand. pt('E') is a point's
+// name and shade(a, …) a piece drawn at alpha a, for a formula that fills in as it is said.
 
 import { measure } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
@@ -22,6 +23,9 @@ export const n = (s, color) => ({ t: 'text', s, face: 'up', kind: 'num', color }
 export const op = (s, color) => ({ t: 'text', s, face: 'up', kind: 'op', color });
 export const jp = (s, color, weight) => ({ t: 'text', s, face: 'jp', kind: 'jp', color, weight });
 export const up = (s, color, weight) => ({ t: 'text', s, face: 'up', kind: 'up', color, weight });
+// The name of a point of a figure (A, B, …), upright as the figure writes it. Names side by side
+// close up into a segment's name (EF), so each letter can be tagged on its own.
+export const pt = (s, color) => ({ t: 'text', s, face: 'up', kind: 'pt', color });
 export const frac = (num, den, color) => ({ t: 'frac', num: node(num), den: node(den), color });
 export const sqrt = (a, color) => ({ t: 'sqrt', a: node(a), color });
 export const sup = (a, s, color) => ({ t: 'sup', a: node(a), s: node(s), color });
@@ -30,6 +34,9 @@ export const row = (...items) => ({ t: 'row', items: items.flatMap(split) });
 export const colored = (color, ...items) => ({ ...row(...items), color });
 // A piece of a formula whose place math() reports under parts[name].
 export const tag = (name, ...items) => ({ t: 'tag', name, a: items.length === 1 ? node(items[0]) : row(...items) });
+// A piece drawn at alpha a (0–1) that keeps its place: a formula that fills in piece by piece,
+// or a piece that something is still carrying into place.
+export const shade = (a, ...items) => ({ t: 'shade', alpha: a, a: items.length === 1 ? node(items[0]) : row(...items) });
 
 function node(x) {
   if (typeof x !== 'string') return x;
@@ -43,6 +50,7 @@ function split(x) {
 }
 
 function word(s) {
+  if (s === '∽') return { t: 'sim' };
   if (FN.has(s)) return fn(s);
   if (OPS.has(s)) return op(s);
   if (/^[−-]?[0-9][0-9.,]*°?$/.test(s) || s === '°') return n(s);
@@ -109,8 +117,53 @@ function layout(nd, size, inherited) {
     return {
       ...b,
       parts(x, y, out) {
-        out[nd.name] = { x, y: y - b.asc, w: b.w, h: b.asc + b.desc };
+        // base and size: where and how large the piece's text is set, for something that
+        // carries a copy of it into place
+        out[nd.name] = { x, y: y - b.asc, w: b.w, h: b.asc + b.desc, base: y, size };
         b.parts?.(x, y, out);
+      },
+    };
+  }
+  if (nd.t === 'sim') {
+    // the sign of similarity, drawn: the face's own ∽ closes into loops and reads as ∞. A
+    // reversed tilde: in from the upper left, down, up through the middle, over and down
+    const w = size * 0.78;
+    const amp = size * 0.12;
+    return {
+      w,
+      asc: size * 0.74,
+      desc: size * 0.22,
+      kind: 'op',
+      draw(ctx, x, y) {
+        const mid = y - size * 0.3;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, size * 0.065);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        for (let i = 0; i <= 32; i++) {
+          const u = -0.1 + (1.2 * i) / 32;
+          const px = x + size * 0.06 + (w - size * 0.12) * ((u + 0.1) / 1.2);
+          const py = mid + amp * Math.sin(2 * Math.PI * u);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      },
+    };
+  }
+  if (nd.t === 'shade') {
+    const b = layout(nd.a, size, color);
+    return {
+      ...b,
+      draw(ctx, x, y) {
+        if (nd.alpha <= 0.001) return;
+        ctx.save();
+        ctx.globalAlpha *= Math.min(1, nd.alpha);
+        b.draw(ctx, x, y);
+        ctx.restore();
       },
     };
   }
@@ -196,6 +249,7 @@ function layout(nd, size, inherited) {
 
 // Space between two neighbours: a little after a function name, more around operators.
 function gap(a, b, size) {
+  if (a.kind === 'pt' && b.kind === 'pt') return 0;
   if (a.kind === 'op' || b.kind === 'op') return size * 0.3;
   if (a.kind === 'fn') return size * 0.18;
   if (b.s === ')' || a.s === '(') return size * 0.04;

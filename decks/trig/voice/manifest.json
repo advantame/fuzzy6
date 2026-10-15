@@ -1535,7 +1535,9 @@
             "file": "small/f@1.3.opus",
             "duration": 4.597,
             "anchors": {
-              "ratio": 1.728
+              "tate": 0.736,
+              "ratio": 1.728,
+              "r78": 2.645
             },
             "mouth": [
               [
@@ -1688,7 +1690,7 @@
               ]
             ],
             "sha256": "07c4dc74e3542aacdaabaec6850f96965b8b820883a70d75888a4dfb169aee8b",
-            "generationSha256": "27b047a41487681172f216e160bb0b9d3d6aaec46f8749f2075cd33bd6447463",
+            "generationSha256": "629a508ca0e1d383654b161a3ef84c863abb4e4a75047ea14a74f686b7180158",
             "master": {
               "file": "small/f@1.3.wav",
               "sha256": "a0e77a61f84026581d90c9a3fb83d31a6a6a2a034530871c8ffe0b8a9fcfa41e"
@@ -1707,6 +1709,7 @@
             "file": "small/g@1.3.opus",
             "duration": 8.555,
             "anchors": {
+              "shape": 0.043,
               "big": 1.28,
               "mul": 5.312
             },
@@ -1957,7 +1960,7 @@
               ]
             ],
             "sha256": "8d926c5729beffab4cff5518e52dd2e90b0de2818f6037e0cfc98c0796c246a9",
-            "generationSha256": "5f16e3fc89a4de4c42785de375cea1bf3ff601f6242621383c3f2a4f78ac552c",
+            "generationSha256": "0d0cfc372c2b86a4c614d002a8f1f96ea9ecbe816e21d161efd23602cb271e7b",
             "master": {
               "file": "small/g@1.3.wav",
               "sha256": "a9622ccab8d68606251e7bf1050593ab32eb4b061f463733ed3b4ecbed0d6355"

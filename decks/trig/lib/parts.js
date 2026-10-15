@@ -1,12 +1,12 @@
 // Small parts that several clips draw: a protractor, a pill-shaped tag, a stamp, an arrow, the
-// tick that marks equal sides, a white card, a formula in a frame, a strike through a word,
-// and a cross. Each one that holds text returns its box ({ x, y, w, h }), so a ring
+// tick that marks equal sides, a white card, a formula to keep in a frame, a strike through a
+// word, and a cross. Each one that holds text returns its box ({ x, y, w, h }), so a ring
 // (ringBox in src/kit/cue.js) or a label (o.avoid in lib/tri.js) can use where it went.
 
 import { clamp, lerp } from '../../../src/kit/ease.js';
 import { rr, text, measure } from '../../../src/kit/draw.js';
 import { C, F } from './theme.js';
-import { math } from './math.js';
+import { math, box as mathBox } from './math.js';
 import { segment } from '../../../src/kit/place.js';
 import { unit } from './tri.js';
 
@@ -152,19 +152,59 @@ export function card(ctx, x, y, w, h, o = {}) {
   ctx.restore();
 }
 
-// A formula on a card framed in colour: a result to keep. (x, y) is the formula's baseline
-// start, as for math(). o: { size, pad, stroke, lw, alpha }. Returns what math() returns, with
-// rect grown to the card.
-export function boxed(ctx, node, x, y, o = {}) {
+// A formula worth keeping — a property, a rule, a result — on a white card framed in ink: the
+// way the deck shows every such formula. One line or several, with an optional title on a tab
+// across the top edge (相似の性質). (x, y) is the first line's baseline start, as for math();
+// each later line goes below the last, at the left (o.align 'center': centred on the widest).
+// lines: a math node, or a list of nodes or { node, size }. o: { title, titleSize, size, gap
+// (between lines), pad, padY, stroke, lw, alpha }. Returns { rect (the card and its tab), card,
+// lines (what math() returned for each line), parts (the tagged pieces of every line) } — also
+// when alpha is 0, so a clip can measure it before showing it.
+export function formulaBox(ctx, lines, x, y, o = {}) {
   const size = o.size ?? 46;
   const a = o.alpha ?? 1;
-  const m = math(ctx, node, x, y, { size, alpha: 0 });
+  const items = (Array.isArray(lines) ? lines : [lines]).map((l) => (l?.node ? { size, ...l } : { node: l, size }));
+  const lead = o.gap ?? size * 0.4;
+  const boxes = items.map((it) => mathBox(it.node, it.size));
+  const bases = [];
+  boxes.forEach((b, i) => bases.push(i === 0 ? y : bases[i - 1] + boxes[i - 1].desc + lead + b.asc));
+  const wide = Math.max(...boxes.map((b) => b.w));
+  const left = (i) => (o.align === 'center' ? x + (wide - boxes[i].w) / 2 : x);
+  const measured = items.map((it, i) => math(ctx, it.node, left(i), bases[i], { size: it.size, alpha: 0 }));
+  const inner = union(measured.map((m) => m.rect));
+
+  const stroke = o.stroke ?? C.ink;
+  const ts = o.titleSize ?? 24;
+  const tab = o.title ? { h: ts * 1.5, w: measure(ctx0(), F.jp(700, ts), o.title) + ts * 1.2 } : null;
   const padX = o.pad ?? 20;
   const padY = o.padY ?? size * 0.45;
-  const r = { x: m.rect.x - padX, y: m.rect.y - padY, w: m.rect.w + padX * 2, h: m.rect.h + padY * 2 };
-  card(ctx, r.x, r.y, r.w, r.h, { stroke: o.stroke ?? C.ink, lw: o.lw ?? 3, alpha: a });
-  math(ctx, node, x, y, { size, alpha: a });
-  return { ...m, rect: r };
+  const padTop = tab ? Math.max(padY, tab.h / 2 + ts * 0.6) : padY;
+  const card0 = { x: inner.x - padX, y: inner.y - padTop, w: inner.w + padX * 2, h: inner.h + padTop + padY };
+  const tabBox = tab ? { x: card0.x + 20, y: card0.y - tab.h / 2, w: tab.w, h: tab.h } : null;
+
+  card(ctx, card0.x, card0.y, card0.w, card0.h, { stroke, lw: o.lw ?? 3, alpha: a });
+  if (tab && a > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= a;
+    rr(ctx, tabBox.x, tabBox.y, tabBox.w, tabBox.h, tab.h / 2);
+    ctx.fillStyle = stroke;
+    ctx.fill();
+    text(ctx, o.title, tabBox.x + tabBox.w / 2, card0.y + ts * 0.36, { font: F.jp(700, ts), color: C.white, align: 'center' });
+    ctx.restore();
+  }
+  const drawn = items.map((it, i) => math(ctx, it.node, left(i), bases[i], { size: it.size, alpha: a }));
+  return {
+    rect: union([card0, tabBox].filter(Boolean)),
+    card: card0,
+    lines: drawn,
+    parts: Object.assign({}, ...drawn.map((m) => m.parts)),
+  };
+}
+
+function union(rs) {
+  const x = Math.min(...rs.map((r) => r.x));
+  const y = Math.min(...rs.map((r) => r.y));
+  return { x, y, w: Math.max(...rs.map((r) => r.x + r.w)) - x, h: Math.max(...rs.map((r) => r.y + r.h)) - y };
 }
 
 // A line struck through a box, from its lower left to its upper right, drawn up to p.
