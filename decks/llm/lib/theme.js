@@ -18,7 +18,7 @@ export const C = {
   green: '#178f53',
   greenSoft: '#cfeeda',
   // the app's own colour where it acts: its box, and the edge of the marks it writes (4-2)
-  purple: '#6c47cc',
+  purple: '#8b67f0',
   purpleSoft: '#e8e1fb',
   red: '#d42a20',
   // token chips cycle through these

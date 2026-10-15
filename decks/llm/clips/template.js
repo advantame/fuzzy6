@@ -15,6 +15,9 @@
 // are the app's and fly out of its box; the LLM reads the open mark and writes on from it. The
 // reply and its end mark are the LLM's and come along the write channel, token by token; the
 // app watches for the end mark and stops the writing, and passes the reply on to the screen.
+// Before the end mark comes in, the clip shows why it is needed: the marks are text the LLM can
+// write too, so left as it is it writes a user mark, the next question and an answer to it, and
+// the app shows them all — a user's bubble the user never wrote (Boss, 2026-10-15).
 
 import { clip } from '../lib/clip.js';
 import { C, F, M, W } from '../lib/theme.js';
@@ -44,8 +47,10 @@ const TURNS = [
 const REPLY_TOKENS = ['それ', 'なら', '、', 'まず', '古', '典', 'の', '名', '作', 'から', '読む', 'の', 'がお', 'すすめ', 'です', '。'];
 const REPLY = REPLY_TOKENS.join('');
 const SYSTEM = 'あなたは、ていねいに答えるアシスタントです。';
-// what a model that only continues might write after the reply (sentence g)
-const GHOST = 'ほかにもある？';
+// left as it is, the LLM writes on past the reply: the user's next question, and an answer to
+// it (sentence g1). The app passes it all to the screen.
+const RUN_Q = ['ほ', 'か', 'にも', 'ある', '？'];
+const RUN_A = ['それ', 'なら', '、', '短', '編集', 'も', 'おすすめ', 'です', '。'];
 const END = { name: '答えの終わり', fill: C.ink, color: C.paper };
 // gpt-oss's harmony format, the start of the same conversation (one real way to write the
 // marks); the marks in the app's colour
@@ -53,6 +58,7 @@ const REAL = [['<|start|>', true], ['user', true], ['<|message|>', true], ['お�
 
 const FLY = 0.55; // a mark flying out of the app's box
 const TOK = 0.42; // a token along the write channel
+const RUN_TOK = 0.55; // a token of the runaway, which comes the longer way
 const EOT = 0.75; // the end mark along the write channel
 
 const span = (t, a, b, rise = 0.25, fall = 0.35) => seg(t, a, a + rise) * (1 - seg(t, b, b + fall));
@@ -86,10 +92,12 @@ export default clip({
     { id: 'e1', text: '{ans}[「答え：」で|答えで]終えたときと同じで、続きを書けば、\nそれがアシスタントの発言になるわね。' },
     { id: 'e2', still: true, text: 'LLM に渡すときは、{whole}こうして整えた文書の全体が、\nコンテクストになるの。' },
     { id: 'f', lead: 1.1, text: 'すると LLM は、{look}この印に続けて、\n{reply}アシスタントの発言を書いていくわ。' },
-    { id: 'g', text: 'でも、そのままだと、{more}答えのあとに、\n次の質問まで書き続けてしまいそうね。' },
-    { id: 'g1', text: 'そこで、{eot}答えの終わりには、終わりの印を書くように、\nLLM を学習させておくの。' },
-    { id: 'g2', text: 'そして、{stop}アプリにこの印を見張らせて、\n{halt}出たところで書かせるのをやめれば、答えだけを取り出せるわ。' },
-    { id: 'g3', still: true, text: '答えを待たせないように、{show}書いている途中から、\n画面に出していくこともできるわ。' },
+    { id: 'g', text: 'でも、{txt}印も、LLM にとっては、\n続きとして書けるテキストの一つなの。' },
+    { id: 'g1', text: 'だから、このままだと、答えを書き終えた LLM は、\n{umark}「ユーザー」の印を書いて、{utext}次の質問まで書き続けてしまうの。' },
+    { id: 'g2', by: 'zunda', text: '{fake}ボクが書いていない質問が、画面に出ているのだ！' },
+    { id: 'g3', text: 'そこで、{eot}答えの終わりには、終わりの印を書くように、\nLLM を学習させておくの。' },
+    { id: 'g4', text: 'そして、{stop}アプリにこの印を見張らせて、\n{halt}出たところで書かせるのをやめれば、答えだけを取り出せるわ。' },
+    { id: 'g5', still: true, text: '答えを待たせないように、{show}書いている途中から、\n画面に出していくこともできるわ。' },
     { id: 'h', text: '答え方を決めておきたいなら、{sys}アプリからの指示を、\n「システム」という印を付けて、頭に書いておけばいいわ。' },
     { id: 'i', by: 'zunda', text: '{q}見えないところで、指示されていたのだ？' },
     { id: 'j', text: 'そうよ。{tone}口調や、答えるときに気をつけてほしいことを、\nここで伝えるの。' },
@@ -98,42 +106,48 @@ export default clip({
   ],
 
   prepare(ctx) {
-    const E = docLayout(ctx, L, [{ role: 'system', text: SYSTEM }, ...TURNS.map(([role, s]) => ({ role, text: s })), { role: 'assistant', text: REPLY }], {
-      top: 30, gap: 26, font: F.jp(500, 25), lh: 38,
-    });
-    const bubbles = [...TURNS, ['assistant', REPLY]].map(([role, s]) => ({ role, L: bubbleLayout(ctx, s, SCREEN.w - 64, { font: F.jp(500, 21), pad: 16 }) }));
+    const E = docLayout(ctx, L, [
+      { role: 'system', text: SYSTEM }, ...TURNS.map(([role, s]) => ({ role, text: s })), { role: 'assistant', text: REPLY },
+      { role: 'user', text: RUN_Q.join('') }, { role: 'assistant', text: RUN_A.join('') },
+    ], { top: 30, gap: 26, font: F.jp(500, 25), lh: 38 });
+    const bubbles = [...TURNS, ['assistant', REPLY], ['user', RUN_Q.join('')], ['assistant', RUN_A.join('')]].map(([role, s]) => ({ role, L: bubbleLayout(ctx, s, SCREEN.w - 64, { font: F.jp(500, 21), pad: 16 }) }));
     let y = SCREEN.y + 70;
     bubbles.forEach((b) => {
       b.x = b.role === 'user' ? SCREEN.x + SCREEN.w - 20 - b.L.w : SCREEN.x + 20;
       b.y = y;
       y += b.L.h + 16;
     });
-    // where each token of the reply lands (its first character), and how much of the reply is
+    // where each token the LLM writes lands (its first character), and how much of its entry is
     // written once it has
-    const R = E[4];
-    let row = 0;
-    let col = 0;
-    let chars = 0;
-    const total = Array.from(REPLY).length;
-    const toks = REPLY_TOKENS.map((s) => {
-      const n = Array.from(s).length;
-      while (row < R.rows.length - 1 && col >= Array.from(R.rows[row]).length) {
-        col -= Array.from(R.rows[row]).length;
-        row++;
-      }
-      const at = rowAt(R, row);
-      const x = at.x + measure(ctx, R.font, Array.from(R.rows[row]).slice(0, col).join(''));
-      col += n;
-      chars += n;
-      return { s, x, y: at.y - 9, upto: chars / total };
-    });
+    const place = (R, tokens) => {
+      let row = 0;
+      let col = 0;
+      let chars = 0;
+      const total = tokens.reduce((n, s) => n + Array.from(s).length, 0);
+      return tokens.map((s) => {
+        const n = Array.from(s).length;
+        while (row < R.rows.length - 1 && col >= Array.from(R.rows[row]).length) {
+          col -= Array.from(R.rows[row]).length;
+          row++;
+        }
+        const at = rowAt(R, row);
+        const x = at.x + measure(ctx, R.font, Array.from(R.rows[row]).slice(0, col).join(''));
+        col += n;
+        chars += n;
+        return { s, x, y: at.y - 9, upto: chars / total };
+      });
+    };
+    const toks = place(E[4], REPLY_TOKENS);
+    const runQ = place(E[5], RUN_Q);
+    const runA = place(E[6], RUN_A);
     // the end mark, after the reply's last row
+    const R = E[4];
     const last = rowAt(R, R.rows.length - 1);
     const end = { x: last.x + measure(ctx, R.font, R.rows[R.rows.length - 1]) + 16, y: last.y - 22, w: markWidth(ctx, END.name) };
-    return { E, bubbles, toks, end };
+    return { E, bubbles, toks, runQ, runA, end };
   },
 
-  draw(ctx, t, { E, bubbles, toks, end }, { at, pace }) {
+  draw(ctx, t, { E, bubbles, toks, runQ, runA, end }, { at, pace }) {
     const cue = pace.cue;
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
@@ -145,7 +159,18 @@ export default clip({
     const tA = at('reply') - 0.15;
     const tB = at('f.end');
     const tokAt = toks.map((_, k) => tA + (k * (tB - TOK - tA)) / (toks.length - 1));
-    const landed = (time) => toks.reduce((u, tk, k) => (time >= tokAt[k] + TOK ? tk.upto : u), 0);
+    const upto = (list, times, dur = TOK) => (time) => list.reduce((u, tk, k) => (time >= times[k] + dur ? tk.upto : u), 0);
+    const landed = upto(toks, tokAt);
+    // sentence g1: left as it is, it writes on: a user mark, the next question, an assistant
+    // mark, an answer to it, until sentence g3 takes it all back
+    const cut = at('g3');
+    const runFade = 1 - tw(t, cut, 0.5);
+    const uMarkAt = at('umark') - lead;
+    const qAt = runQ.map((_, k) => at('utext') - 0.1 + k * 0.17);
+    const aMarkAt = qAt[qAt.length - 1] + RUN_TOK + 0.25;
+    const aAt = runA.map((_, k) => aMarkAt + EOT + 0.05 + k * 0.2);
+    const qLanded = upto(runQ, qAt, RUN_TOK);
+    const aLanded = upto(runA, aAt.map((s) => (s < cut ? s : Infinity)), RUN_TOK);
     const eotAt = at('eot') - lead;
     // who is at work
     const actGlow = Math.max(
@@ -153,8 +178,8 @@ export default clip({
       span(t, markAt[1], markAt[3] + FLY),
       span(t, markAt[4], markAt[4] + FLY),
       span(t, at('f'), at('f') + 1.05),
-      span(t, at('g2'), at('halt') + 0.6),
-      span(t, at('g3'), at('g3.end') - cue.fall),
+      span(t, at('g4'), at('halt') + 0.6),
+      span(t, at('g5'), at('g5.end') - cue.fall),
       span(t, markAt[0] - 0.2, markAt[0] + FLY),
     );
     const llmGlow = span(t, at('look') - lead, at('halt'));
@@ -174,11 +199,28 @@ export default clip({
       text(ctx, 'チャットの画面', SCREEN.x + 20, SCREEN.y + 40, { font: F.jp(700, 20), color: C.ink2, alpha: sa });
     }
     // the reply shows in its bubble as the app passes it on
+    // the runaway turns show too: the app passes on whatever the LLM writes
+    const bubA = [0, 1, 2].map((i) => enter(t, at('a'), pace, i + 1));
+    bubA.push(tw(t, tA + TOK, 0.2), tw(t, qAt[0] + RUN_TOK, 0.2) * runFade, tw(t, aAt[0] + RUN_TOK, 0.2) * runFade);
+    const bubChars = [1, 1, 1, landed(t - 0.12), qLanded(t - 0.12), aLanded(t - 0.12)];
     bubbles.forEach((b, i) => {
-      const a = i < 3 ? enter(t, at('a'), pace, i + 1) : tw(t, tA + TOK, 0.2);
-      bubble(ctx, b.x, b.y, b.L, { fill: b.role === 'user' ? C.blueSoft : C.panel, alpha: a, chars: i < 3 ? 1 : landed(t - 0.12) });
+      bubble(ctx, b.x, b.y, b.L, { fill: b.role === 'user' ? C.blueSoft : C.panel, alpha: bubA[i], chars: bubChars[i] });
     });
-    const shown = focus(t, [at('show')], at('g3.end') - cue.fall, cue).level[0];
+    // the user's bubble the LLM wrote, edged in the LLM's ink
+    const fb = bubbles[4];
+    if (bubA[4] > 0) {
+      ctx.save();
+      ctx.globalAlpha = bubA[4];
+      rr(ctx, fb.x - 5, fb.y - 5, fb.L.w + 10, fb.L.h + 10, 26);
+      ctx.strokeStyle = BY.llm;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+    tag(ctx, fb.x - 14, fb.y + fb.L.h / 2 - 15, 'LLM が書いた', { font: F.jp(700, 15), h: 30, padX: 10, fill: C.ink, color: '#fff', align: 'right', alpha: pop('fake') * runFade });
+    const faked = focus(t, [at('fake')], at('g2.end') - cue.fall, cue).level[0] * runFade;
+    ring(ctx, fb.x - 5, fb.y - 5, fb.L.w + 10, fb.L.h + 10, faked, C.accent, 26);
+    const shown = focus(t, [at('show')], at('g5.end') - cue.fall, cue).level[0];
     ring(ctx, bubbles[3].x, bubbles[3].y, bubbles[3].L.w, bubbles[3].L.h, shown, C.accent, 22);
     const bub = focus(t, [at('bub')], at('a.end') - cue.fall, cue).level[0];
     ring(ctx, SCREEN.x + 8, bubbles[0].y - 4, SCREEN.w - 16, bubbles[2].y + bubbles[2].L.h - bubbles[0].y + 8, bub, C.accent, 14);
@@ -210,7 +252,7 @@ export default clip({
     if (link > 0) {
       const talkHot = span(t, at('fmt0') - lead, at('fmt0') - lead + 1.3) > 0.5;
       const back = tw(t, at('reply') - lead, 0.5, inOutCubic);
-      const backHot = span(t, tA, tB + 0.3) > 0.5 || shown > 0.5;
+      const backHot = span(t, tA, tB + 0.3) > 0.5 || span(t, uMarkAt + EOT, cut) > 0.5 || shown > 0.5;
       ctx.save();
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = ctx.fillStyle = talkHot ? C.accent : C.ink2;
@@ -250,19 +292,26 @@ export default clip({
         const role = e.role === 'user' ? 0 : 1;
         const dim = roles.any > 0 && roles.level[role] < 0.5;
         docEntry(ctx, e, a, { tagAlpha: 0, dim });
-      } else if (written > 0) {
+      } else if (i === 4) {
         // the reply, as far as the LLM has written it
-        docEntry(ctx, e, 1, { tagAlpha: 0, chars: written });
+        if (written > 0) docEntry(ctx, e, 1, { tagAlpha: 0, chars: written });
+      } else {
+        // what it writes on with, left as it is
+        const c = (i === 5 ? qLanded : aLanded)(t);
+        if (c > 0) docEntry(ctx, e, runFade, { tagAlpha: 0, chars: c });
       }
       ctx.restore();
     });
     ctx.restore();
     // the marks the app has written, each edged in its colour
     E.forEach((e, i) => {
-      if (!done(i)) return;
+      if (i > 4 || !done(i)) return;
       const dim = i > 0 && i < 4 && roles.any > 0 && roles.level[e.role === 'user' ? 0 : 1] < 0.5;
       roleMark(ctx, e.x, e.y + 1 - (i === 0 ? 0 : shift), ROLE[e.role], { edge: BY.app, alpha: dim ? 0.38 : 1 });
     });
+    // sentence g: the marks are text the LLM can write as well
+    const txt = focus(t, [at('txt')], at('g.end') - cue.fall, cue).level[0];
+    [1, 2, 3, 4].forEach((i) => ring(ctx, E[i].x - 3, E[i].y - shift - 3, markWidth(ctx, ROLE[E[i].role].name) + 6, MARK_H + 8, txt, C.accent, 10));
     const R = E[4];
     const rY = R.y - shift;
     // sentence f: the LLM reads the open mark; a cursor waits after it until the first token
@@ -276,32 +325,17 @@ export default clip({
       ctx.fillStyle = C.accent;
       ctx.fillRect(at0.x, at0.y - 24 - shift, 4, 30);
     }
-    // sentence g: left to itself, a model that only continues would go on to the next turn
-    const ghostIn = seg(t, at('more') - lead, at('more') - lead + 0.9);
-    const ghost = ghostIn * (1 - tw(t, at('g1'), 0.4));
-    if (ghost > 0) {
-      const gy = R.y + R.h + 26 - shift;
-      const w = markWidth(ctx, ROLE.user.name);
-      ctx.save();
-      ctx.globalAlpha = ghost;
-      rr(ctx, R.x, gy + 1, w, MARK_H, 6);
-      ctx.setLineDash([5, 4]);
-      ctx.strokeStyle = C.muted;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-      text(ctx, ROLE.user.name, R.x + w / 2, gy + 1 + MARK_H / 2 + 1, { font: F.jp(700, 15), color: C.muted, align: 'center', base: 'middle', alpha: ghost });
-      const chars = Array.from(GHOST);
-      text(ctx, chars.slice(0, Math.round(chars.length * ghostIn)).join(''), R.tx, gy + 21, { font: R.font, color: C.muted, alpha: ghost });
-    }
+    // the marks it wrote on with, edged in its ink
+    [[5, uMarkAt], [6, aMarkAt]].forEach(([i, s0]) => {
+      if (t >= s0 + EOT && s0 < cut) roleMark(ctx, E[i].x, E[i].y + 1 - shift, ROLE[E[i].role], { edge: BY.llm, alpha: runFade });
+    });
     // the end mark: written by the LLM, edged in its ink
     const ep = seg(t, eotAt, eotAt + EOT);
     if (ep >= 1) roleMark(ctx, end.x, end.y - shift, END, { edge: BY.llm });
-    // sentence g2: the app finds it, and stops the writing
+    // sentence g4: the app finds it, and stops the writing
     const seen = focus(t, [at('stop')], at('halt') + 0.5, cue).level[0];
     ring(ctx, end.x - 3, end.y - shift - 3, end.w + 6, MARK_H + 8, seen, C.accent, 10);
-    const sight = span(t, at('stop') - lead, at('g2.end'));
+    const sight = span(t, at('stop') - lead, at('g4.end'));
     if (sight > 0) {
       const p = tw(t, at('stop') - lead, 0.4, inOutCubic);
       ctx.save();
@@ -352,6 +386,7 @@ export default clip({
     // the marks leave from the box's lower edge, below the note beside it
     const from = { x: ACT.x + 24, y: ACT.y + ACT.h - MARK_H / 2 - 6 };
     E.forEach((e, i) => {
+      if (i > 4) return;
       const p = seg(t, markAt[i], markAt[i] + FLY);
       if (p <= 0 || p >= 1) return;
       const q = inOutCubic(p);
@@ -372,10 +407,33 @@ export default clip({
       const pt = onPath([...gate, [end.x - 24, end.y - shift + MARK_H + 30], [end.x + end.w / 2, end.y - shift + MARK_H / 2]], inOutCubic(ep));
       roleMark(ctx, pt.x - end.w / 2, pt.y - MARK_H / 2, END, { edge: BY.llm, alpha: clamp(ep * 8) });
     }
+    // the runaway: down the frame's margin, left of the marks; the marks then straight across to
+    // their place, the tokens along a lane under what is written and up into their place
+    const margin = L.write.x2 - 2;
+    const laneY = E[6].y - shift + E[6].h + 30;
+    [[5, uMarkAt], [6, aMarkAt]].forEach(([i, s0]) => {
+      const p = seg(t, s0, s0 + EOT);
+      if (p <= 0 || p >= 1 || s0 >= cut) return;
+      const e = E[i];
+      const w = markWidth(ctx, ROLE[e.role].name);
+      const cy = e.y + 1 - shift + MARK_H / 2;
+      const pt = onPath([gate[0], [margin, L.write.y], [margin, cy], [e.x + w / 2, cy]], inOutCubic(p));
+      roleMark(ctx, pt.x - w / 2, pt.y - MARK_H / 2, ROLE[e.role], { edge: BY.llm, alpha: clamp(p * 8) * runFade });
+    });
+    [[runQ, qAt], [runA, aAt]].forEach(([list, times]) => {
+      list.forEach((tk, k) => {
+        const p = seg(t, times[k], times[k] + RUN_TOK);
+        if (p <= 0 || p >= 1 || times[k] >= cut) return;
+        const w = measure(ctx, TOKEN.font, tk.s) + TOKEN.padX * 2;
+        const x = tk.x + w / 2;
+        const pt = onPath([gate[0], [margin, L.write.y], [margin, laneY], [x, laneY], [x, tk.y - shift]], inOutCubic(p));
+        token(ctx, pt.x - w / 2, pt.y - TOKEN.h / 2, w, tk.s, clamp(p * 8) * clamp((1 - p) * 8) * runFade);
+      });
+    });
 
     // ——— the key to the edges, under the LLM
     const k1 = pop('marks');
-    const k2 = pop('eot');
+    const k2 = pop('umark');
     if (k1 > 0) {
       text(ctx, '印の外枠の色', KEY.x, KEY.y, { font: F.jp(700, 16), color: C.muted, alpha: k1 });
       const sample = { name: '印', fill: C.panel, color: C.ink2 };
