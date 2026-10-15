@@ -14,7 +14,7 @@ import { trainingStrip } from '../lib/training.js';
 import { ROLE } from '../lib/rig.js';
 import { PARAMS_W, PARAMS_H, paramGrid, paramValue, flicker } from '../lib/params.js';
 import { text, measure, rr, arrow, typed } from '../../../src/kit/draw.js';
-import { tw, seg, outCubic } from '../../../src/kit/ease.js';
+import { tw, seg, lerp, outCubic, inOutCubic } from '../../../src/kit/ease.js';
 import { enter, focus, ring } from '../../../src/kit/cue.js';
 
 const ASK = '日本の首都はどこですか？';
@@ -55,7 +55,7 @@ export default clip({
   cast: ['metan', 'zunda'],
   script: [
     { id: 'a', text: '事前学習を終えたモデルは、{cont}文章の続きを予測することを、\n{many}たくさん学んできたわ。' },
-    { id: 'b', text: 'たとえば、このモデルに、{ask}「[日本|にほん]の首都はどこですか？」\nとだけ書いた場面を考えてみましょう。' },
+    { id: 'b', lead: 0.6, text: 'たとえば、このモデルに、{ask}「[日本|にほん]の首都はどこですか？」\nとだけ書いた場面を考えてみましょう。' },
     { id: 'c', still: true, text: '答えではなく、{more}「アメリカの首都はどこですか？」のように、\n別の質問を続けることもあるの。' },
     { id: 'c2', text: '{fig}InstructGPT の論文にも、[GPT-3|ジーピーティースリー] が質問に、\n別の質問で続けた例が載っているわ。' },
     { id: 'd', by: 'zunda', text: '{q}質問したのに、答えてくれないのだ？' },
@@ -83,7 +83,8 @@ export default clip({
     recall(ctx, t, texts, { at, pace });
 
     // ——— left: the question alone, and what the model writes after it
-    const la = enter(t, at('b'), pace);
+    // the card comes in as the grid of sentence a lands on it and fades
+    const la = enter(t, land(at, pace) - 0.35, pace);
     text(ctx, '事前学習だけのモデルに、続きを書かせる', LEFT.x, LEFT.y - 18, { font: F.jp(700, 20), color: C.ink2, alpha: la });
     card(ctx, LEFT, la);
     const asked = pop('ask');
@@ -185,35 +186,53 @@ export default clip({
   },
 });
 
+// When the grid of sentence a lands on the left card: the end of sentence b's lead.
+const land = (at, pace) => at('b.voice') - pace.pre;
+
 // Sentence a: pre-training, looked back on. The first text is practised position by position
 // while the voice says "predicting what comes next"; at "a great deal" more texts come in and
-// many cells change at once; the grid settles before the voice ends, and the scene clears for b.
+// many cells change at once; the grid settles before the voice ends. Then the scene clears, and
+// the trained grid moves onto the left card — "this model" of sentence b — and fades into it.
 function recall(ctx, t, texts, { at, pace }) {
   const lead = pace.cue.lead;
   const a0 = at('a');
-  const out = 1 - seg(t, at('a.done'), at('b'));
-  if (out <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = out;
   // when each text is practised: the first one slowly, the rest quickly, one after another
   const s0 = at('cont') - lead;
   const many = at('many') - lead;
   const runs = TEXTS.map((_, i) => (i === 0 ? [s0, many - 0.1] : [many + 0.1 + (i - 1) * 0.12, many + 0.75 + (i - 1) * 0.12]));
   const settle = runs[runs.length - 1][1];
 
+  // the parameters: random at first, drifting as the practice goes on, still once it is done
+  const go = at('a.done');
+  const end = land(at, pace);
+  const gone = 1 - seg(t, end - 0.35, end + 0.15);
+  if (gone > 0) {
+    const k2 = seg(t, s0, settle);
+    const m = inOutCubic(seg(t, go, end));
+    ctx.save();
+    ctx.globalAlpha = gone;
+    // it lands just inside the card's rounded edge
+    const IN = 14;
+    ctx.translate(lerp(PG.x, LEFT.x + IN, m), lerp(PG.y, LEFT.y + IN, m));
+    ctx.scale(lerp(1, (LEFT.w - 2 * IN) / PARAMS_W, m), lerp(1, (LEFT.h - 2 * IN) / PARAMS_H, m));
+    paramGrid(ctx, 0, 0, (r, c, id) => {
+      const a = tw(t, a0 + (r + c) * 0.01, pace.enter);
+      if (a <= 0) return null;
+      // as in 3-6's sentence i: while the practice runs, a few cells light up at a time
+      const flash = t >= s0 && t < settle ? flicker(id, t - s0) : 0;
+      return { a, v: paramValue(id, 0, k2), flash };
+    });
+    ctx.restore();
+  }
+
+  const out = 1 - seg(t, go, at('b'));
+  if (out <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = out;
+
   text(ctx, '事前学習：先を隠して、次のトークンを当てる練習（3-6）', PG.x, 124, { font: F.jp(700, 22), color: C.ink, alpha: enter(t, a0, pace) });
   text(ctx, 'モデルのパラメータ（値は例）', PG.x, PG.y - 16, { font: F.jp(700, 18), color: C.ink2, alpha: enter(t, a0, pace, 1) });
   text(ctx, '学習に使う文章（GPT-4o の切り方）', TT.x, TT.y - 16, { font: F.jp(700, 18), color: C.ink2, alpha: enter(t, a0, pace, 1) });
-
-  // the parameters: random at first, drifting as the practice goes on, still once it is done
-  const k2 = seg(t, s0, settle);
-  paramGrid(ctx, PG.x, PG.y, (r, c, id) => {
-    const a = tw(t, a0 + (r + c) * 0.01, pace.enter);
-    if (a <= 0) return null;
-    // as in 3-6's sentence i: while the practice runs, a few cells light up at a time
-    const flash = t >= s0 && t < settle ? flicker(id, t - s0) : 0;
-    return { a, v: paramValue(id, 0, k2), flash };
-  });
 
   // what the guesses do to the parameters
   const fix = tw(t, s0, pace.enter);
