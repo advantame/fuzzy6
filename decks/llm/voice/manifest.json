@@ -28296,7 +28296,9 @@
             "file": "base/b@1.3.opus",
             "duration": 5.845,
             "anchors": {
-              "ask": 1.589
+              "model": 0.715,
+              "ask": 1.589,
+              "give": 3.435
             },
             "mouth": [
               [
@@ -28517,7 +28519,7 @@
               ]
             ],
             "sha256": "fa9b909cccdb9bf6dd0aad87a29aa3137cb29d7fc435b7e1624fd72fd205678f",
-            "generationSha256": "bd64388281070d6bf8817b4b9567d6b6d6f3b0df17954adc04699fd0c2005b2d",
+            "generationSha256": "8ac88a07ee715250b03ffccc507159dda1d214ba9c41f46c35351256fa3704bc",
             "master": {
               "file": "base/b@1.3.wav",
               "sha256": "2c6dde690c31a3b1aa61450e1cd2d16c38fdc53c91788ec006b06d7849a32da8"
@@ -28536,7 +28538,7 @@
             "file": "base/c@1.3.opus",
             "duration": 5.045,
             "anchors": {
-              "more": 0.981
+              "other": 3.307
             },
             "mouth": [
               [
@@ -28713,7 +28715,7 @@
               ]
             ],
             "sha256": "de972e2972c1b75874079b546e1a8479ec3ec31fd2f0baca1e5a70134f2479b7",
-            "generationSha256": "a8127572c606a0c66aaa1ae3b4fb2e4225809ff72e0005f15355f7da5c7ec390",
+            "generationSha256": "fa28938d03291102ca131c4c7149711d23e7ce915b8b0023a508ffeb1ba6566a",
             "master": {
               "file": "base/c@1.3.wav",
               "sha256": "3aae3393808165e2c4190754e457de3369af8fe3219eadfc59c746b7852b6936"
@@ -29080,7 +29082,8 @@
             "file": "base/e@1.3.opus",
             "duration": 4.608,
             "anchors": {
-              "why": 1.568
+              "why": 1.568,
+              "what": 2.645
             },
             "mouth": [
               [
@@ -29241,7 +29244,7 @@
               ]
             ],
             "sha256": "8fd0a29fbc510b6f0e2d6451fc358675e2002ae7d7c3d9f6a97af43f3a5d449a",
-            "generationSha256": "3e8434d50b078d1f1fbe79a297868230163edacd31e049e1dd792e22803a7f83",
+            "generationSha256": "eba68509711aadf56cb60525d971f145145344bf5c33853f723fd4de70c6dc4f",
             "master": {
               "file": "base/e@1.3.wav",
               "sha256": "d91ced56425987468ac0d1f98840894baf79e8e1d3113ac615631a6c9370daec"
