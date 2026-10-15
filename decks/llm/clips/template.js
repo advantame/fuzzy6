@@ -96,8 +96,7 @@ export default clip({
     { id: 'g1', text: 'だから、このままだと、答えを書き終えた LLM は、\n{umark}「ユーザー」の印を書いて、{utext}次の質問まで書き続けてしまうの。' },
     { id: 'g2', by: 'zunda', text: '{fake}ボクが書いていない質問が、画面に出ているのだ！' },
     { id: 'g3', text: 'そこで、{eot}答えの終わりには、終わりの印を書くように、\nLLM を学習させておくの。' },
-    { id: 'g4', text: 'そして、{stop}アプリにこの印を見張らせて、\n{halt}出たところで書かせるのをやめれば、答えだけを取り出せるわ。' },
-    { id: 'g5', still: true, text: '答えを待たせないように、{show}書いている途中から、\n画面に出していくこともできるわ。' },
+    { id: 'g4', still: true, text: 'そして、{stop}アプリにこの印を見張らせて、\n{halt}出たところで書かせるのをやめれば、答えだけを取り出せるわ。' },
     { id: 'h', text: '答え方を決めておきたいなら、{sys}アプリからの指示を、\n「システム」という印を付けて、頭に書いておけばいいわ。' },
     { id: 'i', by: 'zunda', text: '{q}見えないところで、指示されていたのだ？' },
     { id: 'j', text: 'そうよ。{tone}口調や、答えるときに気をつけてほしいことを、\nここで伝えるの。' },
@@ -179,7 +178,6 @@ export default clip({
       span(t, markAt[4], markAt[4] + FLY),
       span(t, at('f'), at('f') + 1.05),
       span(t, at('g4'), at('halt') + 0.6),
-      span(t, at('g5'), at('g5.end') - cue.fall),
       span(t, markAt[0] - 0.2, markAt[0] + FLY),
     );
     const llmGlow = span(t, at('look') - lead, at('halt'));
@@ -220,8 +218,6 @@ export default clip({
     tag(ctx, fb.x - 14, fb.y + fb.L.h / 2 - 15, 'LLM が書いた', { font: F.jp(700, 15), h: 30, padX: 10, fill: C.ink, color: '#fff', align: 'right', alpha: pop('fake') * runFade });
     const faked = focus(t, [at('fake')], at('g2.end') - cue.fall, cue).level[0] * runFade;
     ring(ctx, fb.x - 5, fb.y - 5, fb.L.w + 10, fb.L.h + 10, faked, C.accent, 26);
-    const shown = focus(t, [at('show')], at('g5.end') - cue.fall, cue).level[0];
-    ring(ctx, bubbles[3].x, bubbles[3].y, bubbles[3].L.w, bubbles[3].L.h, shown, C.accent, 22);
     const bub = focus(t, [at('bub')], at('a.end') - cue.fall, cue).level[0];
     ring(ctx, SCREEN.x + 8, bubbles[0].y - 4, SCREEN.w - 16, bubbles[2].y + bubbles[2].L.h - bubbles[0].y + 8, bub, C.accent, 14);
     // sentence a2: what the user types is what people call the prompt (a key in the screen's head)
@@ -252,7 +248,7 @@ export default clip({
     if (link > 0) {
       const talkHot = span(t, at('fmt0') - lead, at('fmt0') - lead + 1.3) > 0.5;
       const back = tw(t, at('reply') - lead, 0.5, inOutCubic);
-      const backHot = span(t, tA, tB + 0.3) > 0.5 || span(t, uMarkAt + EOT, cut) > 0.5 || shown > 0.5;
+      const backHot = span(t, tA, tB + 0.3) > 0.5 || span(t, uMarkAt + EOT, cut) > 0.5;
       ctx.save();
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = ctx.fillStyle = talkHot ? C.accent : C.ink2;
