@@ -44,6 +44,7 @@ import { startSupervisedEngine, request, resolveStyle, TOTAL_MS } from './narrat
 import { readLexicon, lineLexicon } from './narrate/lexicon.mjs';
 import { syncDictionary } from './narrate/dictionary.mjs';
 import { queryLine, inspectQueries, formatInspection } from './narrate/inspect.mjs';
+import { deckEndings, formatEnding } from './narrate/endings.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export async function loadDeck(root, id) {
@@ -191,6 +192,13 @@ export async function main(args = process.argv.slice(2), { root = ROOT, load = l
     const deck = await load(root, options.deck);
     controller.signal.throwIfAborted();
     const lines = collectLines(deck, options.clips);
+    if (!options.generate && !options.encode && !options.prune && !options.inspect) {
+      const endings = deckEndings(deck, { deckId: options.deck, clips: options.clips });
+      print(`文末: 隣り合う「の。」（要修正）: ${endings.adjacent.length}組`);
+      for (const pair of endings.adjacent) print(`  要修正: ${formatEnding(pair)}`);
+      print(`文末: 一つおきの「の。」（注意・読んで決める）: ${endings.alternating.length}組`);
+      for (const pair of endings.alternating) print(`  注意・読んで決める: ${formatEnding(pair)}`);
+    }
     if (options.inspect) {
       if (options.json) print('[');
       let first = true;
