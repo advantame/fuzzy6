@@ -55,14 +55,14 @@ export default clip({
     { id: 'b', text: '{pair}「犬」と「猫」は似た意味なのに、\n番号は、ずいぶん離れているわね。' },
     { id: 'c', text: 'そこで LLM は、{table}大きな表を一つ持っていて、\n{row}番号ごとに、決まった数の並びを取り出すの。' },
     { id: 'c2', text: 'このように、トークンを数の並びで表すことを、\n{name}埋め込みと呼ぶわ。数の並びは、ベクトルとも呼ぶの。' },
-    { id: 'd', still: true, text: '数の並びの長さは、モデルによって違うわ。\n{dim}[GPT-3|ジーピーティースリー] の最大のモデルでは、[12,288|いちまんにせんにひゃくはちじゅうはち] 個の数になるの。' },
-    { id: 'e', text: 'この表の数は、学習の中で決まっていくわ。\nすると、{near}意味の関係が、数の並びにも表れてくることがあるの。' },
+    { id: 'd', still: true, text: 'ベクトルに並ぶ数の個数は、モデルによって違うわ。\n{dim}[GPT-3|ジーピーティースリー] の最大のモデルでは、[12,288|いちまんにせんにひゃくはちじゅうはち] 個の数になるの。' },
+    { id: 'e', text: 'この表の数は、学習の中で決まっていくわ。\nすると、{near}意味の関係が、ベクトルにも表れてくることがあるの。' },
     { id: 'f', still: true, text: '{plane}平面に描いたイメージで見てみると、{g1}動物は動物、\n{g2}食べ物は食べ物で、近くに集まるわ。' },
-    { id: 'q', by: 'zunda', text: '{ask}数の並びで、意味の関係まで表せるのだ？' },
-    { id: 'h', text: '{eq}英語の単語の数の並びを調べた 2013 年の研究に、\nこんな計算があるの。' },
+    { id: 'q', by: 'zunda', text: '{ask}ベクトルで、意味の関係まで表せるのだ？' },
+    { id: 'h', text: '{eq}英語の単語のベクトルを調べた 2013 年の研究に、\nこんな計算があるの。' },
     { id: 'i', text: '{king}「王」から{man}「男」を引いて、{woman}「女」を足すと、\n{queen}いちばん近いのは「女王」になったのよ。' },
-    { id: 'j', still: true, text: '{dir}言葉の関係が、数の並びの向きにも表れていた、ということね。' },
-    { id: 'k', tail: 0.6, text: 'ただし、ここまでの数の並びは、{alone}トークン一つぶんのものよ。\n{ctx}前の言葉を見ないと、意味が決まらない言葉もあるわ。' },
+    { id: 'j', still: true, text: '{dir}言葉の関係が、\nベクトルの差の向きにも表れていた、ということね。' },
+    { id: 'k', tail: 0.6, text: 'ただし、ここまでのベクトルは、{alone}トークン一つぶんのものよ。\n{ctx}前の言葉を見ないと、意味が決まらない言葉もあるわ。' },
   ],
 
   draw(ctx, t, _, { at, pace }) {
@@ -268,7 +268,7 @@ export default clip({
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
-      text(ctx, '英語の単語の数の並び（ミコロフら、2013）', INSET.x + 18, INSET.y + 32, { font: F.jp(700, 16), color: C.ink2, alpha: ia });
+      text(ctx, '英語の単語のベクトル（ミコロフら、2013）', INSET.x + 18, INSET.y + 32, { font: F.jp(700, 16), color: C.ink2, alpha: ia });
       text(ctx, 'King − Man + Woman ≈ Queen', INSET.x + 18, INSET.y + 62, { font: F.sans(600, 20), color: C.ink, alpha: pop('queen') });
     }
     const dir = focus(t, [at('dir')], at('j.end') - cue.fall, cue).level[0];

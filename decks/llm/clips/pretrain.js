@@ -56,7 +56,7 @@ export default clip({
   cast: ['metan', 'zunda'],
   script: [
     { id: 'a', text: 'では、確率を出すための計算は、{how}どうやって決まったのかしら。' },
-    { id: 'b', text: 'ここまでに見た、{t1}数の並びの表や、{t2}前を見る計算、\n{t3}確率を出す計算には、たくさんの数が使われているの。' },
+    { id: 'b', text: 'ここまでに見た、{t1}埋め込みの表や、{t2}前を見る計算、\n{t3}確率を出す計算には、たくさんの数が使われているの。' },
     { id: 'c', still: true, text: '計算のしかたを決める、この数を、{param}パラメータと呼ぶわ。\n[GPT-3|ジーピーティースリー] の最大のモデルには、{count}1750 億個あるのよ。' },
     { id: 'd', text: '{rand}はじめは、多くのパラメータを、乱数で決めておくの。\nまだ、文章の続きを予測するようには、学んでいないわ。' },
     { id: 'e', text: 'そこで、{text}たくさんの文章を読ませて、\n{guess}先を隠したまま、次のトークンを当てさせるのよ。' },
@@ -72,7 +72,7 @@ export default clip({
     { id: 'm', text: 'ふつうに答えを作るあいだは、{fix}パラメータは変わらないわ。\nでも、会話や保存した情報を、答えの手がかりにはできるの。' },
     { id: 'm2', text: 'パラメータを変える{more}追加の学習は、また別の仕組みよ。' },
     { id: 'n', text: 'こうして、{base}文章の続きを予測する力が育つわ。' },
-    { id: 'n2', tail: 0.6, text: '相手の頼みに沿って答える力を整えるために、\n{yet}さらに学習を重ねるのよ。それは、次の章で見ていきましょう。' },
+    { id: 'n2', tail: 0.6, text: '相手の指示に沿って答える力を整えるために、\n{yet}さらに学習を重ねるのよ。それは、次の章で見ていきましょう。' },
   ],
 
   prepare(ctx) {
@@ -91,7 +91,7 @@ export default clip({
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [1, 2, 3] });
+    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [1, 2, 3] , vector: true });
 
     // ——— the parameters
     const named = focus(t, [at('t1'), at('t2'), at('t3')], at('b.end') - cue.fall, cue);
@@ -127,7 +127,7 @@ export default clip({
         // random to begin with; each nudge moves it a little, many nudges move it more
         return { a, v: paramValue(id, k1, k2), dim: dimmed(named.level[part], named.any, cue), flash };
       });
-      ['数の並びの表', '前を見る計算', '確率を出す計算'].forEach((s, part) => {
+      ['埋め込みの表', '前を見る計算', '確率を出す計算'].forEach((s, part) => {
         const x = GRID.x + part * 7 * (GRID.cell + GRID.gap);
         const w = (part === 2 ? 6 : 7) * (GRID.cell + GRID.gap) - GRID.gap;
         const a = tw(t, at(['t1', 't2', 't3'][part]) - lead, pace.enter);
@@ -273,7 +273,7 @@ export default clip({
       ctx.lineWidth = 2.5;
       const ya = pop('yet');
       arrow(ctx, RX + w1 + 8, y + 18, RX + w1 + 44, y + 18, ya, 10);
-      tag(ctx, RX + w1 + 52, y, '頼みに沿って答える学習（4 章）', { font: F.jp(700, 18), h: 36, padX: 14, fill: C.accent, color: '#fff', alpha: ya });
+      tag(ctx, RX + w1 + 52, y, '指示に沿って答える学習（4 章）', { font: F.jp(700, 18), h: 36, padX: 14, fill: C.accent, color: '#fff', alpha: ya });
     }
     example(ctx, TX, OY + 4 * OSTEP + 44, oa, '予測とパラメータの値は説明のための例');
     source(ctx, 'Brown ほか（2020）、Meta（2024）、NVIDIA と Qwen（2025）', da, SOURCE_RIGHT);

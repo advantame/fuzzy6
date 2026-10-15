@@ -49,7 +49,7 @@ export default clip({
   kicker: '次トークン予測',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: '書き換えを重ねた数の並びのうち、{last}いちばん後ろの\nトークンのものから、次のトークンを予測するの。' },
+    { id: 'a', text: '書き換えを重ねたベクトルのうち、{last}いちばん後ろの\nトークンのものから、次のトークンを予測するの。' },
     { id: 'b', text: '{all}語彙のすべてのトークンに、{score}点数を付けるわ。\n[GPT-4o|ジーピーティーフォーオー] の切り方なら、およそ 20 万種類よ。' },
     { id: 'b2', text: 'その点数を、{prob}全部を足すと 100% になる確率に直すの。' },
     { id: 'c', still: true, text: '{few}この例では、いくつかの候補に、高い確率が集まっているわ。\n残りのほとんどは、0 に近いの。' },
@@ -90,7 +90,7 @@ export default clip({
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [3, 4] });
+    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [3, 4] , vector: true });
 
     // ——— rounds: each added token lands at its time
     const add0 = at('add');
@@ -122,7 +122,7 @@ export default clip({
     ctx.fillStyle = C.ink2;
     ctx.lineWidth = 2.5;
     arrow(ctx, lastTok.x + lastTok.w / 2, ROW_Y + TOK.h + 12, lastTok.x + lastTok.w / 2, PANEL.y - 54, down, 11);
-    text(ctx, 'いちばん後ろの位置の数の並びから', lastTok.x + lastTok.w / 2 + 16, ROW_Y + TOK.h + 46, { font: F.jp(500, 18), color: C.ink2, alpha: down });
+    text(ctx, 'いちばん後ろの位置のベクトルから', lastTok.x + lastTok.w / 2 + 16, ROW_Y + TOK.h + 46, { font: F.jp(500, 18), color: C.ink2, alpha: down });
 
     // rounds and stop
     const roundA = tw(t, add0, pace.enter);

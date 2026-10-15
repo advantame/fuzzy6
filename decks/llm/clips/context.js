@@ -54,7 +54,7 @@ export default clip({
     { id: 'a', text: 'LLM が一度に扱えるトークンの数には、{limit}上限があるわ。' },
     { id: 'b', text: 'この範囲を、{win}コンテキストウィンドウと呼ぶの。\n文章をのぞく窓のようなものね。' },
     { id: 'c', text: '答えを作るときは、\n{inside}この窓に入っている文章を、手がかりにするのよ。' },
-    { id: 'd', still: true, text: '{own}書いていく答えも、この窓の中に入っていくわ。' },
+    { id: 'd', still: true, text: '{pr}プロンプトだけでなく、{own}書いていく答えも、\nこの窓の中に入っていくわ。' },
     { id: 'e', text: '{grow}文章が長くなると、{outside}窓に入っていない元の文章は、\nそのままでは参照できないの。' },
     { id: 'f', text: 'だから、{who}どこを残し、どこを省くかを、\nLLM を使うプログラムの側で決めるのよ。' },
     { id: 'f2', still: true, text: '前の内容を、{sum}短くまとめて残す方法もあるわ。' },
@@ -71,7 +71,7 @@ export default clip({
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-    strip(ctx, { alpha: enter(t, at('a'), pace), input: 1 });
+    strip(ctx, { alpha: enter(t, at('a'), pace), input: 1 , vector: true });
 
     // ——— the blocks: the text, the answer written after it, then more text
     const g = enter(t, at('a'), pace);
@@ -133,7 +133,8 @@ export default clip({
       text(ctx, '窓の中を手がかりに', LLM.x + LLM.w / 2, LLM.y + LLM.h + 28, { font: F.jp(700, 17), color: C.accent, align: 'center', alpha: inA });
     }
     const ownA = pop('own') * (1 - seg(t, at('grow') - lead, at('grow')));
-    text(ctx, '赤は、書いている答え', LLM.x + LLM.w, LLM.y + LLM.h + 58, { font: F.jp(700, 17), color: C.accent, align: 'right', alpha: Math.max(ownA, pop('own') * 0.8) });
+    text(ctx, '黒は、プロンプト', LLM.x + LLM.w, LLM.y + LLM.h + 58, { font: F.jp(700, 17), color: C.ink, align: 'right', alpha: pop('pr') });
+    text(ctx, '赤は、書いている答え', LLM.x + LLM.w, LLM.y + LLM.h + 84, { font: F.jp(700, 17), color: C.accent, align: 'right', alpha: Math.max(ownA, pop('own') * 0.8) });
     // outside the window, and who decides
     const oa = pop('outside');
     const outLit = focus(t, [at('outside')], at('e.end') - cue.fall, cue).level[0];

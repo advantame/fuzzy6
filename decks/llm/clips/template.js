@@ -1,6 +1,8 @@
-// 4-2: a chat is one document. The chat screen shows bubbles; the LLM reads one text, which the
-// app writes from the conversation: every turn after a mark saying whose it is, and at the end
-// an assistant mark alone, with room after it. What the LLM writes there is the reply; it ends
+// 4-2: a chat is one document. The chat screen shows bubbles; what the user types there is what
+// people usually call the prompt. The LLM reads one text, which the app writes from the
+// conversation: every turn after a mark saying whose it is, and at the end
+// an assistant mark alone, with room after it — this whole text is the prompt passed to the LLM
+// this time (3-1), and so is the system prompt added later. What the LLM writes there is the reply; it ends
 // with a mark of its own, where the app stops and shows the reply as a bubble. At the head, the
 // app's own instructions under a system mark. The parts and their places are those of the tool
 // diagram of chapters 5–7 (lib/rig.js): the LLM on the left, the app with its document in the
@@ -35,19 +37,21 @@ export default clip({
   cast: ['metan', 'zunda'],
   script: [
     { id: 'a', text: 'チャットボットの画面では、{bub}こちらの質問と、\nモデルの答えが、吹き出しで交互に並んでいるわね。' },
+    { id: 'a2', still: true, text: '生成 AI を使う場面では、{pr}ユーザーが直接入力するこの文も、\nふつう、プロンプトと呼ぶわ。' },
     { id: 'b', text: 'でも、LLM が読んでいるのは、{doc}吹き出しではなく、\n一本につながった文書なの。' },
     { id: 'c', text: '画面と LLM の間で、{app}会話を受け渡すプログラムを、\nここではアプリと呼ぶわ。' },
     { id: 'c2', text: '{fmt0}会話を一本の文書に整えるのも、アプリの仕事なの。' },
     { id: 'd', text: '発言の前には、{marks}だれの発言かを表す印が付くわ。' },
     { id: 'd2', still: true, text: '{user}この例では、こちらの発言に「ユーザー」、\n{asst}モデルの発言に「アシスタント」の印を付けているの。' },
     { id: 'e', text: 'そして最後に、{open}アシスタントの発言が始まる印まで、\n書いておくの。' },
+    { id: 'e2', still: true, text: 'LLM に渡すときは、{whole}こうして整えた文書の全体が、\nプロンプトになるの。' },
     { id: 'f', text: '{reply}LLM は、その先のトークンを、順に書いていくわ。' },
     { id: 'g', text: '{eot}答えが終わったことを表す印が出たら、\nアプリがそこで、書くのを止めるの。' },
     { id: 'g2', still: true, text: '{show}答えの文字は、書いている途中から、\n画面に出していくこともできるわ。' },
     { id: 'h', text: '会話には、{sys}アプリからの指示を入れることもできるわ。\nこの例では、頭に「システム」という印で置いているの。' },
     { id: 'i', by: 'zunda', text: '{q}見えないところで、指示されていたのだ？' },
     { id: 'j', text: 'そうよ。{tone}口調や、答えるときに気をつけてほしいことを、\nここで伝えるの。' },
-    { id: 'j2', still: true, text: 'この指示は、{sp}システムプロンプトと呼ばれているわ。' },
+    { id: 'j2', still: true, text: 'この指示は、{sp}システムプロンプトと呼ばれているわ。\n{part}これも、LLM に渡すプロンプトの一部なの。' },
     { id: 'k', tail: 0.8, text: '印の書き方は、{fmt}使うモデルに合わせる必要があるわ。\nここで描いたのは、説明のための形なの。' },
   ],
 
@@ -95,6 +99,20 @@ export default clip({
     ring(ctx, bubbles[3].x, bubbles[3].y, bubbles[3].L.w, bubbles[3].L.h, shown, C.accent, 22);
     const bub = focus(t, [at('bub')], at('a.end') - cue.fall, cue).level[0];
     ring(ctx, SCREEN.x + 8, bubbles[0].y - 4, SCREEN.w - 16, bubbles[2].y + bubbles[2].L.h - bubbles[0].y + 8, bub, C.accent, 14);
+    // sentence a2: what the user types is what people call the prompt (a key in the screen's head)
+    const pa = pop('pr');
+    if (pa > 0) {
+      const kx = SCREEN.x + SCREEN.w - 20;
+      const kw = text(ctx, 'プロンプト', kx, SCREEN.y + 40, { font: F.jp(700, 18), color: C.accent, align: 'right', alpha: pa });
+      ctx.save();
+      ctx.globalAlpha = pa;
+      rr(ctx, kx - kw - 34, SCREEN.y + 25, 26, 18, 6);
+      ctx.fillStyle = C.blueSoft;
+      ctx.fill();
+      ctx.restore();
+    }
+    const prLit = focus(t, [at('pr')], at('a2.end') - cue.fall, cue).level[0];
+    [0, 2].forEach((i) => ring(ctx, bubbles[i].x - 4, bubbles[i].y - 4, bubbles[i].L.w + 8, bubbles[i].L.h + 8, prLit, C.accent, 22));
 
     // ——— the LLM and the app with its document
     const da = pop('doc');
@@ -129,7 +147,7 @@ export default clip({
     const shift = (E[1].y - E[0].y) * (1 - inOutCubic(seg(t, at('sys') - lead, at('sys') - lead + 0.7)));
     const marks = pop('marks');
     const roles = focus(t, [at('user'), at('asst')], at('d2.end') - cue.fall, cue);
-    const tone = focus(t, [at('q'), at('tone')], at('j.end') - cue.fall, cue).level;
+    const tone = [...focus(t, [at('q'), at('tone')], at('j.end') - cue.fall, cue).level, focus(t, [at('part')], at('j2.end') - cue.fall, cue).level[0]];
     const spA = pop('sp');
     ctx.save();
     ctx.beginPath();
@@ -172,6 +190,14 @@ export default clip({
       ctx.restore();
     });
     ctx.restore();
+    // sentence e2: the whole document, up to the open mark, is the prompt as the LLM sees it
+    const wa = pop('whole') * (1 - seg(t, at('reply') - lead, at('reply') + 0.3));
+    if (wa > 0) {
+      const top = E[1].y - shift - 10;
+      const bottom = E[4].y - shift + 44;
+      ring(ctx, L.doc.x + 6, top, L.doc.w - 12, bottom - top, wa, C.accent, 12);
+      tag(ctx, L.doc.x + L.doc.w - 6, bottom + 10, 'LLM に渡すプロンプト', { font: F.jp(700, 16), h: 30, padX: 10, fill: C.accent, color: '#fff', align: 'right', alpha: wa });
+    }
     // the read: the document goes to the LLM, and the reply comes back
     const readP = seg(t, at('reply') - lead - 0.2, at('reply') + 0.6);
     sweep(ctx, L, readP, docEnd(E, 4) - shift);

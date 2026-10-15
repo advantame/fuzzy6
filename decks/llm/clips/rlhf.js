@@ -36,16 +36,16 @@ export default clip({
   kicker: 'RLHF',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', text: '同じ頼みに、{three}モデルが書いた答えを、いくつか並べるわ。' },
-    { id: 'b', still: true, text: '人が、{read}頼みに沿っているかなどを考えながら読み比べて、\n{rank}よいと思う順に並べるの。' },
+    { id: 'a', text: '同じプロンプトに、{three}モデルが書いた答えを、いくつか並べるわ。' },
+    { id: 'b', still: true, text: '人が、{read}指示に沿っているかなどを考えながら読み比べて、\n{rank}よいと思う順に並べるの。' },
     { id: 'c', text: 'この比較を{many}たくさん集めて、{rm}人が選びそうな答えほど\n高い点を付ける、別のモデルを学習させるの。' },
     { id: 'c2', text: 'これを、{rmn}報酬モデルと呼ぶわ。' },
     { id: 'd', text: 'そして、{tune}報酬モデルの点が高くなるように、\n答える LLM のパラメータを調整するのよ。' },
     { id: 'e', still: true, text: 'これは、{name}人のフィードバックを使う強化学習、\n[RLHF|アールエルエイチエフ] の、一つのやり方なの。' },
-    { id: 'f', text: '2022 年の InstructGPT の実験では、\n{small}利用者から集めた頼みへの答えを、人に比べてもらったの。' },
+    { id: 'f', text: '2022 年の InstructGPT の評価では、{small}API の利用者から\n集めたプロンプトへの答えを、人に比べてもらったの。' },
     { id: 'f2', text: '{won}追加の学習をした 13 億パラメータのモデルが、\n{big}元の 1750 億パラメータの [GPT-3|ジーピーティースリー] より、好まれたわ。' },
     { id: 'g', by: 'zunda', text: '{q}大きさが百倍以上も違うのに、なのだ？' },
-    { id: 'h', still: true, text: 'ええ。この実験では、{fit}大きさだけでなく、頼みに沿うように\n追加で学習させることが、答えの評価を大きく変えたのよ。' },
+    { id: 'h', still: true, text: 'ええ。この実験では、{fit}大きさだけでなく、指示に沿うように\n追加で学習させることが、答えの評価を大きく変えたのよ。' },
     { id: 'i', tail: 0.8, text: '比べる学習には、{other}比べた結果から直接調整する方法や、\nAI の評価を使う方法もあるわ。' },
   ],
 
@@ -62,8 +62,8 @@ export default clip({
 
     // ——— the request and the model's answers
     const g = enter(t, at('a'), pace);
-    text(ctx, '頼み', M.l, 140, { font: F.jp(700, 18), color: C.muted, alpha: g });
-    text(ctx, ASK, M.l + 54, 141, { font: F.jp(700, 26), color: C.ink, alpha: g });
+    const pw = text(ctx, 'プロンプト', M.l, 140, { font: F.jp(700, 18), color: C.muted, alpha: g });
+    text(ctx, ASK, M.l + pw + 14, 141, { font: F.jp(700, 26), color: C.ink, alpha: g });
     const read = focus(t, [at('read')], at('rank'), cue).level[0];
     const ranked = tw(t, at('rank') - lead, 0.6);
     ANSWERS.forEach((a, i) => {
@@ -139,7 +139,7 @@ export default clip({
     if (fa > 0) {
       ctx.fillStyle = C.rule;
       ctx.fillRect(M.l, FACT.y - 22, (W - M.l - M.r) * outCubic(fa), 2);
-      text(ctx, 'InstructGPT（2022）：利用者から集めた頼みへの答えを、人が比べた', M.l, FACT.y + 20, { font: F.jp(700, 20), color: C.ink, alpha: fa });
+      text(ctx, 'InstructGPT（2022）の評価：API の利用者から集めたプロンプトへの答えを、人が比べた', M.l, FACT.y + 20, { font: F.jp(700, 20), color: C.ink, alpha: fa });
     }
     // two squares whose areas are the two sizes: 13 億 and 1750 億 (√ of the ratio ≈ 11.6)
     const big = pop('big');
@@ -160,18 +160,18 @@ export default clip({
     const won = tw(t, at('f2.end') - 0.6, pace.enter);
     const RX = 1000;
     text(ctx, '人の評価で、13 億の方が多く好まれた', RX, FACT.y + 70, { font: F.jp(700, 20), color: C.accent, alpha: won });
-    text(ctx, '評価に使った頼みの範囲で', RX, FACT.y + 98, { font: F.jp(500, 16), color: C.ink2, alpha: won });
+    text(ctx, '評価に使ったプロンプトの範囲で', RX, FACT.y + 98, { font: F.jp(500, 16), color: C.ink2, alpha: won });
     const qa = focus(t, [at('q')], at('g.end') - cue.fall, cue).level[0];
     ring(ctx, M.l + 330, FACT.y + 40, side, side, qa, C.accent, 6);
     // what it says, and other ways
     const fit = pop('fit');
-    text(ctx, '大きさだけでなく、頼みに沿う追加の学習が、', RX, FACT.y + 146, { font: F.jp(700, 19), color: C.ink, alpha: fit });
+    text(ctx, '大きさだけでなく、指示に沿う追加の学習が、', RX, FACT.y + 146, { font: F.jp(700, 19), color: C.ink, alpha: fit });
     text(ctx, '答えの評価を大きく変えた（この実験で）', RX, FACT.y + 174, { font: F.jp(700, 19), color: C.ink, alpha: fit });
     const oa = pop('other');
     text(ctx, 'ほかのやり方：比べた結果から直接調整する（DPO）、', RX, FACT.y + 214, { font: F.jp(500, 16), color: C.ink2, alpha: oa });
     text(ctx, 'AI の評価を使う（RLAIF）など', RX, FACT.y + 236, { font: F.jp(500, 16), color: C.ink2, alpha: oa });
 
-    example(ctx, M.l + 560, 112, g, '頼み、答え、順位、点数は説明のための例');
+    example(ctx, M.l + 560, 112, g, 'プロンプト、答え、順位、点数は説明のための例');
     source(ctx, 'Ouyang ほか（2022）', fa, 960);
   },
 });

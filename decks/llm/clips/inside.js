@@ -1,7 +1,8 @@
 // 3-1: what happens in an autoregressive LLM, one that writes from the front. First the loop as 1-3 left it: from
 // the text so far the LLM works out the candidates for what comes next and their chances, one
 // is picked and added to the end, and the next is predicted from the longer text. ずんだもん
-// asks what goes on inside; the box opens into the model's three stages, with the cutting into
+// asks what goes on inside — but first, the text given at the start is named the prompt; the
+// rest is what the LLM wrote. Then the box opens into the model's three stages, with the cutting into
 // tokens before it (lib/inside.js), and the clip ends on the chapter's map: which clip takes
 // which stage. The later clips keep the map as a strip.
 
@@ -50,7 +51,8 @@ export default clip({
     { id: 'a', text: 'ここからは、自己回帰型 LLM の中で、\n何が起きているのかを見ていきましょう。' },
     { id: 'b', text: 'LLM は、{in}書きかけの文章をもとに、\n{out}次に来る言葉の候補と、その確率を計算するの。' },
     { id: 'c', text: '{pick}その中から一つを選んで、{add}文章の後ろに足したら、\n{again}足したところまでを手がかりに、また次を予測するのよ。' },
-    { id: 'd', still: true, text: '{loop}これをくり返して、文章が少しずつ書き進められていくわ。' },
+    { id: 'd', text: '{loop}これをくり返して、文章が少しずつ書き進められていくわ。' },
+    { id: 'd2', still: true, text: '{pr}最初に LLM に読ませる、この文章のことを、\n{wrote}プロンプトと呼ぶわ。' },
     { id: 'e', by: 'zunda', text: '{ask}その LLM の中では、何が起きているのだ？' },
     { id: 'f', text: '{open}中をのぞくと、計算がいくつかの段階に分かれているの。' },
     { id: 'g', text: '{s1}まず、文章をトークンという単位に切って、番号にするわ。\n{s2}その番号を、一つずつ、数の並びに変えるの。' },
@@ -97,6 +99,10 @@ export default clip({
     const hole = words[WORDS.length + landed];
     const holeX = hole ? hole.x : words[words.length - 1].x + words[words.length - 1].w + 10;
     slot(ctx, holeX, TEXT_Y, SLOT_W, WORD.h, { alpha: g, lit: g, blink: Math.floor(t * 2.5) % 2 === 0 });
+    // sentence d2: the part given at the start is the prompt, the rest is what the LLM wrote
+    const by = TEXT_Y + WORD.h + 10;
+    under(ctx, words[0].x, words[WORDS.length - 1].x + words[WORDS.length - 1].w, by, 'プロンプト', C.accent, pop('pr'));
+    under(ctx, words[WORDS.length].x, words[words.length - 1].x + words[words.length - 1].w, by, 'LLM が書き足した部分', C.ink2, pop('wrote'));
     // the text goes in again: a sweep along it
     const again = seg(t, at('again') - lead, at('again') + 0.6);
     if (again > 0 && again < 1) {
@@ -248,3 +254,20 @@ export default clip({
     example(ctx, M.l, 830, out, '文と候補と確率は説明のための例（実際の単位はトークン）');
   },
 });
+
+// A bracket under a stretch of the text, with its name below.
+function under(ctx, x0, x1, y, name, color, a) {
+  if (a <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= a;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x0 + 2, y - 6);
+  ctx.lineTo(x0 + 2, y);
+  ctx.lineTo(x1 - 2, y);
+  ctx.lineTo(x1 - 2, y - 6);
+  ctx.stroke();
+  ctx.restore();
+  text(ctx, name, (x0 + x1) / 2, y + 24, { font: F.jp(700, 18), color, align: 'center', alpha: a });
+}

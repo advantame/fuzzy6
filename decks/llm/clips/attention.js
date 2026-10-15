@@ -44,13 +44,13 @@ export default clip({
     { id: 'c', text: 'ここで見る LLM にも、{att}前の言葉を参考にする、\nアテンションという計算があるわ。' },
     { id: 'd', text: 'トークンの一つ一つが、{look}自分と、それより前のトークンを、\n{weight}どれだけ参考にするかを、数で決めるのよ。' },
     { id: 'e', text: 'たとえば「かける」は、{w1}「電話」を強く参考にするわ。' },
-    { id: 'e2', text: '{take}参考にする度合いに応じて、\nそれぞれの情報を、自分の数の並びに混ぜ込むの。' },
-    { id: 'f', still: true, text: 'こうして、{mean}同じ「かける」でも、前の言葉に応じて、\n数の並びが変わっていくのよ。' },
+    { id: 'e2', text: '{take}参考にする度合いに応じて、\nそれぞれの情報を、自分のベクトルに混ぜ込むの。' },
+    { id: 'f', still: true, text: 'こうして、{mean}同じ「かける」でも、前の言葉に応じて、\nベクトルが変わっていくのよ。' },
     { id: 'g', by: 'zunda', text: '{ask}後ろにある言葉は、見ないのだ？' },
     { id: 'h', text: '自己回帰型 LLM では、{ahead}自分より後ろのトークンは、\n見ないように作られているの。' },
     { id: 'h2', text: '書いている途中では、{none}後ろは、まだ書かれていないものね。' },
     { id: 'i', still: true, text: '並び順もわかるように、{pos}トークンの位置の情報も、\n計算に使われているわ。' },
-    { id: 'j', text: 'LLM の中では、{layer}この前を見る計算のあとに、\n{ffn}トークンごとに数の並びを作り変える計算が続くの。' },
+    { id: 'j', text: 'LLM の中では、{layer}この前を見る計算のあとに、\n{ffn}トークンごとにベクトルを作り変える計算が続くの。' },
     { id: 'k', text: '大きく分けると、この二つを{block}[一組|ひとくみ]にして、{stack}何十段も重ねるわ。\n[GPT-3|ジーピーティースリー] の最大のモデルでは、{n96}96 段あるのよ。' },
     { id: 'l', tail: 0.6, text: 'この形は、{tf}2017 年の Transformer で示されたものよ。\nいまの LLM の多くも、この考え方を受け継いでいるわ。' },
   ],
@@ -75,7 +75,7 @@ export default clip({
     const lead = cue.lead;
     const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
 
-    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [2] });
+    strip(ctx, { alpha: enter(t, at('a'), pace), lit: [2] , vector: true });
 
     const before = focus(t, [at('before')], at('b.end') - cue.fall, cue).level[0];
     const w1 = focus(t, [at('w1'), at('take')], at('e2.end') - cue.fall, cue);
@@ -180,7 +180,7 @@ export default clip({
         ctx.fillStyle = r.tint;
         ctx.fill();
         ctx.restore();
-        text(ctx, '「かける」の数の並びが表す意味（イメージ）', BOX_X + 22, y + 20, { font: F.jp(500, 16), color: C.ink2, alpha: m });
+        text(ctx, '「かける」のベクトルが表す意味（イメージ）', BOX_X + 22, y + 20, { font: F.jp(500, 16), color: C.ink2, alpha: m });
         text(ctx, r.means, BOX_X + 22, y + 58, { font: F.jp(700, 30), color: C.ink, alpha: m });
       }
       ctx.restore();
@@ -228,7 +228,7 @@ export default clip({
     const lit = focus(t, [at('layer'), at('ffn')], at('j.end') - cue.fall, cue);
     // the lists going in
     const inA = la;
-    text(ctx, '数の並び', M.l, LY + 22, { font: F.jp(700, 19), color: C.ink2, alpha: inA });
+    text(ctx, 'ベクトル', M.l, LY + 22, { font: F.jp(700, 19), color: C.ink2, alpha: inA });
     for (let k = 0; k < 3; k++) icon(ctx, 'vec', M.l + 30 + k * 52, LY + 96, 70, inA);
     ctx.strokeStyle = C.ink2;
     ctx.fillStyle = C.ink2;

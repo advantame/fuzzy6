@@ -21,6 +21,8 @@ export const STAGES = [
   { id: 'prob', label: '確率を出す', clip: '3-5' },
   { id: 'pick', label: '一つ選んで足す', clip: '3-5' },
 ];
+// After 3-3 names the list of numbers a vector, the later clips call the stage by that name.
+export const VECTOR_LABEL = 'ベクトルにする';
 export const INPUT = '書きかけの文章';
 export const TITLE = '自己回帰型 LLM の流れ';
 export const INNER = [1, 2, 3]; // the stages inside the model's frame
@@ -111,7 +113,9 @@ export function icon(ctx, id, cx, cy, s, a = 1, ink = C.ink2) {
 
 const S = { y: 34, h: 40, font: F.jp(700, 17), padX: 14, gap: 30, frame: 8 };
 
-function stripLayout(ctx) {
+const labels = (vector) => STAGES.map((st) => (vector && st.id === 'vec' ? VECTOR_LABEL : st.label));
+
+function stripLayout(ctx, names) {
   const w = (s) => measure(ctx, S.font, s) + S.padX * 2;
   let x = M.l;
   const input = { x, w: w(INPUT) };
@@ -127,7 +131,7 @@ function stripLayout(ctx) {
       frame.w = x - S.gap + S.frame - frame.x;
       x += S.frame;
     }
-    const out = { x, w: w(st.label) };
+    const out = { x, w: w(names[i]) };
     x += out.w + S.gap;
     return out;
   });
@@ -135,11 +139,12 @@ function stripLayout(ctx) {
 }
 
 // o: { alpha, lit: [stage indices to fill in ink], input (0–1, fill the input in ink),
-//      title (alpha of the title) }
+//      title (alpha of the title), vector (call the second stage by its name, from 3-4 on) }
 export function strip(ctx, o = {}) {
   const a = o.alpha ?? 1;
   if (a <= 0.001) return;
-  const L = stripLayout(ctx);
+  const names = labels(o.vector);
+  const L = stripLayout(ctx, names);
   const lit = new Set(o.lit ?? []);
   ctx.save();
   ctx.globalAlpha *= clamp(a);
@@ -150,7 +155,7 @@ export function strip(ctx, o = {}) {
   ctx.fill();
   text(ctx, 'LLM', L.frame.x + S.frame + 4, S.y + S.h / 2 + 1, { font: F.sans(700, 17), color: C.ink, base: 'middle' });
   pill(ctx, L.input.x, L.input.w, INPUT, o.input ?? 0);
-  STAGES.forEach((st, i) => pill(ctx, L.stages[i].x, L.stages[i].w, st.label, lit.has(i) ? 1 : 0));
+  names.forEach((s, i) => pill(ctx, L.stages[i].x, L.stages[i].w, s, lit.has(i) ? 1 : 0));
   // arrows between the pills
   ctx.fillStyle = C.ink2;
   ctx.strokeStyle = C.ink2;

@@ -34,15 +34,15 @@ export default clip({
   kicker: '指示チューニング',
   cast: ['metan', 'zunda'],
   script: [
-    { id: 'a', still: true, text: '印で会話の形を整えても、{doc}それだけで、\n頼みに合う答えを出せるとは限らないわ。' },
-    { id: 'b', text: 'そこで、{ex}頼みと、望ましい答えの手本を用意するの。\n{many}ここでは、人が書いた会話の手本で見てみましょう。' },
-    { id: 'c', still: true, text: '{q}頼みと、{good}それにどう答えてほしいかを示す手本が、\n組になっているの。' },
+    { id: 'a', still: true, text: '印で会話の形を整えても、{doc}それだけで、\n指示に沿った答えを出せるとは限らないわ。' },
+    { id: 'b', text: 'そこで、{ex}プロンプトと、望ましい答えの手本を用意するの。\n{many}ここでは、人が書いた会話の手本で見てみましょう。' },
+    { id: 'c', still: true, text: '{q}プロンプトと、{good}それにどう答えてほしいかを示す手本が、\n組になっているの。' },
     { id: 'd', text: 'これを使って、{next}次のトークンを予測する練習を重ねるわ。\n手本の続きが出やすくなるように、パラメータを直すのよ。' },
-    { id: 'e', text: 'ここでは、頼みを手がかりにして、{only}答えの部分の予測を、\n手本と比べているわ。' },
-    { id: 'f', still: true, text: 'こうして、{learn}アシスタントの番に、\n頼みに沿った答えを続けるように、学んでいくのよ。' },
+    { id: 'e', text: 'ここでは、プロンプトを手がかりにして、{only}答えの部分の予測を、\n手本と比べているわ。' },
+    { id: 'f', still: true, text: 'こうして、{learn}アシスタントの番に、\n指示に沿った答えを続けるように、学んでいくのよ。' },
     { id: 'g', text: '手本を使うこの学習は、\n{name}教師ありファインチューニング、[SFT|エスエフティー] と呼ばれるわ。' },
     { id: 'g2', text: 'なかでも、指示に沿う答えを学ばせるものを、\n{tun}指示チューニングと言うの。' },
-    { id: 'h', still: true, text: '2022 年の InstructGPT では、{n}人の手本を使う学習に、\n[約 1 万 3 千件|やくいちまんさんぜんけん]の頼みを使ったの。' },
+    { id: 'h', still: true, text: '2022 年の InstructGPT では、{n}人の手本を使う学習に、\n[約 1 万 3 千件|やくいちまんさんぜんけん]のプロンプトを使ったの。' },
     { id: 'i', by: 'zunda', text: '{q2}手本をまねるだけで、いい答えになるのだ？' },
     { id: 'j', tail: 0.8, text: '手本で学んだあとに、{limit}答えを比べる評価も使って、\nさらに整える方法があるの。次は、それを見てみましょう。' },
   ],
@@ -137,7 +137,7 @@ export default clip({
         ctx.globalAlpha = 1;
       });
       text(ctx, '手本と比べる', answer[0].x, rowY[1] + CHIP.h + 72, { font: F.jp(700, 18), color: C.red, alpha: oa });
-      text(ctx, '手がかり（比べない）', user[0].x, rowY[0] + CHIP.h + 30, { font: F.jp(700, 18), color: C.muted, alpha: oa });
+      text(ctx, 'プロンプト：手がかり（比べない）', user[0].x, rowY[0] + CHIP.h + 30, { font: F.jp(700, 18), color: C.muted, alpha: oa });
     }
     // what it learns: after the assistant mark, an answer that follows the request
     const la = pop('learn');
@@ -152,13 +152,13 @@ export default clip({
       ctx.lineWidth = 2.5;
       arrow(ctx, T.x + w + 10, y + 18, T.x + w + 54, y + 18, outCubic(la), 10);
       ctx.restore();
-      text(ctx, '頼みに沿った答えが来る、という並び方を学ぶ', T.x + w + 64, y + 26, { font: F.jp(700, 20), color: C.ink, alpha: la });
+      text(ctx, '指示に沿った答えが来る、という並び方を学ぶ', T.x + w + 64, y + 26, { font: F.jp(700, 20), color: C.ink, alpha: la });
     }
     // the name, and InstructGPT's demonstrations
     tag(ctx, W - M.r, 104, '教師ありファインチューニング（SFT）', { font: F.jp(700, 18), h: 36, padX: 14, fill: C.accent, color: '#fff', align: 'right', alpha: pop('name') });
     tag(ctx, W - M.r, 148, '指示に沿う答えを学ばせる：指示チューニング', { font: F.jp(700, 16), h: 32, padX: 12, fill: '#fff', stroke: C.accent, color: C.accent, align: 'right', alpha: pop('tun') });
     const na = pop('n');
-    text(ctx, 'InstructGPT（2022）：SFT の訓練に、頼み 12,725 件（検証用は別）', S.x, S.y + S.h + 64, { font: F.jp(700, 18), color: C.ink2, alpha: na });
+    text(ctx, 'InstructGPT（2022）：SFT の訓練に、プロンプト 12,725 件（検証用は別）', S.x, S.y + S.h + 64, { font: F.jp(700, 18), color: C.ink2, alpha: na });
     const lim = pop('limit');
     text(ctx, '手本のあとに、答えを比べる評価でも整える → 4-4', S.x, S.y + S.h + 96, { font: F.jp(700, 18), color: C.accent, alpha: lim });
 
