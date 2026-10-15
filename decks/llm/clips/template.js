@@ -44,6 +44,8 @@ const TURNS = [
 const REPLY_TOKENS = ['それ', 'なら', '、', 'まず', '古', '典', 'の', '名', '作', 'から', '読む', 'の', 'がお', 'すすめ', 'です', '。'];
 const REPLY = REPLY_TOKENS.join('');
 const SYSTEM = 'あなたは、ていねいに答えるアシスタントです。';
+// what a model that only continues might write after the reply (sentence g)
+const GHOST = 'ほかにもある？';
 const END = { name: '答えの終わり', fill: C.ink, color: C.paper };
 // gpt-oss's harmony format, the start of the same conversation (one real way to write the
 // marks); the marks in the app's colour
@@ -70,25 +72,29 @@ export default clip({
   title: '会話は一本の文書',
   kicker: 'チャットのしくみ',
   cast: ['metan', 'zunda'],
+  // Told from the designer's side (Boss, 2026-10-15): the LLM can only continue one document, so
+  // what do we have the app and the model do, and why does that work.
   script: [
     { id: 'a', text: 'チャットボットの画面では、{bub}こちらの質問と、\nモデルの答えが、吹き出しで交互に並んでいるわね。' },
     { id: 'a2', still: true, text: '生成 AI を使う場面では、{pr}ユーザーが直接入力するこの文を、\nふつう、プロンプトと呼ぶわ。' },
-    { id: 'b', text: 'でも、LLM が読んでいるのは、{doc}吹き出しではなく、\n一本につながった文書なの。' },
-    { id: 'c', text: '画面と LLM の間で、{app}会話を受け渡すプログラムを、\nここではアプリと呼ぶわ。' },
-    { id: 'c2', text: '{fmt0}会話を一本の文書に整えるのも、アプリの仕事なの。' },
-    { id: 'd', text: 'アプリは、発言の前に、{marks}だれの発言かを表す印を付けるの。' },
-    { id: 'd2', still: true, text: '{user}この例では、こちらの発言に「ユーザー」、\n{asst}モデルの発言に「アシスタント」の印を付けているの。' },
-    { id: 'e', text: 'そして最後に、{open}アシスタントの発言が始まる印まで、\n書いておくの。' },
+    { id: 'b', text: 'でも、LLM にできるのは、{doc}一本につながった文書を読んで、\nその続きを書くことだけなの。' },
+    { id: 'c', text: 'そこで、画面と LLM の間に、{app}会話を受け渡す\nプログラムを置くの。ここでは、これをアプリと呼ぶわ。' },
+    { id: 'c2', text: '{fmt0}アプリには、まず、会話を一本の文書に書き直させるの。' },
+    { id: 'd', text: 'そのままつなぐと、発言の切れ目がわからないから、\n{marks}発言の前に、だれの発言かを表す印を付けさせるの。' },
+    { id: 'd2', still: true, text: '{user}この例では、こちらの発言に「ユーザー」、\n{asst}モデルの発言に「アシスタント」の印を付けているわ。' },
+    { id: 'e', text: 'そして最後に、{open}アシスタントの印だけを書いておくの。' },
+    { id: 'e1', text: '{ans}[「答え：」で|答えで]終えたときと同じで、続きを書けば、\nそれがアシスタントの発言になるわね。' },
     { id: 'e2', still: true, text: 'LLM に渡すときは、{whole}こうして整えた文書の全体が、\nコンテクストになるの。' },
-    { id: 'f', lead: 1.1, text: 'LLM は、{look}この印を読んで、{reply}その先に、\nアシスタントの発言を書いていくわ。' },
-    { id: 'g', text: '{eot}答えの終わりを表す印も、LLM が書くの。' },
-    { id: 'g2', text: 'アプリは、{stop}この印を見つけたら、\n{halt}LLM に書かせるのを止めるわ。' },
-    { id: 'g3', still: true, text: 'アプリは、{show}LLM が書いている途中から、\n答えを画面に出していくこともあるわ。' },
-    { id: 'h', text: '会話には、{sys}アプリからの指示を入れることもできるわ。\nこの例では、頭に「システム」という印で置いているの。' },
+    { id: 'f', lead: 1.1, text: 'すると LLM は、{look}この印に続けて、\n{reply}アシスタントの発言を書いていくわ。' },
+    { id: 'g', text: 'でも、そのままだと、{more}答えのあとに、\n次の質問まで書き続けてしまいそうね。' },
+    { id: 'g1', text: 'そこで、{eot}答えの終わりには、終わりの印を書くように、\nLLM を学習させておくの。' },
+    { id: 'g2', text: 'そして、{stop}アプリにこの印を見張らせて、\n{halt}出たところで書かせるのをやめれば、答えだけを取り出せるわ。' },
+    { id: 'g3', still: true, text: '答えを待たせないように、{show}書いている途中から、\n画面に出していくこともできるわ。' },
+    { id: 'h', text: '答え方を決めておきたいなら、{sys}アプリからの指示を、\n「システム」という印を付けて、頭に書いておけばいいわ。' },
     { id: 'i', by: 'zunda', text: '{q}見えないところで、指示されていたのだ？' },
     { id: 'j', text: 'そうよ。{tone}口調や、答えるときに気をつけてほしいことを、\nここで伝えるの。' },
     { id: 'j2', still: true, text: 'この指示は、{sp}システムプロンプトと呼ばれているわ。\n{part}これも、コンテクストの一部なの。' },
-    { id: 'k', tail: 0.8, text: '印の書き方は、{fmt}使うモデルに合わせる必要があるわ。\nここで描いたのは、説明のための形なの。' },
+    { id: 'k', tail: 0.8, text: '印の書き方は、{fmt}モデルが学習で見てきた形に、\nそろえる必要があるの。ここで描いたのは、説明のための形よ。' },
   ],
 
   prepare(ctx) {
@@ -261,11 +267,33 @@ export default clip({
     const rY = R.y - shift;
     // sentence f: the LLM reads the open mark; a cursor waits after it until the first token
     const look = focus(t, [at('look')], at('reply') + 0.4, cue).level[0];
-    ring(ctx, R.x - 3, rY - 3, markWidth(ctx, ROLE.assistant.name) + 6, MARK_H + 8, look, C.accent, 10);
+    // sentence e1: the open mark does what「答え：」did in 4-1
+    const ans = focus(t, [at('ans')], at('e1.end') - cue.fall, cue).level[0];
+    ring(ctx, R.x - 3, rY - 3, markWidth(ctx, ROLE.assistant.name) + 6, MARK_H + 8, Math.max(look, ans), C.accent, 10);
+    tag(ctx, rowAt(R, 0).x + 24, rY - 1, '「答え：」と同じ役目', { font: F.jp(700, 16), h: 30, padX: 10, fill: '#fff', stroke: C.ink2, color: C.ink2, alpha: ans });
     if (done(4) && written <= 0 && Math.floor(t * 2.5) % 2 === 0) {
       const at0 = rowAt(R, 0);
       ctx.fillStyle = C.accent;
       ctx.fillRect(at0.x, at0.y - 24 - shift, 4, 30);
+    }
+    // sentence g: left to itself, a model that only continues would go on to the next turn
+    const ghostIn = seg(t, at('more') - lead, at('more') - lead + 0.9);
+    const ghost = ghostIn * (1 - tw(t, at('g1'), 0.4));
+    if (ghost > 0) {
+      const gy = R.y + R.h + 26 - shift;
+      const w = markWidth(ctx, ROLE.user.name);
+      ctx.save();
+      ctx.globalAlpha = ghost;
+      rr(ctx, R.x, gy + 1, w, MARK_H, 6);
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = C.muted;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      text(ctx, ROLE.user.name, R.x + w / 2, gy + 1 + MARK_H / 2 + 1, { font: F.jp(700, 15), color: C.muted, align: 'center', base: 'middle', alpha: ghost });
+      const chars = Array.from(GHOST);
+      text(ctx, chars.slice(0, Math.round(chars.length * ghostIn)).join(''), R.tx, gy + 21, { font: R.font, color: C.muted, alpha: ghost });
     }
     // the end mark: written by the LLM, edged in its ink
     const ep = seg(t, eotAt, eotAt + EOT);
