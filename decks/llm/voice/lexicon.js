@@ -17,4 +17,7 @@ export default [
   // engine read head-high (ジ'ーピーティーフォーオー).
   { word: 'ジーピーティーフォーオー', kana: 'ジーピーティーフォーオー', accent: 'flat', priority: 8 },
   { word: 'ジーピーティーフォー', kana: 'ジーピーティーフォー', accent: 'flat', priority: 8 },
+  // 2026-10-16, Claude from the reading of 7-2: the engine split 12本 into two phrases (ジュウ'/ニ'ホン, and
+  // ジュ'ウニ/ホ'ン when the reading was written out). One word, down after ニ. Not yet heard by the Boss.
+  { word: '12本', kana: 'ジュウニホン', accent: 3, type: 'common', priority: 8 },
 ];
