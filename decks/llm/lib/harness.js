@@ -39,10 +39,15 @@
 
 import { C, F } from './theme.js';
 import { tag } from './parts.js';
-import { toolUseLayout, toolBox, onPath, MARK_H } from './rig.js';
-import { terminal, person } from './terminal.js';
+import {
+  toolUseLayout, toolBox, onPath, MARK_H, docLayout, docEntry, roleMark, ROLE, WRITER, screenBubbles, chatScreen, chatBubble,
+  screenLinks, appFrame, llmBlock, channel, loopIcon,
+} from './rig.js';
+import {
+  terminal, person, T as T64, DEFS, defRows, defY, drawDef, callLayout, drawCall, DX, SYS, MFONT, llmTag, NOTE_X, NOTE_Y,
+} from './terminal.js';
 import { text, measure, wrap, rr, path, circle, arrowHead } from '../../../src/kit/draw.js';
-import { lerp, clamp, inOutCubic } from '../../../src/kit/ease.js';
+import { lerp, clamp, seg, inOutCubic } from '../../../src/kit/ease.js';
 
 // ——— the geometry ————————————————————————————————————————————————————————————————————————————
 
@@ -632,4 +637,226 @@ export function mcpCard(ctx, o) {
   });
   text(ctx, '出典：Anthropic の発表、MCP の公式ブログ', x, B.y + B.h - 14, { font: F.jp(400, 11), color: C.muted, alpha: a * ya });
   return { title: { x: tx, y: MC.title - 21, w: mw, h: 27 }, plug: { x: px - PLUG.w / 2, y: MC.title - 7 - PLUG.h / 2, w: PLUG.w, h: PLUG.h }, rows: MCP_ROWS.map((s, k) => ({ x, y: MC.rows + k * MC.step - 16, w: measure(ctx, F.jp(500, 15), s) + 26, h: 22 })), years };
+}
+
+
+// ——— 7-3: the harness asks the GitHub MCP server for its tools and calls one ——————————————————————————
+// 7-3 (clips/mcpflow.js) narrows the tool's place (G73: its left edge 120 px to the right) so that the lane
+// between the harness's frame and the tool's place holds the log of the exchange (LOG73: → tools/list,
+// ← the definitions, → tools/call, ← the result). GitHub narrows with it (NET73); the chat screen stays where it
+// is (SCREEN7, with T7's links). The document gets the GitHub server's three definitions under bash's, the
+// request, the LLM's search_issues call and its result (#128). 7-3 ends on final73(): draw it, with what
+// prepare73() returns, to start 7-4 from the same picture.
+//   prepare: const s = prepare73(ctx);   draw: final73(ctx, t, s, a);
+// (the channels 入力 and 結果 are L73's, the screen's links T7's; mix7(G7, G73, p) is the way between.)
+export const G73 = { llm: G7.llm, app: G7.app, tool: { x: G7.tool.x + 120, y: G7.tool.y, w: G7.tool.w - 120, h: G7.tool.h } };
+export const T73 = harnessLayout(G73);
+export const L73 = T73.L;
+export const TOOL73 = L73.tool;
+export const TERM73 = { x: TOOL73.x + 14, y: TOOL73.y + 14, w: TOOL73.w - 28, h: TERM7.h };
+export const SERVER73 = { ...SERVER7, x: TERM73.x + 18 };
+export const NET73 = { x: TOOL73.x, y: NET7.y, w: TOOL73.w, h: NET7.h };
+export const API73 = { x: NET73.x + 200, y: NET73.y };
+// the lane's log, under the 結果 channel's name, down to GitHub's foot
+const LANE_X0 = G7.app.x + G7.app.w + 12;
+export const LOG73 = { x: LANE_X0, y: 628, w: TOOL73.x - 12 - LANE_X0, h: NET7.y + NET7.h - 628 };
+
+// GitHub's issues once the server has searched them: the list scrolls one row and shows #128 (an example)
+export const ISSUES73 = [...ISSUES7, ['#128', 0.86]];
+
+// GitHub in the net beyond, as githubPanel() draws it (o all 0: the same strokes) or narrowed to NET73.
+// o: { narrow (0 → 1: 7-2's note gives way to a short one; the bars take the room the tags had), scroll
+// (0 → 1: one row up, #128 comes in at the foot), found (0–1: #128 is marked as what the search found) }
+export function githubBoard(ctx, B, a, o = {}) {
+  if (a <= 0.001) return;
+  const nw = clamp(o.narrow ?? 0);
+  const sc = clamp(o.scroll ?? 0);
+  netPlace(ctx, B, a, { name: 'GitHub', note: '' });
+  const noteOpts = { font: F.jp(500, 13), color: C.muted, align: 'right' };
+  text(ctx, '外のサービス（ネットの先）', B.x + B.w - 16, B.y + 29, { ...noteOpts, alpha: a * (1 - seg(nw, 0, 0.4)) });
+  text(ctx, 'ネットの先', B.x + B.w - 16, B.y + 29, { ...noteOpts, alpha: a * seg(nw, 0.6, 1) });
+  const nameW = measure(ctx, F.jp(700, 18), 'GitHub');
+  text(ctx, 'Issue の一覧', B.x + 16 + nameW + 12, B.y + 30, { font: F.jp(500, 14), color: C.muted, alpha: a });
+  const room = lerp(150, 44, nw);
+  const clip = sc > 0.001;
+  if (clip) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(B.x + 4, B.y + 40, B.w - 8, B.h - 46);
+    ctx.clip();
+  }
+  ISSUES73.forEach(([n, share], k) => {
+    const ra = a * (k === 3 ? sc : k === 0 ? 1 - sc : 1);
+    if (ra <= 0.001) return;
+    const y = B.y + 58 + (k - sc) * 22;
+    if (k === 3 && (o.found ?? 0) > 0.001) {
+      ctx.save();
+      ctx.globalAlpha *= clamp(o.found) * ra;
+      rr(ctx, B.x + 14, y - 16, B.w - 28, 22, 6);
+      ctx.fillStyle = C.greenSoft;
+      ctx.fill();
+      ctx.restore();
+    }
+    issueIcon(ctx, B.x + 26, y - 5, ra);
+    text(ctx, n, B.x + 40, y, { font: F.mono(500, 14), color: C.ink2, alpha: ra });
+    textBar(ctx, B.x + 92, y - 5, (B.w - 92 - room) * share, ra, C.rule, 9);
+  });
+  if (clip) ctx.restore();
+  apiPort(ctx, B.x + 200, B.y, a, a);
+}
+// where #128's row stands once scrolled in (for a ring)
+export const issue128 = (B) => ({ x: B.x + 14, y: B.y + 58 + 2 * 22 - 16, w: B.w - 28, h: 22 });
+
+// The server's line down to the API's port at x (serverLine()'s, wherever the port is).
+export function serverWire(ctx, B, x, a, p = 1) {
+  if (a <= 0.001 || p <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  ctx.strokeStyle = C.ink2;
+  ctx.lineWidth = 2;
+  path(ctx, [[x, B.y + B.h], [x, API7.y - PORT.h / 2]], p);
+  ctx.restore();
+}
+
+// The harness's side of the connection (7-2's purple part, as a socket on the frame's right edge, between
+// 入力 and 結果): no name, as 7-2 gave it none.
+export const HPLUG73 = { x: G7.app.x + G7.app.w, y: (L73.call.y + L73.back.y) / 2 };
+export function harnessPlug(ctx, a, color = C.purple) {
+  plug(ctx, HPLUG73.x, HPLUG73.y, a, color);
+}
+
+// The log of what the harness and the MCP server send each other (the lane, LOG73): [arrow, what, about].
+export const LOG_ROWS = [
+  ['→', 'tools/list', '使えるツールを尋ねる'],
+  ['←', 'ツールの定義', 'search_issues ほか'],
+  ['→', 'tools/call', 'search_issues を呼ぶ'],
+  ['←', '結果', 'Issue #128'],
+];
+const LG = { head: 28, top: 64, step: 38 };
+export const logRow = (k) => ({ x: LOG73.x + 10, y: LOG73.y + LG.top + k * LG.step - 17, w: LOG73.w - 20, h: 36 });
+// o: { a, rows ([alpha, …]), plugColor }. Returns the card's box and its rows'.
+export function mcpLog(ctx, o = {}) {
+  const a = o.a ?? 0;
+  if (a <= 0.001) return null;
+  // (the card grows as its rows come in: LOG73's height once all four have)
+  const B = { ...LOG73, h: Math.min(LOG73.h, 44 + 40 * (o.rows ?? []).reduce((n, r) => n + clamp(r), 0)) };
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, B.x, B.y, B.w, B.h, 12);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.rule;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  const s = 0.78;
+  plug(ctx, B.x + 12 + (PLUG.w * s) / 2, B.y + LG.head - 5, a, o.plugColor ?? C.ink, s);
+  text(ctx, 'MCP のやりとり', B.x + 18 + PLUG.w * s, B.y + LG.head, { font: F.jp(700, 14), color: C.ink2, alpha: a });
+  LOG_ROWS.forEach(([dir, what, about], k) => {
+    const ra = a * (o.rows?.[k] ?? 0);
+    if (ra <= 0.001) return;
+    const y = B.y + LG.top + k * LG.step + (1 - clamp(o.rows[k])) * 5;
+    const x = B.x + 12;
+    text(ctx, dir, x, y, { font: F.jp(700, 15), color: dir === '→' ? C.accent : C.green, alpha: ra });
+    const font = what.includes('/') ? F.mono(600, 14) : F.jp(700, 14);
+    text(ctx, what, x + 20, y, { font, color: C.ink, alpha: ra });
+    text(ctx, about, x + 20, y + 16, { font: F.jp(500, 11), color: C.muted, alpha: ra });
+  });
+  // the rows' names (what is sent), for a mark under them
+  const names = LOG_ROWS.map(([, what], k) => ({ x: B.x + 32, y: B.y + LG.top + k * LG.step - 14, w: measure(ctx, what.includes('/') ? F.mono(600, 14) : F.jp(700, 14), what), h: 18 }));
+  return { box: B, rows: LOG_ROWS.map((_, k) => logRow(k)), names };
+}
+
+// ——— 7-3's document: the GitHub server's definitions (under bash's), the request, the call, the result
+// (an example; the definitions are the official server's, cut short and put in Japanese as the picture
+// writes bash's — research/harness-jobs-facts 7-3)
+export const DEFS73 = [
+  [['search_issues', F.jp(700, 17)], ['：Issue を検索する', F.jp(500, 17)]],
+  [['入力：query（検索する内容）ほか', F.jp(500, 17)]],
+  [['issue_read', F.jp(700, 17)], ['：Issue の中身を読む', F.jp(500, 17)]],
+  [['入力：method（get、get_comments）ほか', F.jp(500, 17)]],
+  [['add_issue_comment', F.jp(700, 17)], ['：コメントを書く', F.jp(500, 17)]],
+  [['入力：body（コメントの文）ほか', F.jp(500, 17)]],
+];
+// the LLM's call, row by row, as o200k_base cuts it (23 tokens)
+export const CALL73 = [
+  ['{"', 'name', '":', ' "', 'search', '_', 'issues', '",'],
+  [' "', 'input', '":', ' {"', 'query', '":'],
+  [' "', 'デ', 'ータ', 'ベ', 'ース', '時間', '切', 'れ', '"}}'],
+];
+export const CALL73_LH = 26;
+// what the harness writes in as the tool's result (cut short from what the server returns)
+export const RESULT73 = '#128 10/7 からデータベースが時間切れになる\n未解決（open）・コメント 3 件';
+export const NOTE73 = '依頼、ログ、報告、Issue と検索の結果、文書の中身は例';
+const TFONT7 = F.jp(500, 20);
+
+// The document as 7-3 leaves it, laid out (for prepare): the definitions' rows, the request, the call, the
+// result; and 7-2's two bubbles on the screen.
+export function prepare73(ctx) {
+  const opts = { ...T64.DOC, font: TFONT7, lh: 28 };
+  const one = (e, yy) => docLayout(ctx, L7, [e], { ...opts, top: yy - DOC7.y })[0];
+  const defs = defRows(ctx, [...DEFS, ...DEFS73]);
+  defs.forEach((d, k) => { if (d.right > DOC7.x + DOC7.w - 14) throw new Error(`harness: definition row ${k} is too wide`); });
+  const U = one({ role: 'user', text: ASK7_DOC }, defY(defs.length - 1) + 28);
+  let y = U.y + U.h + 12;
+  const c = callLayout(ctx, { x: DX, y, w: U.w, h: CALL73.length * CALL73_LH + 16 }, CALL73, CALL73_LH, { hang: true });
+  if (c.end.x + c.end.w > c.band.x + c.band.w - 6) throw new Error('harness: the call\'s end mark does not fit');
+  c.toks.forEach((tk) => { if (tk.x + tk.w > c.band.x + c.band.w - 6) throw new Error('harness: the call is too wide'); });
+  y = c.band.y + c.band.h + 10;
+  const R = one({ role: 'result', kind: 'data', text: RESULT73, font: MFONT, lh: 24 }, y);
+  if (R.rows.length !== 2) throw new Error(`harness: the result takes ${R.rows.length} rows`);
+  if (R.y + R.h > DOC7.y + DOC7.h - 8) throw new Error('harness: the document overflows');
+  const [Br, Bu] = screenBubbles(ctx, T7.SCREEN, [['assistant', REPORT64], ['user', ASK7_SCREEN]], { font: F.jp(500, 15), gap: 12 });
+  return { defs, U, c, R, Br, Bu };
+}
+
+// Under the LLM, as 7-3 leaves it: what the LLM writes and reads, and whose cut the tokens are.
+export function llmNotes73(ctx, a = [1, 1, 1]) {
+  llmTag(ctx, NOTE_Y[0], 'ツール呼び出しを書く', a[0]);
+  llmTag(ctx, NOTE_Y[1], '定義と結果を読む', a[1]);
+  text(ctx, 'トークンの切れ目は、o200k_base で切った例', NOTE_X, NOTE_Y[1] + 72, { font: F.jp(400, 13), color: C.muted, align: 'center', alpha: a[2] });
+}
+
+// 7-3's last picture (7-4's first), drawn with alpha a.
+export function final73(ctx, t, s, a = 1) {
+  if (a <= 0.001) return;
+  const { defs, U, c, R, Br, Bu } = s;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  chatScreen(ctx, T7.SCREEN, 1);
+  chatBubble(ctx, Br, { alpha: 1 });
+  chatBubble(ctx, Bu, { alpha: 1 });
+  screenLinks(ctx, T7, { talk: 1, back: 1, talkHot: false, backHot: false });
+  appFrame(ctx, L73, 1, { name: '' });
+  llmBlock(ctx, L73, 1, { glow: 0 });
+  channel(ctx, L73.read, 1, { hot: false });
+  channel(ctx, L73.write, 1, { hot: false });
+  channel(ctx, L73.call, 1, { labelAlpha: 1, hot: false });
+  channel(ctx, L73.back, 1, { labelAlpha: 1, hot: false });
+  roleMark(ctx, SYS.x, SYS.y + 1, ROLE.system, { edge: WRITER.system });
+  defs.forEach((d, k) => drawDef(ctx, d, defY(k), 1));
+  docEntry(ctx, U, 1, { tagAlpha: 0, chars: 1 });
+  roleMark(ctx, U.x, U.y + 1, ROLE.user, { edge: WRITER.user });
+  roleMark(ctx, DOC7.x + 18, c.band.y + 1, ROLE.assistant, { edge: WRITER.assistant });
+  drawCall(ctx, c, { bandA: 1, open: true, n: c.toks.length, end: true });
+  roleMark(ctx, R.x, R.y + 1, ROLE.result, { edge: WRITER.result });
+  docEntry(ctx, R, 1, { tagAlpha: 0, chars: 1 });
+  harnessBox(ctx, ACT7, 1, { glow: 0, names: [['アプリ', 0, 26], [NAME, 1, 0]] });
+  const LP = T7.LOOP;
+  loopIcon(ctx, LP.x, LP.y, LP.r, 1, { p: 1 });
+  text(ctx, 'くり返す', LP.x - LP.r - 14, LP.y + 6, { font: F.jp(700, 16), color: C.purple, align: 'right', alpha: 1 });
+  toolPlace(ctx, L73, 1, {
+    draw: (cx) => {
+      shell(cx, t, 1, term64Lines(() => -100), { trim: true, box: TERM73 });
+      mcpServer(cx, SERVER73, 1);
+    },
+  });
+  githubBoard(ctx, NET73, 1, { narrow: 1, scroll: 1, found: 1 });
+  serverWire(ctx, SERVER73, API73.x, 1, 1);
+  harnessPlug(ctx, 1);
+  mcpLog(ctx, { a: 1, rows: [1, 1, 1, 1] });
+  llmNotes73(ctx);
+  mcpCard(ctx, { a: 1, name: 1, abbr: 1, rows: [1, 1], note: 1, years: [1, 1], plugColor: C.ink });
+  exampleNote(ctx, L7, NOTE73, 1, 1);
+  ctx.restore();
 }
