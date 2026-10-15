@@ -9,11 +9,13 @@
 import { clip } from '../lib/clip.js';
 import { C, F, SQ } from '../lib/theme.js';
 import { seg, tw, lerp, inOutCubic, outBack, clamp } from '../../../src/kit/ease.js';
-import { text, rr } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
+import { text } from '../../../src/kit/draw.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { rect } from '../../../src/kit/place.js';
 import { treeTriangle, TREE } from '../lib/scene.js';
-import { corners, mixPose, drawTri, angleArc, label, RAD } from '../lib/tri.js';
-import { math, row } from '../lib/math.js';
+import { corners, mixPose, drawTri, ghostTri, angleArc, angleAt, placeLabel, triShapes, RAD } from '../lib/tri.js';
+import { math, row, tag } from '../lib/math.js';
+import { protractor, pill } from '../lib/parts.js';
 
 const BIG0 = { x: TREE.A.x, y: TREE.A.y, s: 1 };
 const BIG1 = { x: 120, y: 600, s: 0.6 };
@@ -50,18 +52,17 @@ export default clip({
     const answer = tw(t, ans - cue.lead, 0.5, outBack);
     const lit = focus(t, [at('d18'), at('d38'), at('ask')], at('a.end'), cue);
     const bigLit = tw(t, at('big') - cue.lead, cue.rise) * (1 - tw(t, at('g.end'), cue.fall));
-    const T = treeTriangle(ctx, {
+    const { T, box } = treeTriangle(ctx, {
       pose,
       height: answer > 0.5 ? '約 14 m' : '？',
       heightColor: answer > 0.5 ? C.accent : C.sin,
       heightSize: lerp(40, 34, move),
-      heightOff: answer > 0.5 ? 92 : 50,
     });
     // the three facts, pointed at as she names them
     const k = Math.max(0.6, pose.s);
-    ring(ctx, (T.A.x + T.C.x) / 2 - 60, T.A.y + 56 * k + 6, 120, 52, lit.level[0], C.accent);
-    ring(ctx, T.A.x + 70 * k, T.A.y - 70 * k, 92, 50, lit.level[1], C.accent);
-    ring(ctx, T.C.x + 56 * k + 20, (T.B.y + T.C.y) / 2 - 34, answer > 0.5 ? 150 : 64, 68, Math.max(lit.level[2], bigLit, answer * (1 - tw(t, at('h.end') - cue.fall, cue.fall))), C.accent);
+    ringBox(ctx, box.dist, lit.level[0], C.accent);
+    ringBox(ctx, box.ang, lit.level[1], C.accent);
+    ringBox(ctx, box.height, Math.max(lit.level[2], bigLit, answer * (1 - tw(t, at('h.end') - cue.fall, cue.fall))), C.accent);
 
     // ——— the plan: a copy of the big triangle shrinks onto the paper
     const smallT = corners(38, SMALL.base, { x: SMALL.x, y: SMALL.y });
@@ -69,10 +70,7 @@ export default clip({
     const drawn = seg(t, at('draw'), at('draw') + 1.4);
     if (ghostGo > 0) {
       const G = corners(38, TREE.base, mixPose(BIG1, { x: SMALL.x, y: SMALL.y, s: SMALL.base / TREE.base }, ghostGo));
-      ctx.save();
-      ctx.setLineDash([10, 9]);
-      drawTri(ctx, G, { plain: true, plainColor: C.muted, lw: 3, right: 0, alpha: 1 - 0.85 * clamp(drawn * 1.5) });
-      ctx.restore();
+      ghostTri(ctx, G, { alpha: 1 - 0.85 * clamp(drawn * 1.5) });
     }
 
     // similar: the same angle marked twice, and the word
@@ -81,16 +79,7 @@ export default clip({
       angleArc(ctx, T.A, T.C, T.B, { r: 46 * k, double: true, color: C.accent, alpha: same * (1 - tw(t, at('d'), 0.4)) });
       angleArc(ctx, smallT.A, smallT.C, smallT.B, { r: 46, double: true, color: C.accent, alpha: same * (1 - tw(t, at('d'), 0.4)) });
     }
-    const sim = tw(t, at('sim') - cue.lead, 0.5, outBack) * (1 - tw(t, at('d'), 0.5));
-    if (sim > 0) {
-      ctx.save();
-      ctx.globalAlpha *= clamp(sim);
-      rr(ctx, 610, 560, 120, 56, 28);
-      ctx.fillStyle = C.accent;
-      ctx.fill();
-      text(ctx, '相似', 670, 600, { font: F.jp(700, 30), color: C.white, align: 'center' });
-      ctx.restore();
-    }
+    pill(ctx, '相似', 670, 588, { align: 'center', alpha: tw(t, at('sim') - cue.lead, 0.5, outBack) * (1 - tw(t, at('d'), 0.5)) });
 
     // ——— her drawing, in the order she draws it
     // the base, counted out square by square
@@ -108,7 +97,7 @@ export default clip({
     // the 38° from a protractor
     const deg = at('deg');
     const prot = tw(t, deg - 0.2, 0.4) * (1 - tw(t, at('draw') + 0.8, 0.4));
-    if (prot > 0) protractor(ctx, smallT.A, prot);
+    protractor(ctx, smallT.A, { r: 150, alpha: prot });
     const markA = tw(t, deg + 0.3, 0.3);
     if (markA > 0) {
       const r = 150;
@@ -122,7 +111,7 @@ export default clip({
       ctx.fill();
       ctx.restore();
     }
-    angleArc(ctx, smallT.A, smallT.C, smallT.B, { r: 64, label: '38°', size: 28, alpha: tw(t, deg + 0.3, 0.4) });
+    angleAt(ctx, smallT, 'A', { r: 64, label: '38°', size: 28, alpha: tw(t, deg + 0.3, 0.4) });
 
     // the height, counted up the right side: seven whole squares and most of the eighth
     const count = at('count');
@@ -139,47 +128,28 @@ export default clip({
       ctx.restore();
       if (i < 8) text(ctx, String(i), smallT.C.x + SQ / 2, y1 + SQ * 0.68, { font: F.mono(500, 18), color: C.sin, align: 'center', alpha: on * (1 - tw(t, at('g'), 0.5) * 0.6) });
     }
+    // beside the column of counted squares
+    const column = rect(smallT.C.x, smallT.B.y, SQ, smallT.C.y - smallT.B.y);
     const v78 = tw(t, n78 - cue.lead, 0.4, outBack);
-    if (v78 > 0) label(ctx, '約 7.8 マス', smallT.C.x + SQ + 92, (smallT.B.y + smallT.C.y) / 2, { size: 28, color: C.sin, alpha: clamp(v78) });
+    placeLabel(ctx, '約 7.8 マス', { x: smallT.C.x, y: (smallT.B.y + smallT.C.y) / 2 }, { x: 1, y: 0 }, [column, ...triShapes(smallT)], { size: 28, color: C.sin, alpha: clamp(v78), gap: 14 });
 
     // 7.8 ÷ 10 = 0.78, under her drawing
     const ratio = tw(t, at('ratio') - cue.lead, 0.5);
     const rLit = focus(t, [at('ratio')], at('f.end'), cue).level[0];
-    math(ctx, row('7.8', '÷', '10', '=', '0.78'), SMALL.x + SMALL.base / 2, 820, { size: 44, align: 'center', alpha: ratio });
-    if (rLit > 0) ring(ctx, SMALL.x + SMALL.base / 2 + 60, 784, 112, 50, rLit, C.accent);
+    const mine = math(ctx, row('7.8', '÷', '10', '=', tag('r', '0.78')), SMALL.x + SMALL.base / 2, 820, { size: 44, align: 'center', alpha: ratio });
+    ringBox(ctx, mine.parts.r, rLit, C.accent);
 
     // the same 0.78 carried over to the tree: 18 × 0.78
     const mul = tw(t, at('mul') - cue.lead, 0.5);
     const carry = inOutCubic(seg(t, at('mul') - 0.2, at('mul') + 0.6));
+    const tree = math(ctx, row('18', '×', tag('r', '0.78'), ...(answer > 0 ? ['≒', '14'] : [])), 300, 820, { size: 44, align: 'center', alpha: mul });
     if (carry > 0 && carry < 1) {
       // a chip with 0.78 travels from her formula to the tree's
-      const x = lerp(SMALL.x + SMALL.base / 2 + 116, 330, carry);
-      const y = lerp(806, 790, carry) - Math.sin(Math.PI * carry) * 120;
-      text(ctx, '0.78', x, y, { font: F.sans(500, 40), color: C.accent, align: 'center' });
+      const from = mine.parts.r;
+      const to = tree.parts.r;
+      const x = lerp(from.x + from.w / 2, to.x + to.w / 2, carry);
+      const y = lerp(from.y + from.h / 2, to.y + to.h / 2, carry) - Math.sin(Math.PI * carry) * 120;
+      text(ctx, '0.78', x, y + 15, { font: F.sans(500, 40), color: C.accent, align: 'center' });
     }
-    math(ctx, row('18', '×', '0.78', ...(answer > 0 ? ['≒', '14'] : [])), 300, 820, { size: 44, align: 'center', alpha: mul });
   },
 });
-
-function protractor(ctx, A, a) {
-  ctx.save();
-  ctx.globalAlpha *= a * 0.9;
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.strokeStyle = C.ink2;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(A.x, A.y, 150, Math.PI, 2 * Math.PI);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  for (let d = 0; d <= 180; d += 5) {
-    const r0 = d % 10 ? 140 : d % 30 ? 132 : 124;
-    const ang = Math.PI + (d * Math.PI) / 180;
-    ctx.beginPath();
-    ctx.moveTo(A.x + Math.cos(ang) * r0, A.y + Math.sin(ang) * r0);
-    ctx.lineTo(A.x + Math.cos(ang) * 150, A.y + Math.sin(ang) * 150);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-

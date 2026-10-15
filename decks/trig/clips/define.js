@@ -8,8 +8,8 @@
 import { clip } from '../lib/clip.js';
 import { C } from '../lib/theme.js';
 import { seg, tw, lerp, inOutCubic, outBack, clamp } from '../../../src/kit/ease.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { drawTri, angleArc, mixTri } from '../lib/tri.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { drawTri, angleAt, mixTri, rightBox, pointBox } from '../lib/tri.js';
 import { math, box } from '../lib/math.js';
 import {
   board, boardCorners, ratioCard, ratioTable, tatesoko, CARD, ZUNDA_NAMES, METAN_NAMES,
@@ -71,16 +71,16 @@ export default clip({
         base: tw(t, at('base') - lead, 0.4),
       };
       if (split === 0) {
-        board(ctx, { other: 1 - thetaMix, angle: thetaMix > 0.5 ? 'θ' : '38°', nameMix });
+        const bd = board(ctx, { other: 1 - thetaMix, angle: thetaMix > 0.5 ? 'θ' : '38°', nameMix });
         const pose = focus(t, [at('bl'), at('br')], at('place.end'), cue);
-        ring(ctx, T0.A.x - 30, T0.A.y - 40, 70, 64, pose.level[0], C.accent);
-        ring(ctx, T0.C.x - 40, T0.C.y - 40, 64, 64, pose.level[1], C.accent);
+        ringBox(ctx, [pointBox(T0.A), bd.angle], pose.level[0], C.accent);
+        ringBox(ctx, rightBox(T0), pose.level[1], C.accent);
       } else {
         // the triangle splits into the three of the sheet
         for (let i = 0; i < 3; i++) {
           const U = mixTri(T0, memoPanel(i).T, split);
           drawTri(ctx, U, { lw: lerp(6, 5, split) });
-          angleArc(ctx, U.A, U.C, U.B, { r: lerp(70, 58, split), label: 'θ', size: lerp(32, 30, split) });
+          angleAt(ctx, U, 'A', { r: lerp(70, 58, split), label: 'θ', size: lerp(32, 30, split) });
         }
       }
 
@@ -137,14 +137,13 @@ export default clip({
       const frame = tw(t, at('bang') - lead, 0.4, outBack);
       const shake = Math.sin(t * 38) * 5 * Math.sin(Math.PI * seg(t, at('cram.voice'), at('cram.end')));
       memo(ctx, { ...where, x: where.x + shake * (1 - go), write: [sP, cP, tP], frame: clamp(frame) });
-      // den, num: the parts of sin's definition as she names them
+      // den, num: the parts of sin's definition as she names them (where memo() writes it)
       if (go === 0) {
         const P = memoPanel(0);
-        const bx = box(definition('s'), 46);
-        const fracX = P.fx + bx.w / 2 - 70;
+        const { parts } = math(ctx, definition('s'), P.fx, P.fy, { size: 44, align: 'center', alpha: 0 });
         const dn = focus(t, [at('den'), at('num')], at('s.end'), cue);
-        ring(ctx, fracX - 52, P.fy - 2, 104, 46, dn.level[0], C.accent);
-        ring(ctx, fracX - 52, P.fy - 70, 104, 46, dn.level[1], C.accent);
+        ringBox(ctx, parts.den, dn.level[0], C.accent);
+        ringBox(ctx, parts.num, dn.level[1], C.accent);
       }
     }
     drillTag(ctx, '演習', tw(t, at('go') + 0.4, 0.5));

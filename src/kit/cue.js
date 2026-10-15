@@ -52,3 +52,17 @@ export function ring(ctx, x, y, w, h, level, color, r = 12) {
   ctx.stroke();
   ctx.restore();
 }
+
+// The same frame around a box { x, y, w, h } — what a label or a formula reports where it
+// was drawn — so a ring needs no coordinates measured by hand. Several boxes get one frame
+// around them all; missing ones (null) are skipped. pad: room between the box and the frame,
+// on top of the frame's own.
+export function ringBox(ctx, b, level, color, pad = 4) {
+  const bs = (Array.isArray(b) ? b : [b]).filter(Boolean);
+  if (!bs.length || level <= 0.001) return;
+  const x = Math.min(...bs.map((q) => q.x)) - pad;
+  const y = Math.min(...bs.map((q) => q.y)) - pad;
+  const w = Math.max(...bs.map((q) => q.x + q.w)) + pad - x;
+  const h = Math.max(...bs.map((q) => q.y + q.h)) + pad - y;
+  ring(ctx, x, y, w, h, level, color);
+}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { focus, dimmed, lifted, enter } from '../src/kit/cue.js';
+import { focus, dimmed, lifted, enter, ringBox } from '../src/kit/cue.js';
 
 const cue = { lead: 0.15, rise: 0.25, fall: 0.4, scale: 1.06, dim: 0.4, stay: 'next', span: 1.2 };
 
@@ -48,5 +48,32 @@ describe('dimmed, lifted, enter', () => {
     expect(enter(1.5, 1, pace)).toBe(1);
     expect(enter(1.2, 1, pace, 2)).toBe(0);
     expect(enter(1.7, 1, pace, 2)).toBe(1);
+  });
+});
+
+describe('ringBox', () => {
+  const fake = () => {
+    const calls = [];
+    return {
+      calls,
+      save() {},
+      restore() {},
+      beginPath() {},
+      stroke() {},
+      roundRect: (...a) => calls.push(a),
+      globalAlpha: 1,
+    };
+  };
+  test('one frame round every box given, skipping missing ones', () => {
+    const ctx = fake();
+    ringBox(ctx, [{ x: 10, y: 20, w: 30, h: 10 }, null, { x: 50, y: 5, w: 10, h: 10 }], 1, '#f00', 0);
+    // the frame's own room at full light is 6 px
+    expect(ctx.calls).toEqual([[4, -1, 62, 37, 15]]);
+  });
+  test('nothing is drawn while unlit or with no box', () => {
+    const ctx = fake();
+    ringBox(ctx, { x: 0, y: 0, w: 1, h: 1 }, 0, '#f00');
+    ringBox(ctx, null, 1, '#f00');
+    expect(ctx.calls).toEqual([]);
   });
 });

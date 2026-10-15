@@ -7,9 +7,10 @@ import { clip } from '../lib/clip.js';
 import { C, F } from '../lib/theme.js';
 import { seg, tw, inOutCubic, outBack, lerp } from '../../../src/kit/ease.js';
 import { text } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
 import { treeTriangle } from '../lib/scene.js';
 import { cursive } from '../lib/cursive.js';
+import { label, triBox } from '../lib/tri.js';
 import { row, jp, colored } from '../lib/math.js';
 import { trigTable } from '../lib/table.js';
 import { cornerMemo, tab, example, workLine } from '../lib/drill.js';
@@ -47,30 +48,29 @@ export default clip({
     const tree = tw(t, at('tree') - lead, 0.6);
     const ans = at('ans');
     const done = tw(t, ans - lead, 0.5, outBack);
-    const T = treeTriangle(ctx, {
+    const { T, box } = treeTriangle(ctx, {
       pose: POSE,
       alpha: tree,
       height: done > 0.5 ? '約 14.06 m' : '？',
       heightColor: done > 0.5 ? C.accent : C.sin,
-      heightOff: done > 0.5 ? 116 : 50,
       heightSize: 36,
     });
     example(ctx, 120, 120, tree);
-    const k = POSE.s;
     const facts = focus(t, [at('b18'), at('a38'), at('want')], at('a1.end'), cue);
-    ring(ctx, (T.A.x + T.C.x) / 2 - 60, T.A.y + 56 * k + 4, 120, 50, facts.level[0], C.accent);
-    ring(ctx, T.A.x + 64 * k, T.A.y - 70 * k - 6, 92, 50, facts.level[1], C.accent);
-    ring(ctx, T.C.x + 56 * k + 16, (T.B.y + T.C.y) / 2 - 34, done > 0.5 ? 210 : 64, 68, Math.max(facts.level[2], done * (1 - tw(t, at('a4.end'), cue.fall))), C.accent);
+    ringBox(ctx, box.dist, facts.level[0], C.accent);
+    ringBox(ctx, box.ang, facts.level[1], C.accent);
+    ringBox(ctx, box.height, Math.max(facts.level[2], done * (1 - tw(t, at('a4.end'), cue.fall))), C.accent);
 
     // the t, written over the triangle: base first, then up the height
     const pair = focus(t, [at('pair')], at('t'), cue).level[0];
     if (pair > 0) {
+      const b = triBox(T, 10);
       ctx.save();
       ctx.globalAlpha *= pair;
       ctx.strokeStyle = C.accent;
       ctx.lineWidth = 3;
       ctx.setLineDash([8, 8]);
-      ctx.strokeRect(T.A.x - 10, T.B.y - 10, T.C.x - T.A.x + 20, T.C.y - T.B.y + 20);
+      ctx.strokeRect(b.x, b.y, b.w, b.h);
       ctx.restore();
     }
     cursive(ctx, T, 't', seg(t, at('t') - 0.1, at('t') + 1.1), { lw: 8, numbers: 0, alpha: 1 - 0.8 * tw(t, at('a2.end'), 0.6) });
@@ -89,27 +89,25 @@ export default clip({
     const back = focus(t, [at('tanv')], at('m2.end') - cue.fall, cue).level[0];
     const tb = trigTable(ctx, TABLE.x, TABLE.y, { rows: ROWS, show: TABLE.show, scroll, alpha: look, hi: { deg: 38, col: 'tan', level: Math.max(v * (1 - tw(t, at('a4.end'), 0.4)), back) } });
 
-    // what she measured on the paper, beside the answer; joined to the table at the end
+    // what she measured on the paper, under the answer; joined to the table at the end
     const same = tw(t, at('same') - lead, 0.5);
-    if (same > 0) {
-      text(ctx, '方眼紙では 約 14 m', T.C.x + 60, (T.B.y + T.C.y) / 2 + 70, { font: F.jp(500, 24), color: C.muted, alpha: same });
-    }
+    const h = box.height;
+    text(ctx, '方眼紙では 約 14 m', h.x, h.y + h.h + 36, { font: F.jp(500, 24), color: C.muted, alpha: same });
     const grid = tw(t, at('grid') - lead, 0.5);
     if (grid > 0) {
-      const gx = 760;
-      const gy = 560;
-      ring(ctx, gx - 10, gy - 34, 200, 48, grid, C.accent);
-      text(ctx, '方眼紙の 0.78', gx, gy, { font: F.jp(700, 26), color: C.ink, alpha: grid });
-      const cy = tb.rowY(38) + 23;
-      const cx = TABLE.x + 96 + 150 * 2.5 - 50;
+      const g = label(ctx, '方眼紙の 0.78', 850, 548, { size: 26, alpha: grid });
+      ringBox(ctx, g, grid, C.accent);
+      const c = tb.cell(38, 'tan');
+      const from = { x: g.x + g.w + 14, y: g.y + g.h / 2 };
+      const to = { x: c.x + 24, y: c.y + c.h / 2 };
       const p = inOutCubic(seg(t, at('tanv') - lead, at('tanv') + 0.6));
       ctx.save();
       ctx.strokeStyle = C.accent;
       ctx.lineWidth = 3;
       ctx.setLineDash([8, 7]);
       ctx.beginPath();
-      ctx.moveTo(gx + 190, gy - 12);
-      ctx.lineTo(lerp(gx + 190, cx, p), lerp(gy - 12, cy, p));
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(lerp(from.x, to.x, p), lerp(from.y, to.y, p));
       ctx.stroke();
       ctx.restore();
     }

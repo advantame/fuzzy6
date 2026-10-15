@@ -12,6 +12,7 @@ import { C } from '../lib/theme.js';
 import { seg, tw, lerp, inOutCubic, outBack } from '../../../src/kit/ease.js';
 import { circle } from '../../../src/kit/draw.js';
 import { scenery, drawTree, zundamon, mark, treeTriangle, treeCorners, TREE } from '../lib/scene.js';
+import { protractor, cross } from '../lib/parts.js';
 import { mouthAt, eyesAt } from '../lib/voice.js';
 
 const V = 300; // px a second the road passes while she walks
@@ -70,20 +71,7 @@ export default clip({
       ctx.bezierCurveTo(T.C.x - 70, T.C.y - 200, T.C.x - 10, T.C.y - 360, T.B.x - 30, T.B.y + 40);
       ctx.stroke();
       ctx.setLineDash([]);
-      const no = tw(t, at('no') - 0.1, 0.35, outBack);
-      if (no > 0) {
-        const cx = T.C.x - 50;
-        const cy = T.C.y - 250;
-        const r = 46 * no;
-        ctx.strokeStyle = C.accent;
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.moveTo(cx - r, cy - r);
-        ctx.lineTo(cx + r, cy + r);
-        ctx.moveTo(cx + r, cy - r);
-        ctx.lineTo(cx - r, cy + r);
-        ctx.stroke();
-      }
+      cross(ctx, T.C.x - 50, T.C.y - 250, 46, tw(t, at('no') - 0.1, 0.35, outBack));
       ctx.restore();
     }
 
@@ -106,28 +94,7 @@ export default clip({
     // the angle: a protractor at A, and the line of sight up to the top
     const ang = at('ang');
     const sight = tw(t, ang - 0.15, 0.7, inOutCubic);
-    const protractor = tw(t, ang - 0.15, 0.5) * (1 - gone);
-    if (protractor > 0) {
-      ctx.save();
-      ctx.globalAlpha *= protractor * 0.85;
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.strokeStyle = C.ink2;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(T.A.x, T.A.y, 120, Math.PI, 2 * Math.PI);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      for (let d = 0; d <= 180; d += 10) {
-        const r0 = d % 30 ? 108 : 100;
-        const a = Math.PI + (d * Math.PI) / 180;
-        ctx.beginPath();
-        ctx.moveTo(T.A.x + Math.cos(a) * r0, T.A.y + Math.sin(a) * r0);
-        ctx.lineTo(T.A.x + Math.cos(a) * 120, T.A.y + Math.sin(a) * 120);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
+    protractor(ctx, T.A, { r: 120, step: 10, alpha: tw(t, ang - 0.15, 0.5) * (1 - gone) });
     if (sight > 0) {
       // dashed while it is a line of sight, solid once it is the hypotenuse
       ctx.save();
@@ -144,18 +111,11 @@ export default clip({
 
     // the triangle itself, solid once the scenery fades; its labels come in as they are measured
     const heightL = tw(t, at('height') - 0.15, 0.6);
-    // over the leaves, the unknown height needs a white patch to be read
-    if (heightL > 0 && gone < 1) {
-      ctx.save();
-      ctx.globalAlpha *= heightL * (1 - gone);
-      ctx.fillStyle = C.white;
-      circle(ctx, T.C.x + 56 + 50, (T.B.y + T.C.y) / 2, 32);
-      ctx.fill();
-      ctx.restore();
-    }
     treeTriangle(ctx, {
       sides: gone,
       labels: { dist: distLabel, ang: tw(t, ang + 0.3, 0.5), height: heightL, heightP: heightL },
+      // over the leaves, the unknown height needs a white plate to be read
+      patch: 1 - gone,
     });
 
     // ——— ずんだもん, in the foreground

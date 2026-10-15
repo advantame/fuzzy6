@@ -7,7 +7,7 @@ import { clamp, lerp } from '../../../src/kit/ease.js';
 import { circle, text } from '../../../src/kit/draw.js';
 import { hash } from '../../../src/kit/random.js';
 import { C, F, W } from './theme.js';
-import { corners, drawTri, angleArc, dim, RAD } from './tri.js';
+import { corners, drawTri, angleAt, dim, RAD } from './tri.js';
 import { drawSprite } from './figures.js';
 
 // ——— the tree's triangle ————————————————————————————————————————————
@@ -206,22 +206,30 @@ export function mark(ctx, x, y, s, p, color = C.accent) {
 
 // The tree's triangle as it stands once the scenery has gone: the three sides in their
 // colours, the right angle, the 18 m under the base, the 38° at A and the unknown height.
-// o: { pose, alpha, sides (0–1: drawn sides), labels (0–1), height: label for the height,
-// heightColor, fade (0–1: the sides' colour, from plain ink to their own) }.
+// o: { pose, alpha, sides (0–1: drawn sides), labels (0–1, or { dist, ang, height, distP,
+// angP, heightP }), height: label for the height, heightColor, heightSize, patch (alpha of a
+// white plate under the height's label, to read it over the leaves) }. Returns { T, box } —
+// box holds the labels' boxes, for rings.
 export function treeTriangle(ctx, o = {}) {
   const T = treeCorners(o.pose);
   const s = o.pose?.s ?? 1;
   const a = o.alpha ?? 1;
-  if (a <= 0.001) return T;
   const sides = o.sides ?? 1;
   drawTri(ctx, T, { alpha: a * sides, lw: 6, right: o.right ?? sides });
   const L = typeof o.labels === 'object' ? { dist: 1, ang: 1, height: 1, ...o.labels } : { dist: o.labels ?? 1, ang: o.labels ?? 1, height: o.labels ?? 1 };
   const k = Math.max(0.6, s);
-  dim(ctx, T.A, T.C, { x: 0, y: 1 }, 56 * k, '18 m', { alpha: L.dist * a, p: L.distP ?? 1, size: 34, labelOff: 30, color: C.cos, labelColor: C.cos });
-  angleArc(ctx, T.A, T.C, T.B, { r: 84 * k, label: '38°', size: 32, alpha: L.ang * a, p: L.angP ?? 1, color: C.ink, labelR: 84 * k + 54 });
+  const dist = dim(ctx, T.A, T.C, { x: 0, y: 1 }, 56 * k, '18 m', { alpha: L.dist * a, p: L.distP ?? 1, size: 34, color: C.cos, labelColor: C.cos }).box;
+  const ang = angleAt(ctx, T, 'A', { r: 84 * k, label: '38°', size: 32, alpha: L.ang * a, p: L.angP ?? 1, color: C.ink });
   const hl = o.height ?? '？';
-  dim(ctx, T.C, T.B, { x: 1, y: 0 }, 56 * k, hl, { alpha: L.height * a, p: L.heightP ?? 1, size: o.heightSize ?? 40, labelOff: o.heightOff ?? 50, color: C.sin, labelColor: o.heightColor ?? C.sin });
-  return T;
+  const height = dim(ctx, T.C, T.B, { x: 1, y: 0 }, 56 * k, hl, {
+    alpha: L.height * a,
+    p: L.heightP ?? 1,
+    size: o.heightSize ?? 40,
+    color: C.sin,
+    labelColor: o.heightColor ?? C.sin,
+    patch: o.patch ?? 0,
+  }).box;
+  return { T, box: { dist, ang, height } };
 }
 
 export { RAD, lerp };

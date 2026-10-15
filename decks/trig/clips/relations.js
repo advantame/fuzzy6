@@ -6,13 +6,14 @@
 
 import { clip } from '../lib/clip.js';
 import { C, F } from '../lib/theme.js';
-import { seg, tw, inOutCubic, outBack, clamp, lerp } from '../../../src/kit/ease.js';
-import { text, rr } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { corners, drawTri, angleArc, sideLabel, RAD } from '../lib/tri.js';
-import { math, row, frac, jp, sup, box, colored } from '../lib/math.js';
+import { seg, tw, inOutCubic, clamp, lerp } from '../../../src/kit/ease.js';
+import { text } from '../../../src/kit/draw.js';
+import { focus, ring, ringBox } from '../../../src/kit/cue.js';
+import { corners, drawTri, angleAt, sideLabel, RAD } from '../lib/tri.js';
+import { math, row, frac, jp, sup, colored, tag } from '../lib/math.js';
 import { definition } from '../lib/board.js';
 import { workLine } from '../lib/drill.js';
+import { boxed, strike } from '../lib/parts.js';
 
 const R = 300; // the hypotenuse, as 1
 const A0 = { x: 250, y: 560 };
@@ -58,17 +59,17 @@ export default clip({
     if (sq > 0) squares(ctx, T, sq);
 
     drawTri(ctx, T, { lw: 6 });
-    angleArc(ctx, T.A, T.C, T.B, { r: 58, label: 'θ', size: 32 });
+    angleAt(ctx, T, 'A', { r: 58, label: 'θ', size: 32 });
     // the names, then the values once the hypotenuse is 1
     const vals = tw(t, at('hs') - lead, 0.5);
     // in the problem the sides carry its numbers instead
     const prob = 1 - tw(t, at('q') - lead, 0.4);
-    sideLabel(ctx, T, 'height', '高さ', { off: 52, size: 28, alpha: 1 - vals });
-    sideLabel(ctx, T, 'base', '底辺', { off: 30, size: 28, alpha: 1 - one });
-    sideLabel(ctx, T, 'hyp', '斜辺', { off: 40, size: 28, color: C.ink, alpha: 1 - one });
-    sideLabel(ctx, T, 'hyp', '1', { off: 36, size: 34, color: C.ink, alpha: one * (1 - sq) * prob });
-    sideLabel(ctx, T, 'height', row('sin', 'θ'), { off: 66, size: 32, alpha: vals * (1 - sq) * prob });
-    sideLabel(ctx, T, 'base', row('cos', 'θ'), { off: 30, size: 32, alpha: tw(t, at('bc') - lead, 0.5) * (1 - sq) * prob });
+    sideLabel(ctx, T, 'height', '高さ', { size: 28, alpha: 1 - vals });
+    sideLabel(ctx, T, 'base', '底辺', { size: 28, alpha: 1 - one });
+    sideLabel(ctx, T, 'hyp', '斜辺', { size: 28, color: C.ink, alpha: 1 - one });
+    sideLabel(ctx, T, 'hyp', '1', { size: 34, color: C.ink, alpha: one * (1 - sq) * prob });
+    sideLabel(ctx, T, 'height', row('sin', 'θ'), { size: 32, alpha: vals * (1 - sq) * prob });
+    sideLabel(ctx, T, 'base', row('cos', 'θ'), { size: 32, alpha: tw(t, at('bc') - lead, 0.5) * (1 - sq) * prob });
 
     // ——— b: sin θ ÷ cos θ, the hypotenuses cancel
     const defs = 1 - tw(t, at('c'), 0.5);
@@ -76,72 +77,27 @@ export default clip({
     if (divA > 0) {
       const y1 = 260;
       workLine(ctx, row('sin', 'θ', '÷', 'cos', 'θ'), X, y1, divA, { size: 46 });
-      // = (高さ/斜辺) ÷ (底辺/斜辺): laid out piece by piece to strike the 斜辺s
-      const f1 = frac(jp('高さ', C.sin), jp('斜辺'));
-      const f2 = frac(jp('底辺', C.cos), jp('斜辺'));
-      const b1 = box(f1, 46);
-      const b2 = box(f2, 46);
-      const eqW = box(row('='), 46).w;
-      const divW = box(row('÷'), 46).w;
+      // = (高さ/斜辺) ÷ (底辺/斜辺), the 斜辺s struck out as they cancel
       const y2 = 400;
-      const x1 = X + eqW + 20;
-      const x2 = x1 + b1.w + divW + 30;
-      workLine(ctx, row('='), X, y2, divA, { size: 46 });
-      workLine(ctx, f1, x1, y2, divA, { size: 46 });
-      workLine(ctx, row('÷'), x1 + b1.w + 15, y2, divA, { size: 46 });
-      workLine(ctx, f2, x2, y2, divA, { size: 46 });
-      const strike = seg(t, at('cancel') - 0.05, at('cancel') + 0.5);
-      for (const [x, w] of [[x1, b1.w], [x2, b2.w]]) {
-        if (strike <= 0) continue;
-        ctx.save();
-        ctx.globalAlpha *= divA;
-        ctx.strokeStyle = C.accent;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(x + 6, y2 + 44);
-        ctx.lineTo(x + 6 + (w - 12) * strike, y2 + 8);
-        ctx.stroke();
-        ctx.restore();
-      }
+      const line = workLine(ctx, row('=', frac(jp('高さ', C.sin), tag('d1', jp('斜辺'))), '÷', frac(jp('底辺', C.cos), tag('d2', jp('斜辺')))), X, y2, divA, { size: 46 });
+      const struck = seg(t, at('cancel') - 0.05, at('cancel') + 0.5);
+      strike(ctx, line.parts.d1, struck, { alpha: divA });
+      strike(ctx, line.parts.d2, struck, { alpha: divA });
       const left = tw(t, at('left') - lead, 0.5) * defs;
       workLine(ctx, row('=', frac(jp('高さ', C.sin), jp('底辺', C.cos)), ...(t > at('tan') - lead ? ['=', colored(C.tan, 'tan θ')] : [])), X, 560, left, { size: 46 });
     }
     // m1: the relation, boxed
     const eq = tw(t, at('eq') - lead, 0.5) * (1 - tw(t, at('q') - 0.3, 0.5));
     const eqY = lerp(700, 220, inOutCubic(seg(t, at('c'), at('c') + 0.8)));
-    if (eq > 0) {
-      const node = row('tan', 'θ', '=', frac(row('sin', 'θ'), row('cos', 'θ')));
-      const b = box(node, 46);
-      ctx.save();
-      ctx.globalAlpha *= eq;
-      rr(ctx, X - 20, eqY - 70, b.w + 40, 110, 14);
-      ctx.fillStyle = C.white;
-      ctx.fill();
-      ctx.strokeStyle = C.tan;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-      math(ctx, node, X, eqY, { size: 46, alpha: eq });
-    }
+    boxed(ctx, row('tan', 'θ', '=', frac(row('sin', 'θ'), row('cos', 'θ'))), X, eqY, { size: 46, stroke: C.tan, padY: 12, alpha: eq });
 
     // ——— d, m2: sin²θ + cos²θ = 1
     const pyth = tw(t, at('one2') - lead, 0.5) * (1 - tw(t, at('q') - 0.3, 0.5));
-    const sqNode = row(sup('sin', '2'), 'θ', '+', sup('cos', '2'), 'θ', '=', '1');
+    const sqNode = row(sup('sin', tag('two', '2')), 'θ', '+', sup('cos', '2'), 'θ', '=', '1');
     if (pyth > 0) {
-      const b = box(sqNode, 54);
-      ctx.save();
-      ctx.globalAlpha *= pyth;
-      rr(ctx, X - 20, 390, b.w + 40, 100, 14);
-      ctx.fillStyle = C.white;
-      ctx.fill();
-      ctx.strokeStyle = C.ink;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-      math(ctx, sqNode, X, 460, { size: 54, alpha: pyth });
+      const m = boxed(ctx, sqNode, X, 460, { size: 54, padY: 18, alpha: pyth });
       const sqLit = focus(t, [at('sq')], at('m2.end'), cue).level[0];
-      const sinW = box(row('sin'), 54).w;
-      ring(ctx, X + sinW - 8, 396, 40, 44, sqLit, C.accent);
+      ringBox(ctx, m.parts.two, sqLit, C.accent);
       if (sqLit > 0 || t > at('sq')) {
         math(ctx, row(sup('sin', '2'), 'θ', jp('は'), sup(row('(', 'sin', 'θ', ')'), '2'), jp('のこと')), X, 540, { size: 30, alpha: pyth * tw(t, at('sq'), 0.5), color: C.muted });
       }
@@ -175,16 +131,18 @@ export default clip({
     // ——— m3 to m4: the problem
     const q = tw(t, at('q') - lead, 0.5);
     if (q > 0) {
-      workLine(ctx, row('sin', 'θ', '=', '0.6'), X, 200, q, { size: 46 });
-      workLine(ctx, row(sup('0.6', '2'), '=', '0.36'), X, 300, tw(t, at('p1') - lead, 0.5), { size: 42 });
-      workLine(ctx, row(sup('cos', '2'), 'θ', '=', '1', '−', '0.36', '=', '0.64'), X, 380, tw(t, at('p2') - lead, 0.5), { size: 42 });
-      workLine(ctx, row('cos', 'θ', '=', colored(C.accent, '0.8')), X, 460, tw(t, at('p3') - lead, 0.5), { size: 42 });
-      workLine(ctx, row('tan', 'θ', '=', '0.6', '÷', '0.8', '=', colored(C.accent, '0.75')), X, 560, tw(t, at('p4') - lead, 0.5), { size: 42 });
-      sideLabel(ctx, T, 'height', '0.6', { off: 52, size: 32, alpha: q });
-      sideLabel(ctx, T, 'base', '0.8', { off: 30, size: 32, alpha: tw(t, at('p3') - lead, 0.5) });
-      sideLabel(ctx, T, 'hyp', '1', { off: 36, size: 34, color: C.ink, alpha: q });
+      const lines = [
+        workLine(ctx, row('sin', 'θ', '=', '0.6'), X, 200, q, { size: 46 }),
+        workLine(ctx, row(sup('0.6', '2'), '=', '0.36'), X, 300, tw(t, at('p1') - lead, 0.5), { size: 42 }),
+        workLine(ctx, row(sup('cos', '2'), 'θ', '=', '1', '−', '0.36', '=', '0.64'), X, 380, tw(t, at('p2') - lead, 0.5), { size: 42 }),
+        workLine(ctx, row('cos', 'θ', '=', colored(C.accent, '0.8')), X, 460, tw(t, at('p3') - lead, 0.5), { size: 42 }),
+        workLine(ctx, row('tan', 'θ', '=', '0.6', '÷', '0.8', '=', colored(C.accent, '0.75')), X, 560, tw(t, at('p4') - lead, 0.5), { size: 42 }),
+      ];
+      sideLabel(ctx, T, 'height', '0.6', { size: 32, alpha: q });
+      sideLabel(ctx, T, 'base', '0.8', { size: 32, alpha: tw(t, at('p3') - lead, 0.5) });
+      sideLabel(ctx, T, 'hyp', '1', { size: 34, color: C.ink, alpha: q });
       const all = focus(t, [at('all')], at('m4.end') - cue.fall, cue).level[0];
-      ring(ctx, X - 16, 150, 560, 440, all, C.accent);
+      ringBox(ctx, lines.map((l) => l.rect), all, C.accent, 16);
     }
 
     // a: the three definitions to play with, top right

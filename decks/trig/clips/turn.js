@@ -6,11 +6,12 @@
 import { clip } from '../lib/clip.js';
 import { C } from '../lib/theme.js';
 import { seg, tw, inOutCubic, outBack, clamp } from '../../../src/kit/ease.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { corners, mixPose, drawTri, angleArc, sideLabel, label, unit } from '../lib/tri.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { corners, mixPose, drawTri, ghostTri, angleAt, sideLabel, triBox } from '../lib/tri.js';
 import { cursive } from '../lib/cursive.js';
 import { row, frac } from '../lib/math.js';
 import { mark } from '../lib/scene.js';
+import { arrow } from '../lib/parts.js';
 import { cornerMemo, tab, workLine } from '../lib/drill.js';
 
 const DEG = (Math.atan2(3, 4) * 180) / Math.PI; // 36.87°
@@ -50,11 +51,11 @@ export default clip({
     // once it is set down, the sides take their colours; before, all ink
     const named = tw(t, at('done'), 0.5);
     drawTri(ctx, T, { lw: 6, alpha: shown, plain: named < 0.5 });
-    angleArc(ctx, T.A, T.C, T.B, { r: 62, label: 'θ', size: 34, alpha: shown });
-    const sideA = shown;
-    sideLabel(ctx, T, 'height', '3', { off: 36, size: 36, alpha: sideA, color: named > 0.5 ? C.sin : C.ink });
-    sideLabel(ctx, T, 'base', '4', { off: 36, size: 36, alpha: sideA, color: named > 0.5 ? C.cos : C.ink });
-    sideLabel(ctx, T, 'hyp', '5', { off: 40, size: 36, alpha: sideA, color: C.ink });
+    const theta = angleAt(ctx, T, 'A', { r: 62, label: 'θ', size: 34, alpha: shown });
+    const lo = { size: 36, alpha: shown, gap: 12 };
+    const h3 = sideLabel(ctx, T, 'height', '3', { ...lo, color: named > 0.5 ? C.sin : C.ink });
+    const b4 = sideLabel(ctx, T, 'base', '4', { ...lo, color: named > 0.5 ? C.cos : C.ink });
+    const c5 = sideLabel(ctx, T, 'hyp', '5', { ...lo, color: C.ink });
 
     // a1: the s will not go on — it starts and stops
     const tryS = seg(t, at('wrong') - 0.1, at('cant') + 0.2) * 0.35;
@@ -64,20 +65,15 @@ export default clip({
 
     // m1: where it should go, as an outline
     const ghost = tw(t, at('place') - lead, 0.5) * (1 - tw(t, at('done'), 0.4));
-    if (ghost > 0) {
-      ctx.save();
-      ctx.setLineDash([10, 9]);
-      drawTri(ctx, corners(DEG, BASE, END), { plain: true, plainColor: C.muted, lw: 3, alpha: ghost, right: ghost });
-      ctx.restore();
-      label(ctx, 'θ', END.x + 40, END.y - 70, { size: 30, color: C.muted, alpha: ghost });
-    }
+    const E = corners(DEG, BASE, END);
+    ghostTri(ctx, E, { alpha: ghost, right: ghost });
+    angleAt(ctx, E, 'A', { r: 50, label: 'θ', size: 30, color: C.muted, alpha: ghost, lw: 2 });
 
     // a2: the three sides named in turn
     const sides = focus(t, [at('h3'), at('b4'), at('c5')], at('a2.end'), cue);
-    const E = corners(DEG, BASE, END);
-    ring(ctx, E.C.x + 10, (E.B.y + E.C.y) / 2 - 30, 60, 60, sides.level[0], C.accent);
-    ring(ctx, (E.A.x + E.C.x) / 2 - 30, E.A.y + 10, 60, 60, sides.level[1], C.accent);
-    ring(ctx, (E.A.x + E.B.x) / 2 - 70, (E.A.y + E.B.y) / 2 - 70, 60, 60, sides.level[2], C.accent);
+    ringBox(ctx, h3, sides.level[0], C.accent, 10);
+    ringBox(ctx, b4, sides.level[1], C.accent, 10);
+    ringBox(ctx, c5, sides.level[2], C.accent, 10);
 
     // a3: the answers, one by one
     const X = 960;
@@ -87,34 +83,11 @@ export default clip({
 
     // m2: from θ, the side across and the sides beside it
     const from = tw(t, at('from') - lead, 0.6);
-    if (from > 0) {
-      const g = { x: E.A.x + 70, y: E.A.y - 24 };
-      arrowTo(ctx, g, { x: E.C.x - 14, y: (E.B.y + E.C.y) / 2 }, C.sin, from);
-      arrowTo(ctx, g, { x: (E.A.x + E.C.x) / 2 + 30, y: E.A.y - 14 }, C.cos, clamp(from * 1.2));
-    }
+    // from just past θ's label (by then the triangle lies as E)
+    const g = { x: theta.x + theta.w + 10, y: theta.y + theta.h / 2 };
+    arrow(ctx, g, { x: E.C.x - 14, y: (E.B.y + E.C.y) / 2 }, { color: C.sin, p: from });
+    arrow(ctx, g, { x: (E.A.x + E.C.x) / 2 + 30, y: E.A.y - 14 }, { color: C.cos, p: clamp(from * 1.2) });
     const names = focus(t, [at('names')], at('from'), cue).level[0];
-    ring(ctx, E.A.x - 20, E.B.y - 30, E.C.x - E.A.x + 100, E.A.y - E.B.y + 90, names, C.accent);
+    ringBox(ctx, [triBox(E), h3, b4, c5], names, C.accent, 14);
   },
 });
-
-function arrowTo(ctx, p, q, color, a) {
-  const u = unit(p, q);
-  const e = { x: p.x + (q.x - p.x) * a, y: p.y + (q.y - p.y) * a };
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
-  ctx.lineTo(e.x, e.y);
-  ctx.stroke();
-  if (a > 0.9) {
-    ctx.beginPath();
-    ctx.moveTo(e.x, e.y);
-    ctx.lineTo(e.x - u.x * 16 - u.y * 9, e.y - u.y * 16 + u.x * 9);
-    ctx.lineTo(e.x - u.x * 16 + u.y * 9, e.y - u.y * 16 - u.x * 9);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.restore();
-}

@@ -6,11 +6,12 @@
 import { clip } from '../lib/clip.js';
 import { C, F } from '../lib/theme.js';
 import { seg, tw, inOutCubic, outBack } from '../../../src/kit/ease.js';
-import { text, rr } from '../../../src/kit/draw.js';
-import { focus, ring } from '../../../src/kit/cue.js';
-import { corners, mixPt, mixPose, drawTri, angleArc, rightMark, label, sidePoint, RAD } from '../lib/tri.js';
-import { row, paren, box } from '../lib/math.js';
+import { text } from '../../../src/kit/draw.js';
+import { focus, ringBox } from '../../../src/kit/cue.js';
+import { corners, mixPose, mixTri, drawTri, angleAt, angleArc, sideLabel, triBox, RAD } from '../lib/tri.js';
+import { math, row, paren, jp, up, tag } from '../lib/math.js';
 import { workLine } from '../lib/drill.js';
+import { pill } from '../lib/parts.js';
 
 const DEG = 32;
 const T = corners(DEG, 380, { x: 200, y: 640 });
@@ -45,36 +46,21 @@ export default clip({
 
     // ——— the triangle; in d it flips over its diagonal
     const flip = inOutCubic(seg(t, at('flip') - 0.1, at('flip') + 1.0));
-    const P = { A: mixPt(T.A, F2.A, flip), B: mixPt(T.B, F2.B, flip), C: mixPt(T.C, F2.C, flip) };
+    const P = mixTri(T, F2, flip);
     // the side C–B is the height before the flip and the base after; C–A the other way
     const swap = flip > 0.5 ? 1 : 0;
-    side(ctx, P.C, P.B, swap ? C.cos : C.sin);
-    side(ctx, P.A, P.C, swap ? C.sin : C.cos);
-    side(ctx, P.A, P.B, C.ink);
-    rightMark(ctx, P);
+    drawTri(ctx, P, { lw: 6, height: { color: swap ? C.cos : C.sin }, base: { color: swap ? C.sin : C.cos } });
     // θ at the old A; 90° − θ at the old B
-    angleArc(ctx, P.A, P.C, P.B, { r: 64, label: 'θ', size: 32, color: C.ink });
+    angleAt(ctx, P, 'A', { r: 64, label: 'θ', size: 32, color: C.ink });
     const other = tw(t, at('other') - lead, 0.5);
     const named = tw(t, at('v') - lead, 0.5, outBack);
-    angleArc(ctx, P.B, P.A, P.C, { r: 52, label: named > 0.5 ? row('90°', '−', 'θ') : '？', size: named > 0.5 ? 28 : 34, labelR: named > 0.5 ? 120 : 86, color: C.accent, alpha: other });
-    // the names of the sides, as seen from the angle at the bottom left
-    const tag = (s, side, color) => {
-      const sp = sidePoint(P, side, side === 'base' ? 34 : 56);
-      label(ctx, s, sp.x, sp.y, { size: 28, color, alpha: 1 - Math.sin(Math.PI * flip) });
-    };
-    // before the flip, base = A–C, height = C–B; after, the reverse
-    if (!swap) {
-      tag('高さ', 'height', C.sin);
-      tag('底辺', 'base', C.cos);
-    } else {
-      // after the flip the bottom left corner is the old B: name the sides by where they are
-      const pt1 = mixPt(P.B, P.C, 0.5);
-      const pt2 = mixPt(P.C, P.A, 0.5);
-      label(ctx, '底辺', pt1.x, pt1.y + 36, { size: 28, color: C.cos, alpha: 1 - Math.sin(Math.PI * flip) });
-      label(ctx, '高さ', pt2.x + 56, pt2.y, { size: 28, color: C.sin, alpha: 1 - Math.sin(Math.PI * flip) });
-    }
+    angleAt(ctx, P, 'B', { r: 52, label: named > 0.5 ? row('90°', '−', 'θ') : '？', size: named > 0.5 ? 28 : 34, color: C.accent, alpha: other });
+    // the names of the sides, as seen from the angle at the bottom left: they swap with the flip
+    const nameA = 1 - Math.sin(Math.PI * flip);
+    sideLabel(ctx, P, 'height', swap ? '底辺' : '高さ', { size: 28, color: swap ? C.cos : C.sin, alpha: nameA });
+    sideLabel(ctx, P, 'base', swap ? '高さ' : '底辺', { size: 28, color: swap ? C.sin : C.cos, alpha: nameA });
     const sw = focus(t, [at('swap')], at('d.end'), cue).level[0];
-    ring(ctx, 170, 240, 310, 440, sw, C.accent);
+    ringBox(ctx, triBox(P), sw, C.accent, 30);
 
     // a: what she recalls — 1-6's triangle, set down again, small in the top right
     const recall = tw(t, at('recall') - lead, 0.5) * (1 - tw(t, at('b'), 0.5));
@@ -85,7 +71,7 @@ export default clip({
       ctx.save();
       ctx.globalAlpha *= recall;
       drawTri(ctx, R, { lw: 4, plain: turn < 0.98 });
-      angleArc(ctx, R.A, R.C, R.B, { r: 36, label: 'θ', size: 22 });
+      angleAt(ctx, R, 'A', { r: 36, label: 'θ', size: 22, sideW: 4 });
       ctx.restore();
       text(ctx, '演習 3 で', 1080, 380, { font: F.jp(700, 24), color: C.muted, alpha: recall });
     }
@@ -103,57 +89,28 @@ export default clip({
       angleArc(ctx, P.A, P.C, P.B, { r: 76, color: C.accent, alpha: pair, lw: 4 });
       angleArc(ctx, P.B, P.A, P.C, { r: 64, color: C.accent, alpha: pair, lw: 4 });
     }
-    const yo = tw(t, at('yo') - lead, 0.5, outBack);
-    if (yo > 0) {
-      ctx.save();
-      ctx.globalAlpha *= Math.min(1, yo);
-      rr(ctx, X, 470, 130, 58, 29);
-      ctx.fillStyle = C.accent;
-      ctx.fill();
-      text(ctx, '余角', X + 65, 510, { font: F.jp(700, 30), color: C.white, align: 'center' });
-      text(ctx, '足して 90° になる二つの角', X + 150, 510, { font: F.jp(500, 26), color: C.ink2 });
-      ctx.restore();
-    }
+    const yo = Math.min(1, tw(t, at('yo') - lead, 0.5, outBack));
+    const yb = pill(ctx, '余角', X, 499, { w: 130, alpha: yo });
+    text(ctx, '足して 90° になる二つの角', yb.x + yb.w + 20, 509, { font: F.jp(500, 26), color: C.ink2, alpha: yo });
 
     // f, m3: co + sine
     const coA = tw(t, at('co') - lead, 0.5);
-    if (coA > 0) {
-      const y = 640;
-      const wCo = box(row('co'), 50).w;
-      text(ctx, 'co', X, y, { font: F.sans(500, 50), color: C.accent, alpha: coA });
-      text(ctx, 'sine', X + wCo + 4, y, { font: F.sans(500, 50), color: C.ink, alpha: coA });
-      ring(ctx, X - 8, y - 46, wCo + 16, 60, focus(t, [at('co')], at('f.end'), cue).level[0], C.accent);
-      const abbr = tw(t, at('abbr') - lead, 0.5);
-      const wSine = box(row('sine'), 50).w;
-      text(ctx, '余角の', X + wCo / 2, y + 46, { font: F.jp(500, 24), color: C.accent, alpha: abbr, align: 'center' });
-      text(ctx, 'サイン', X + wCo + 4 + wSine / 2 + 10, y + 46, { font: F.jp(500, 24), color: C.ink2, alpha: abbr, align: 'center' });
-    }
+    const word = math(ctx, row(tag('co', up('co', C.accent, 500)), tag('sine', up('sine', C.ink, 500))), X, 640, { size: 50, alpha: coA });
+    ringBox(ctx, word.parts.co, focus(t, [at('co')], at('f.end'), cue).level[0], C.accent);
+    // under each part, what it stands for
+    const abbr = tw(t, at('abbr') - lead, 0.5) * (coA > 0 ? 1 : 0);
+    const under = (b, s, color) => text(ctx, s, b.x + b.w / 2, b.y + b.h + 34, { font: F.jp(500, 24), color, alpha: abbr, align: 'center' });
+    under(word.parts.co, '余角の', C.accent);
+    under(word.parts.sine, 'サイン', C.ink2);
 
     // m4: 正弦 and 余弦
-    const jp = tw(t, at('jp') - lead, 0.5);
-    if (jp > 0) {
-      const y = 790;
-      text(ctx, 'サイン ＝ 正弦', X, y, { font: F.jp(700, 34), color: C.sin, alpha: jp });
-      const x2 = X + 330;
-      text(ctx, 'コサイン ＝ ', x2, y, { font: F.jp(700, 34), color: C.cos, alpha: jp });
-      const w = box({ t: 'text', s: 'コサイン ＝ ', face: 'jp', kind: 'jp' }, 34).w;
-      const yo2 = tw(t, at('yo2') - lead, 0.4);
-      text(ctx, '余', x2 + w, y, { font: F.jp(700, 34), color: yo2 > 0.5 ? C.accent : C.cos, alpha: jp });
-      text(ctx, '弦', x2 + w + 36, y, { font: F.jp(700, 34), color: C.cos, alpha: jp });
-      ring(ctx, x2 + w - 6, y - 36, 46, 48, yo2 * (1 - tw(t, at('m5.end') - cue.fall, cue.fall)), C.accent);
-      text(ctx, '＝ 余角の正弦', x2 + w, y + 48, { font: F.jp(700, 26), color: C.accent, alpha: yo2 });
-    }
+    const names = tw(t, at('jp') - lead, 0.5);
+    const yo2 = tw(t, at('yo2') - lead, 0.4);
+    const b = (s, color) => jp(s, color, 700);
+    math(ctx, row(b('サイン', C.sin), '=', b('正弦', C.sin)), X, 790, { size: 34, alpha: names, color: C.sin });
+    const co = math(ctx, row(b('コサイン', C.cos), '=', tag('yo', b('余', yo2 > 0.5 ? C.accent : C.cos)), b('弦', C.cos)), X + 330, 790, { size: 34, alpha: names, color: C.cos });
+    const yb2 = co.parts.yo;
+    ringBox(ctx, yb2, yo2 * (1 - tw(t, at('m5.end') - cue.fall, cue.fall)), C.accent);
+    text(ctx, '＝ 余角の正弦', yb2.x, yb2.y + yb2.h + 40, { font: F.jp(700, 26), color: C.accent, alpha: yo2 });
   },
 });
-
-function side(ctx, p, q, color) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
-  ctx.lineTo(q.x, q.y);
-  ctx.stroke();
-  ctx.restore();
-}
