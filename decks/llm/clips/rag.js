@@ -445,6 +445,10 @@ export default clip({
     working(ctx, Lt, seg(t, queryIn, foundAt));
     const lw = text(ctx, 'ツール', box.x, box.y - 16, { font: F.jp(700, 22), color: C.ink });
     text(ctx, 'の場所', box.x + lw, box.y - 16, { font: F.jp(700, 22), color: C.ink });
+    // the search sits in the tool's place, but here the app uses it itself; the LLM does not ask
+    // for it (6-2 turns it into a tool the LLM asks for)
+    const w0 = measure(ctx, F.jp(700, 22), 'の場所');
+    text(ctx, 'アプリが直接使う', box.x + lw + w0 + 14, box.y - 17, { font: F.jp(500, 15), color: C.muted, alpha: tw(t, at('d'), pace.enter) });
     if (gone > 0.001) {
       const w1 = measure(ctx, F.jp(700, 22), 'の場所');
       tag(ctx, box.x + lw + w1 + 14, box.y - 39, '6 章　つなぐ先', { font: F.jp(700, 15), h: 30, padX: 11, fill: C.ink, color: C.paper, alpha: gone });
