@@ -2654,14 +2654,15 @@ export function filesList77(ctx, o = {}) {
 }
 
 // the five calls of 7-7, row by row, as o200k_base cuts them (29, 23, 23, 19 and 31 tokens; none splits a
-// character). The last one's body is the comment's first words: the whole text stands in the dialog.
+// character). The last one's body is the comment's first words: the whole text stands in the dialog; its rows
+// break after a whole string (the name is too long to share the first row with the call mark).
 const ROW_BASH77 = ['{"', 'name', '":', ' "', 'bash', '",', ' "', 'input', '":'];
 export const CALLS77 = [
   [ROW_BASH77, [' {"', 'command', '":', ' "', 'sed', ' -', 'i', " '", 's', '/=', ' ', '5', '/=', ' ', '20', "/'"], [' config', '/settings', '.py', '"}}']],
   [ROW_BASH77, [' {"', 'command', '":', ' "', 'python', '3', ' tools', '/re', 'play', '.py'], [' --', 'env', ' test', '"}}']],
   [['{"', 'name', '":', ' "', 'issue', '_read', '",'], [' "', 'input', '":', ' {"', 'method', '":', ' "', 'get', '_comments', '",'], [' "', 'number', '":', ' ', '128', '}}']],
   [ROW_BASH77, [' {"', 'command', '":', ' "', 'drop', 'db'], [' app', '_pro', 'duction', '"}}']],
-  [['{"', 'name', '":', ' "', 'add', '_issue', '_comment'], ['",', ' "', 'input', '":', ' {"', 'number', '":', ' ', '128', ','], [' "', 'body', '":'], [' "', '接', '続', 'プ', 'ール', 'の', '上', '限', 'を', '…', '"}}']],
+  [['{"', 'name', '":'], [' "', 'add', '_issue', '_comment', '",', ' "', 'input', '":'], [' {"', 'number', '":', ' ', '128', ',', ' "', 'body', '":'], [' "', '接', '続', 'プ', 'ール', 'の', '上', '限', 'を', '…', '"}}']],
 ];
 export const CALL77_LH = 26;
 // what each call does, as a chip on its way out of the harness (the third goes to the MCP server, the fourth
