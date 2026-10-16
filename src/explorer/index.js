@@ -237,7 +237,7 @@ export function createExplorer(host, deck, options = {}) {
   };
   function newLayer(clip, thumb = false, box = timing) {
     const source = box.value.error ? { ...clip, setup() { throw box.value.error; } } : clip;
-    return createLayer(source, root, { k, still, thumb, report, timing: () => box.value, pace: () => pace, answers: () => box.answers ?? {} });
+    return createLayer(source, root, { k, still, thumb, report, timing: () => box.value, pace: () => pace, answers: () => box.answers ?? {}, timelineOf: other => compute(other) });
   }
   function prepareSound(entry, timeline, seconds = 0, stack = diveStack) {
     if (!sound) return;

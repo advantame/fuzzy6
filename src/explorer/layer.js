@@ -1,6 +1,6 @@
 import { answerAt } from './quiz.js';
 import { W, H, canvasScale } from './model.js';
-export function createLayer(clip, root, { k, still, thumb = false, report, timing, pace, answers = () => ({}) }) {
+export function createLayer(clip, root, { k, still, thumb = false, report, timing, pace, answers = () => ({}), timelineOf }) {
   const el = document.createElement('div');
   el.className = 'mx-layer';
   el.dataset.clip = clip.id;
@@ -40,6 +40,12 @@ export function createLayer(clip, root, { k, still, thumb = false, report, timin
     answer: id => answerAt(timing(), answers(), id, lastTime, thumb),
     get duration() { return timing().duration; },
     get pace() { return pace(); },
+    // another clip's timeline at the current pace, with no answers (spec §6.2)
+    timeline: timelineOf ? other => {
+      const tl = timelineOf(other);
+      if (tl.error) throw tl.error;
+      return { at: name => tl.at(name), duration: tl.duration };
+    } : undefined,
     theme: name => getComputedStyle(root).getPropertyValue(name).trim(),
     canvas(opts = {}) {
       const canvas = document.createElement('canvas');
