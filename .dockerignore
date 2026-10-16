@@ -1,4 +1,5 @@
-# Only inputs used by Vite and the production server enter the build context.
+# Only inputs used by Vite and the production server enter the build context. (This file applies only when
+# the context is a directory: ship-app.sh sends the commit as a tar on stdin, and all of it goes in.)
 **
 !package.json
 !package-lock.json
@@ -13,6 +14,9 @@
 !public/**
 !server/
 !server/**
+# vite.config.js loads the plugin that writes each deck's script.md
+!tools/
+!tools/script-*.mjs
 # Also exclude synthesis originals in a working-tree build. The standing figures stay in: git
 # ignores them, and ship-app.sh adds them to the context from .shipinclude.
 decks/*/voice/**/*.wav

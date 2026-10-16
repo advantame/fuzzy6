@@ -125,6 +125,6 @@ npm run play -- <deck> [clipId …]      # 声つきで頭から最後まで実�
 - 公開版への反映は、次のコマンドで行うことができる。`SHIP_BWLIMIT_KBPS=2048 bash ~/projects/fuzzy2/platform/scripts/ship-app.sh fuzzy6`（サンドボックスの外で。送信の帯域の上限は 2 MiB/s）　届くのは、`~/projects/fuzzy6`（`main` の作業ツリー）の HEAD のコミットと、`.shipinclude` に書いた Git 管理外のファイル（立ち絵）だけ。その作業ツリーに立ち絵が無いと、反映は本番に触る前に止まる。作りかけのクリップを `deck.js` に載せたまま反映しない。
 - `gh` と `git push` は、`GH_TOKEN=$(gh auth token --user advantame)` を付けて呼ぶ。リモートの `main` に push しても、公開版は変わらない（CI が unit テストとビルドを走らせるだけ）。
 - 自分で書く `href` や iframe の `src` は、`decks/llm/` のように相対パスにする。`/` で始めると、公開版で切れる。
-- `Dockerfile` の `chmod -R a+rX /app` を消さない。消すと、公開版のサーバが自分のファイルを読めず、起動しない。
+- `Dockerfile` のビルドの段の `chmod -R a+rX …` を消さない。消すと、公開版のサーバが自分のファイルを読めず、起動しない。声、書体、立ち絵を別の層に分けてあるのは、コードだけを直した反映で、それらを送り直さないため（[docs/publishing.md](docs/publishing.md) の「イメージとサーバ」）。
 - 語りの音声は、音源の規約で、政治や宗教の活動、個人・団体・国家への非難や応援、情報商材、意図的な虚偽、公序良俗に反する用途に使えない（規約の要約。読み直しに行かなくてよい）。気にかけるのは、会社や製品を名指しする文が、その応援や非難にならないことくらい。語りを足したら、`decks/<id>/voice/README.md` に日付と一緒に書く。語りの音声は、再利用を許諾していない。
 - 古い GitHub Pages のサイトを消すこと、LICENSE と README の「ライセンス」の文面を書き直すことは、ボスの指示を受けてから行う。
