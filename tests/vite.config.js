@@ -10,6 +10,8 @@ export default mergeConfig(config, {
       server.middlewares.use((req, res, next) => {
         if (req.url?.startsWith('/decks/gutter-fixture/'))
           req.url = req.url.replace('/decks/gutter-fixture/', '/tests/fixtures/gutter/');
+        if (req.url?.startsWith('/decks/inspection-fixture/'))
+          req.url = req.url.replace('/decks/inspection-fixture/', '/tests/fixtures/inspection/');
         next();
       });
     },
