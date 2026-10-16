@@ -95,7 +95,7 @@ export default clip({
     { id: 'a', tail: 1.4, rest: 'short', text: 'ここで、{built}組み立ててきたものを、\n外側から順に、{unravel}ほどいてみましょう。' },
     { id: 'b', rest: 'short', text: '{fig}この図の{outer}いちばん外側は、{agent}AI エージェントよ。' },
     { id: 'c', tail: 0.8, text: '{harn}ハーネスが、{tools}ツールを動かしながら、\n{llm3}LLM に、{loop}[くり返し続きを|くり返し、続きを]書かせているわ。' },
-    { id: 'd', rest: 'short', text: '{inner}その内側には、{ch4}4 章で組み立てた、\n{bot}チャットボットの仕組みがあるわ。' },
+    { id: 'd', rest: 'short', text: '{inner}その内側にあるのは、{ch4}4 章で組み立てた、\n{bot}チャットボットの仕組みよ。' },
     { id: 'e', tail: 0.5, text: '{conv}会話を、{doc5}LLM に読ませる一本の文書にまとめて、\n{asst}アシスタントの発言を書かせる仕組みだったわね。' },
     { id: 'f', still: true, tail: 0.4, text: '{core}中心にあるのは、{ar}自己回帰型 LLM。\n\n{seen}書かれた文書のすぐ先の、{tok}次のトークンを、\n{one}一つずつ予測していくわ。' },
     { id: 'g', by: 'zunda', text: '{all}ここまでの仕組みは、ぜんぶ、\n{pred}次のトークンを予測する LLM の{base}上に、組み立ててきたのだ！' },
