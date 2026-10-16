@@ -3064,6 +3064,7 @@ export function final77(ctx, t, s, a = 1) {
   chatScreen(ctx, T7.SCREEN, 1);
   chatBubble(ctx, s.BuUp, { alpha: 1 });
   confirmDialog77(ctx, s, { a: 1, body: 1, pressed: 1, tap: 0 });
+  check(ctx, s.BuUp.x - 14, s.BuUp.y + s.BuUp.L.h / 2, 10, 1);
   screenLinks(ctx, T7, { talk: 1, back: 1, talkHot: false, backHot: false });
   appFrame(ctx, { ...L7, doc: { ...DOC7, h: DOC7_SHORT.h } }, 1, { name: '' });
   llmBlock(ctx, L7, 1, { glow: 0 });
