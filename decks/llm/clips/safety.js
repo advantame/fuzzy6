@@ -29,13 +29,11 @@ import {
 } from '../lib/rig.js';
 import { halt, check, person } from '../lib/terminal.js';
 import {
-  T7, L7, ACT7, DOC7, DOC7_SHORT, PANEL7, NAME, TERM7, TOOL7, TOOL76, SERVER7, API7, NET7, SUB76, BAR74,
-  harnessBox, toolPlace, shell, exampleNote, chipGo, mcpServer, githubBoard, serverWire, issue128, marker,
-  lookLine, fence, docBox76, recordCard75, rulesCard75, docBar75, RUNS_END76, RUNS76, TOK76, agentHead76,
-  subAgent76, factCards76, timeline76, terminalLines76, CALL_TOK76, CONCL_TOKENS76, REPORT_TOK76, NOTE76,
-  prepare77, doc77, CALLS77, CALL77_LH, CHIPS77, TERM77, terminalLines77, filesList77, FILE_NAMES77,
-  injectCard77, rulesCard77, ruleRow77, noticeCard77, NOTICE77, sandboxCard77, confirmDialog77, undoMark77,
-  commentDone77, NOTE77,
+  T7, L7, ACT7, DOC7, DOC7_SHORT, NAME, TERM7, TOOL7, TOOL76, SERVER7, API7, NET7, harnessBox, toolPlace, shell,
+  exampleNote, chipGo, mcpServer, githubBoard, serverWire, issue128, marker, lookLine, fence, docBox76, docBar75,
+  RUNS_END76, RUNS76, TOK76, agentHead76, subAgent76, factCards76, timeline76, CALL_TOK76, CONCL_TOKENS76,
+  REPORT_TOK76, NOTE76, prepare77, doc77, CHIPS77, TERM77, terminalLines77, filesList77, injectCard77, rulesCard77,
+  noticeCard77, sandboxCard77, confirmDialog77, undoMark77, commentDone77, NOTE77,
 } from '../lib/harness.js';
 import { text, measure, rr, path, circle, line } from '../../../src/kit/draw.js';
 import { tw, seg, lerp, clamp, inOutCubic } from '../../../src/kit/ease.js';
