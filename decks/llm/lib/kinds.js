@@ -8,7 +8,8 @@
 // by harnessLayout(). A bridge moves v.G, and every part that stands on it moves with it.
 
 import { C, F } from './theme.js';
-import { tag as tagFn } from './parts.js';
+import { tag as tagFn, chip as textChipFn } from './parts.js';
+import { oddsRow as oddsRowFn, slot as tokenSlotFn } from './odds.js';
 import {
   chatScreen, chatBubble, screenLinks, appFrame, llmBlock, channel, roleMark, docEntry, sweep, send, loopIcon, flyMark,
   token as tokenFn, ROLE, WRITER, MARK_H, markWidth,
@@ -38,6 +39,22 @@ export function tag(ctx, p, a) {
   const w = tagFn(ctx, p.x, p.y, p.s, { ...p.o, alpha: a });
   const x = p.o?.align === 'right' ? p.x - w : p.o?.align === 'center' ? p.x - w / 2 : p.x;
   return { x, y: p.y, w, h: p.o?.h ?? 32 };
+}
+
+// parts.js's token chip, as distinct from a token flying through chapter 7's rig.
+export function textChip(ctx, p, a) {
+  const w = textChipFn(ctx, p.x, p.y, p.s, { ...p.o, alpha: a });
+  return { x: p.x, y: p.y, w, h: p.o?.h ?? 56 };
+}
+
+// odds.js's candidate row and empty next-token slot.
+export function oddsRow(ctx, p, a) {
+  oddsRowFn(ctx, p.x, p.y, p.s, { ...p.o, alpha: a });
+}
+
+export function tokenSlot(ctx, p, a) {
+  tokenSlotFn(ctx, p.x, p.y, p.w, p.h, { ...p.o, alpha: a });
+  return { x: p.x, y: p.y, w: p.w, h: p.h };
 }
 
 // kit's ringBox() round a target (a box, boxes, or a node: paint.js): { b, level, color, pad }
