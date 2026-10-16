@@ -49,6 +49,9 @@ import {
 import { text, measure, wrap, rr, path, circle, arrowHead } from '../../../src/kit/draw.js';
 import { lerp, clamp, seg, inOutCubic } from '../../../src/kit/ease.js';
 import { ringBox } from '../../../src/kit/cue.js';
+import { BY, tokenPlaces } from './rig.js';
+import { outCubic } from '../../../src/kit/ease.js';
+import { line } from '../../../src/kit/draw.js';
 
 // ——— the geometry ————————————————————————————————————————————————————————————————————————————
 
@@ -1353,4 +1356,637 @@ export function final74(ctx, t, s, a = 1) {
 // one function of k each, so that the end can pass constants).
 export function terminalLines74(work, out = work) {
   return [...term64Lines(() => -100), ...CMDS74.flatMap((_, k) => termLines74(k, work(k), out(k)))];
+}
+
+
+// ——— 7-5: the window's limit; old results taken out; a summary; the rules from a file outside ————————————————
+// 7-5 (clips/compact.js) starts on final74(). Four more rounds run on the summary of the document (two before the
+// old results are taken out, two after), and the bar under the LLM gets the window's limit (docBar75). The harness
+// takes the old tool results out of the document the LLM reads and leaves a short line of its own in each one's
+// place (summaryDoc75's clear); the record above the LLM keeps them all (recordCard75). Then the harness has the
+// LLM write a summary, folds everything before it into that one entry, and the short document is drawn at full
+// size (shortDoc75). The rules a person keeps in a file outside the document (rulesCard75, in CARD7 under the
+// record, which shrinks to a strip) are put back in by the harness at a session's start and after a summary
+// (whenCard75, in the frame's top left, under the name コンパクション). Everything in it is an example
+// (research/harness-jobs-facts 7-5: what is taken out is taken out of what the LLM reads; the rules file is an
+// instruction to the LLM, not the harness's permissions, which are 7-7's). 7-5 ends on final75(): draw it, with
+// what prepare75() returns, to start 7-6 from the same picture.
+//   prepare: const s = prepare75(ctx);   draw: final75(ctx, t, s, a);
+// s.ents: 7-4's entries (the long document as the summary draws it), the four rounds' calls and results (14 to
+// 21), the harness's request for a summary (22) and the summary the LLM writes under the assistant's mark (23).
+// The short document: the head, the rules (s.RE, from 7-5's k on), the summary (s.SE), the assistant's mark at
+// s.asstY; once the rules are in, the summary and the mark stand s.RULE_DY lower.
+
+// the four calls, row by row, as o200k_base cuts them (24, 21, 24 and 19 tokens; none splits a character)
+export const CALLS75 = [
+  [ROW_BASH, [' {"', 'command', '":', ' "', 'cat', ' logs', '/'], ['202', '6', '-', '10', '-', '07', '.log', '"}}']],
+  [ROW_BASH, [' {"', 'command', '":', ' "', 'git', ' show'], [' --', 'stat', ' HEAD', '~', '1', '"}}']],
+  [ROW_BASH, [' {"', 'command', '":', ' "', 'cat', ' logs', '/'], ['202', '6', '-', '10', '-', '08', '.log', '"}}']],
+  [ROW_BASH, [' {"', 'command', '":', ' "', 'cat'], [' tests', '/test', '_db', '.py', '"}}']],
+];
+export const CMDS75 = ['cat logs/2026-10-07.log', 'git show --stat HEAD~1', 'cat logs/2026-10-08.log', 'cat tests/test_db.py'];
+export const CHIPS75 = ['cat logs/…', 'git show …', 'cat logs/…', 'cat tests/…'];
+// what they print (cut short with …): more of the timeouts, the change of 10-06 (the file, not what changed), the
+// tests. None of it tells the cause (7-6 finds it).
+export const OUTS75 = [
+  ['09:12:03 ERROR db: timeout after 30s', '09:12:04 ERROR db: timeout after 30s', '09:12:04 ERROR db: timeout after 30s', '…'],
+  ['commit 8c1e2a7', '…', '    接続の設定を変更', ' config/settings.py | 2 +-'],
+  ['08:41:19 ERROR db: timeout after 30s', '08:41:20 ERROR db: timeout after 30s', '…'],
+  ['import db', 'def test_connect():', '    conn = db.connect()', '…'],
+];
+export function termLines75(k, work, out) {
+  const lines = [{ s: CMDS75[k], cmd: true, show: work, type: work + 0.02 }];
+  OUTS75[k].forEach((s, j) => lines.push({ s, show: out + j * 0.06 }));
+  return lines;
+}
+// The shell's lines through 7-5: 7-4's (all shown), then the four rounds'.
+export function terminalLines75(work, out = work) {
+  return [...terminalLines74(() => -100), ...CMDS75.flatMap((_, k) => termLines75(k, work(k), out(k)))];
+}
+export const NOTE75 = '依頼、コマンドと出力、トークン数と上限、記録、要約、決まりの中身は説明のための例';
+
+// the record's rows for the four rounds (the harness keeps writing it)
+export const RECORD75 = [
+  ['call', '"cmd":"cat logs/2026-1…"'],
+  ['result', '"text":"09:12:03 ERROR…"'],
+  ['call', '"cmd":"git show --stat…"'],
+  ['result', '"text":"commit 8c1e2a7…"'],
+  ['call', '"cmd":"cat logs/2026-1…"'],
+  ['result', '"text":"08:41:19 ERROR…"'],
+  ['call', '"cmd":"cat tests/test_d…"'],
+  ['result', '"text":"import db…"'],
+];
+export const RECORD_ALL75 = [...RECORD74, ...RECORD75];
+export const REC_ROWS = 13; // the rows the card shows at once (more scroll up)
+
+// marks the harness writes in 7-5 (their edges are the harness's purple)
+export const SUM_MARK = { name: '要約', fill: C.panel, color: C.ink2 };
+export const RULE_MARK = { name: '決まり', fill: C.panel, color: C.ink2 };
+export const ASK75 = 'ここまでのやりとりを要約して';
+// what the LLM writes as the summary (an example; it says where to look next, 7-6's three leads, not the cause)
+export const SUMMARY75 = '依頼：時間切れの原因を突き止め、\n直す変更を作って、#128 に書く。\n・10/7 から時間切れ。テストは通る。\n・10/6 に「接続の設定を変更」。\n次に調べる：接続の設定、\n10/6 の変更、その日のアクセスの数。';
+// …as o200k_base cuts it (79 tokens; a token's line break is left out, the rows already break there)
+export const SUM_TOKENS75 = [
+  '依', '頼', '：', '時間', '切', 'れ', 'の', '原因', 'を', '突', 'き', '止', 'め', '、',
+  '直', 'す', '変更', 'を', '作', 'って', '、', '#', '128', ' に', '書', 'く', '。',
+  '・', '10', '/', '7', ' ', 'から', '時間', '切', 'れ', '。', 'テ', 'スト', 'は', '通', 'る', '。',
+  '・', '10', '/', '6', ' に', '「', '接', '続', 'の', '設定', 'を', '変更', '」', '。',
+  '次', 'に', '調', 'べ', 'る', '：', '接', '続', 'の', '設定', '、',
+  '10', '/', '6', ' の', '変更', '、その', '日の', 'アクセス', 'の', '数', '。',
+];
+export const RULES75 = ['テストは pytest -v で動かす', '本番のデータベースには触らない'];
+// a result once taken out: its band keeps one short line (the harness's), full size
+export const PH75 = 42;
+// the results taken out: 7-3's and the first five rounds' (the two newest stay)
+export const CLEAR75 = [3, 5, 7, 9, 11, 13];
+
+// The long document 7-5 runs on (7-4's, the four rounds, the request, the summary) and the short one it ends with.
+export function prepare75(ctx) {
+  const s = prepare74(ctx);
+  const opts = { ...T64.DOC, font: TFONT7, lh: 28 };
+  const one = (e, yy) => docLayout(ctx, L7, [e], { ...opts, top: yy - DOC7.y })[0];
+  // the entries as the summary draws them (prepare74's way)
+  const mark = (role, x, yy, w = markWidth(ctx, ROLE[role].name)) => ({ t: 'mark', role, x, y: yy, w });
+  const rowBars = (E) => E.rows.map((r, i) => ({ t: 'bar', x: rowAt(E, i).x, y: rowAt(E, i).y - (E.kind === 'text' ? 7 : 5), w: measure(ctx, E.font, r), th: E.kind === 'text' ? 11 : 9 }));
+  const call = (c) => {
+    const byRow = c.toks.reduce((m, tk) => { (m[tk.row] ??= []).push(tk); return m; }, []);
+    return {
+      kind: 'call', c, y0: c.band.y, y1: c.band.y + c.band.h,
+      items: [
+        mark('assistant', DOC7.x + 18, c.band.y + 1),
+        { t: 'band', kind: 'call', x: c.band.x, y: c.band.y, w: c.band.w, h: c.band.h },
+        mark('call', c.open.x, c.open.y, c.open.w),
+        ...byRow.map((ts) => {
+          const x0 = ts[0].x + (ts[0].s.startsWith(' ') ? measure(ctx, MFONT, ' ') : 0);
+          return { t: 'bar', x: x0, y: ts[0].base - 5, w: ts[ts.length - 1].x + ts[ts.length - 1].w - x0, th: 9 };
+        }),
+        mark('callEnd', c.end.x, c.end.y, c.end.w),
+      ],
+    };
+  };
+  const result = (R) => ({ kind: 'result', R, y0: R.y, y1: R.y + R.h, items: [mark('result', R.x, R.y + 1), { t: 'band', kind: 'data', x: R.tx, y: R.y, w: R.w, h: R.h }, ...rowBars(R)] });
+  let y = s.end + 12;
+  const rounds75 = CALLS75.map((rows, k) => {
+    const c = callLayout(ctx, { x: DX, y, w: s.U.w, h: rows.length * CALL73_LH + 16 }, rows, CALL73_LH, { hang: true });
+    if (c.end.x + c.end.w > c.band.x + c.band.w - 6) throw new Error(`harness: 7-5's call ${k + 1}: the end mark does not fit`);
+    c.toks.forEach((tk) => { if (tk.x + tk.w > c.band.x + c.band.w - 6) throw new Error(`harness: 7-5's call ${k + 1} is too wide`); });
+    y = c.band.y + c.band.h + 10;
+    const R = one({ role: 'result', kind: 'data', text: OUTS75[k].join('\n'), font: MFONT, lh: 24 }, y);
+    if (R.rows.length !== OUTS75[k].length) throw new Error(`harness: 7-5's output ${k + 1} wraps`);
+    y = R.y + R.h + 12;
+    return { c, R };
+  });
+  const Q = one({ role: 'system', text: ASK75 }, y);
+  const S = one({ role: 'assistant', text: SUMMARY75 }, Q.y + Q.h + 12);
+  if (S.rows.length !== SUMMARY75.split('\n').length) throw new Error('harness: the summary wraps');
+  const ask = { kind: 'ask', E: Q, y0: Q.y, y1: Q.y + Q.h, items: [mark('system', Q.x, Q.y + 1), ...rowBars(Q)] };
+  const sum = { kind: 'summary', E: S, y0: S.y, y1: S.y + S.h, items: [mark('assistant', S.x, S.y + 1), ...rowBars(S)] };
+  const ents = [...s.ents, ...rounds75.flatMap(({ c, R }) => [call(c), result(R)]), ask, sum];
+  // where the summary's tokens land in the long document
+  const toks = tokenPlaces(ctx, S, SUM_TOKENS75);
+  if (SUM_TOKENS75.join('') !== SUMMARY75.replace(/\n/g, '')) throw new Error('harness: the summary\'s tokens do not spell it');
+  // the short document: under the head (where 7-3's request stood), the rules, the summary, the assistant's mark
+  const top = s.U.y;
+  const RE = one({ text: RULES75.join('\n') }, top);
+  const RULE_DY = RE.h + 12;
+  const SE = one({ text: SUMMARY75 }, top);
+  const asstY = SE.y + SE.h + 12;
+  if (asstY + RULE_DY + MARK_H > DOC7.y + DOC7.h - 8) throw new Error('harness: the short document overflows');
+  return { ...s, rounds75, Q, S, toks, ents, end75: S.y + S.h, top, RE, RULE_DY, SE, asstY };
+}
+
+// an entry laid out by docLayout, moved down by dy
+export const shiftE = (E, dy) => (dy ? { ...E, y: E.y + dy } : E);
+
+// The long document as the summary draws it (summaryDoc's strokes, entry by entry), with what 7-5 does to the
+// entries: f(k) → { alpha, prog (0–1: written), dy (full-size px: moved), clear (0–1: taken out — the band down to
+// one short line, the harness's, in its place), rename (0–1: the assistant's mark of the summary gives way to 要約) }.
+export function summaryDoc75(ctx, ents, M, f) {
+  ents.forEach((e, k) => {
+    const o = (f && f(k)) || {};
+    const a = o.alpha ?? 1;
+    if (a <= 0.001) return;
+    const p = clamp(o.prog ?? 1);
+    if (p <= 0) return;
+    const dy = o.dy ?? 0;
+    const cl = clamp(o.clear ?? 0);
+    const X = (x) => mapX(M, x);
+    const Y = (yy) => mapY(M, yy + dy);
+    const total = e.items.reduce((n, it) => n + (it.t === 'bar' ? it.w : 0), 0);
+    let left = total * p;
+    ctx.save();
+    ctx.globalAlpha *= clamp(a);
+    e.items.forEach((it) => {
+      if (it.t === 'band') {
+        const h = (cl > 0 ? lerp(it.h, PH75, cl) : it.h) * M.sy;
+        rr(ctx, X(it.x), Y(it.y), it.w * M.sx, h, Math.min(8, h / 2));
+        ctx.fillStyle = it.kind === 'call' ? C.accentSoft : '#eef6f0';
+        ctx.fill();
+        ctx.fillStyle = it.kind === 'call' ? C.accent : C.green;
+        ctx.fillRect(X(it.x), Y(it.y) + Math.min(6, h * 0.2), Math.max(2, 4 * M.sx), h - 2 * Math.min(6, h * 0.2));
+        if (cl > 0.001) {
+          // the harness's short line, where the result was
+          const bh = Math.max(3, 10 * M.sy);
+          ctx.save();
+          ctx.globalAlpha *= seg(cl, 0.5, 1);
+          rr(ctx, X(it.x + 22), Y(it.y) + h / 2 - bh / 2, 170 * M.sx, bh, bh / 2);
+          ctx.fillStyle = C.purple;
+          ctx.fill();
+          ctx.restore();
+        }
+      } else if (it.t === 'mark') {
+        const h = MARK_H * M.sy;
+        const rn = it.role === 'assistant' ? clamp(o.rename ?? 0) : 0;
+        const lw = lerp(1.2, 2.5, clamp((M.sy - 0.3) / 0.7));
+        if (rn < 0.999) {
+          if (rn > 0.001) {
+            ctx.save();
+            ctx.globalAlpha *= 1 - rn;
+          }
+          const r = ROLE[it.role];
+          rr(ctx, X(it.x), Y(it.y), it.w * M.sx, h, Math.min(6, h / 2));
+          ctx.fillStyle = r.fill;
+          ctx.fill();
+          ctx.strokeStyle = WRITER[it.role];
+          ctx.lineWidth = lw;
+          ctx.stroke();
+          if (rn > 0.001) ctx.restore();
+        }
+        if (rn > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= rn;
+          rr(ctx, X(it.x), Y(it.y), markWidth(ctx, SUM_MARK.name) * M.sx, h, Math.min(6, h / 2));
+          ctx.fillStyle = SUM_MARK.fill;
+          ctx.fill();
+          ctx.strokeStyle = BY.app;
+          ctx.lineWidth = lw;
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else if (left > 0.5) {
+        const w = Math.min(it.w, left) * M.sx;
+        left -= it.w;
+        const h = Math.max(2, it.th * M.sy);
+        if (cl > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= 1 - seg(cl, 0, 0.5);
+        }
+        rr(ctx, X(it.x), Y(it.y) - h / 2, w, h, h / 2);
+        ctx.fillStyle = SUM_BAR;
+        ctx.fill();
+        if (cl > 0.001) ctx.restore();
+      }
+    });
+    ctx.restore();
+  });
+}
+
+// The record (recordCard()'s strokes) as it goes on through 7-5: more rows, the older ones scrolling up, and then
+// down to a strip that keeps only its name. o: { a, rows (how many are written, of RECORD_ALL75; a fraction fades
+// the next in), keep(k) (0–1: row k is lit green — still in the record), keepTag (the tag that says so), strip (0 → 1:
+// the card shrinks to its name) }. Returns the card's box and the rows' (where they are now).
+export const STRIP75_H = 56;
+export function recordCard75(ctx, o = {}) {
+  const a = o.a ?? 0;
+  const st = clamp(o.strip ?? 0);
+  const B = { ...CARD7, h: lerp(CARD7.h, STRIP75_H, inOutCubic(st)) };
+  if (a <= 0.001) return { box: B, rows: [] };
+  const inner = 1 - seg(st, 0, 0.45); // the subtitle, the rule and the rows go first
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, B.x, B.y, B.w, B.h, 14);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.ink2;
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  if (inner > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= inner;
+    ctx.fillStyle = C.rule;
+    ctx.fillRect(B.x + 16, B.y + 76, B.w - 32, 1.5);
+    ctx.restore();
+  }
+  ctx.restore();
+  fileIcon(ctx, B.x + 30, B.y + 30, C.ink2, a);
+  text(ctx, 'session.jsonl', B.x + 48, B.y + 36, { font: F.mono(600, 16), color: C.ink, alpha: a });
+  tag(ctx, B.x + B.w - 14, B.y + 16, '記録の例', { font: F.jp(700, 12), h: 24, padX: 8, stroke: C.muted, color: C.muted, align: 'right', alpha: a });
+  text(ctx, '1 行に 1 件ずつ、順に書き足す', B.x + 18, B.y + 64, { font: F.jp(500, 13), color: C.muted, alpha: a * inner });
+  const n = o.rows ?? RECORD74.length;
+  const scroll = Math.max(0, n - REC_ROWS) * REC74.step;
+  const font = REC74.font;
+  const clip = scroll > 0.001 || st > 0.001;
+  if (clip) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(B.x, B.y + 82, B.w, Math.max(0, B.h - 88));
+    ctx.clip();
+  }
+  const rows = RECORD_ALL75.map(([type, rest], k) => {
+    const ra = a * clamp(n - k) * inner * (scroll > 0.001 ? clamp((recRowY(k) - scroll - (REC74.row0 - 16)) / 14) : 1);
+    const y = recRowY(k) - scroll;
+    const x0 = B.x + 18;
+    const pre = '{"type":"';
+    const mid = `${type}",`;
+    const w0 = measure(ctx, font, pre);
+    const w1 = measure(ctx, font, `${type}"`);
+    const w = measure(ctx, font, `${pre}${mid}${rest}}`);
+    const box = { x: x0, y: y - 11, w, h: 14 };
+    if (ra <= 0.001) return box;
+    const kp = o.keep ? o.keep(k) : 0;
+    if (kp > 0.001) {
+      ctx.save();
+      ctx.globalAlpha *= clamp(kp) * ra;
+      rr(ctx, x0 - 6, y - 12, B.w - 24, 16, 4);
+      ctx.fillStyle = C.greenSoft;
+      ctx.fill();
+      ctx.restore();
+    }
+    text(ctx, pre, x0, y, { font, color: C.muted, alpha: ra });
+    text(ctx, `${type}"`, x0 + w0, y, { font, color: REC_TYPE[type], alpha: ra });
+    text(ctx, `,${rest}}`, x0 + w0 + w1, y, { font, color: C.ink2, alpha: ra });
+    return box;
+  });
+  if (clip) ctx.restore();
+  // what was taken out of the document is still here
+  const ka = a * (o.keepTag ?? 0) * inner;
+  tag(ctx, B.x + B.w - 14, B.y - 12, '記録には残る', { font: F.jp(700, 12), h: 24, padX: 9, fill: C.green, color: '#fff', align: 'right', alpha: ka });
+  return { box: B, rows };
+}
+
+// The bar of what the document holds (docBar()'s strokes), as 7-5 goes on: four parts (the summary's after the
+// fold), the window's limit on it, and what was taken out fading. o: { a, vals ([tokens, …] for PARTS75), rows
+// ([alpha, …]: the legend's rows), slots ([row, …]: where each part's row stands), track (the window's length,
+// dashed, up to the limit), limit (0–1: its line and name), limitP (0–1: the line drawn so far), gone ({ from, to,
+// a }: tokens taken out, a ghost on the bar), lit ([0–1, …]) }. Returns the parts' boxes, the bar's end, the
+// limit's box and the whole.
+export const PARTS75 = [['指示と定義', C.muted], ['会話と呼び出し', C.accent], ['ツールの結果', C.green], ['要約', C.ink2]];
+export const LIMIT75 = 60000; // the window's limit (an example): the bar's whole width
+export const LIMIT_X75 = BAR74.x + LIMIT75 * BAR74.scale;
+export const VALS75 = { start: [12000, 2000, 27000, 0], end: [12000, 0, 0, 80] };
+const fmtTok = (v) => (v >= 1000 ? Math.round(v / 500) * 500 : Math.round(v / 10) * 10).toLocaleString('en-US');
+export function docBar75(ctx, o = {}) {
+  const a = o.a ?? 1;
+  const B = BAR74;
+  const scale = B.scale;
+  const vals = o.vals ?? VALS75.start;
+  const fr = (o.frame ?? 1) * a;
+  if (fr <= 0.001) return null;
+  const tw0 = text(ctx, 'LLM に読ませる文書の中身', B.x, B.head, { font: F.jp(700, 15), color: C.ink2, alpha: fr });
+  tag(ctx, B.x + tw0 + 10, B.head - 18, '例', { font: F.jp(700, 13), h: 24, padX: 8, stroke: C.muted, color: C.muted, alpha: fr });
+  // the window: its whole length, up to the limit
+  const ta = a * (o.track ?? 0);
+  if (ta > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= ta;
+    rr(ctx, B.x, B.y, LIMIT_X75 - B.x, B.h, 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fill();
+    ctx.restore();
+  }
+  const parts = PARTS75.map(([name, color], i) => [name, vals[i], color, i]);
+  const drawn = parts.filter(([, v]) => v > 0.5);
+  const total = drawn.reduce((n, [, v]) => n + v, 0);
+  ctx.save();
+  ctx.globalAlpha *= fr;
+  rr(ctx, B.x, B.y, total * scale, B.h, 5);
+  ctx.strokeStyle = C.rule;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+  let x = B.x;
+  const boxes = [];
+  drawn.forEach(([, v, color, i]) => {
+    const w = v * scale;
+    if (w > 0.3) {
+      ctx.save();
+      ctx.globalAlpha *= a;
+      ctx.fillStyle = color;
+      ctx.fillRect(x, B.y, w, B.h);
+      ctx.restore();
+    }
+    boxes[i] = { x, y: B.y, w, h: B.h };
+    x += w;
+  });
+  const end = x;
+  // the seams between the parts
+  ctx.save();
+  ctx.globalAlpha *= a;
+  ctx.strokeStyle = C.paper;
+  ctx.lineWidth = 2;
+  drawn.slice(1).forEach(([, , , i]) => { const b = boxes[i]; if (b.w >= 2) { ctx.beginPath(); ctx.moveTo(b.x, B.y); ctx.lineTo(b.x, B.y + B.h); ctx.stroke(); } });
+  ctx.restore();
+  // what was taken out: a dashed ghost of it, fading
+  const g = o.gone;
+  if (g && g.a > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= a * g.a;
+    rr(ctx, B.x + g.from * scale, B.y + 2, (g.to - g.from) * scale, B.h - 4, 4);
+    ctx.strokeStyle = C.green;
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([5, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  // the legend
+  parts.forEach(([name, v, color], i) => {
+    const ra = a * (o.rows?.[i] ?? (i < 3 ? 1 : 0));
+    if (ra <= 0.001) return;
+    const y = B.legend + (o.slots?.[i] ?? i) * B.step;
+    ctx.save();
+    ctx.globalAlpha *= ra;
+    ctx.fillStyle = color;
+    ctx.fillRect(B.x, y - 10, 11, 11);
+    ctx.restore();
+    const w = text(ctx, name, B.x + 18, y, { font: F.jp(500, 14), color: C.ink, alpha: ra });
+    text(ctx, `約 ${fmtTok(v)} トークン`, B.x + 140, y, { font: F.jp(500, 14), color: C.ink2, alpha: ra });
+    const lv = (o.lit?.[i] ?? 0) * a;
+    if (boxes[i]) ringBox(ctx, boxes[i], lv, C.accent, 3);
+    ringBox(ctx, { x: B.x, y: y - 13, w: 18 + w, h: 17 }, lv, C.accent, 2);
+  });
+  // the window's limit
+  const la = a * (o.limit ?? 0);
+  const limitBox = { x: LIMIT_X75 - 2, y: B.y - 26, w: 4, h: B.h + 34 };
+  if (la > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= la;
+    ctx.strokeStyle = C.accent;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([7, 5]);
+    line(ctx, LIMIT_X75, B.y - 24, LIMIT_X75, B.y + B.h + 8, outCubic(clamp(o.limitP ?? 1)));
+    ctx.setLineDash([]);
+    ctx.restore();
+    text(ctx, 'ウィンドウの上限', LIMIT_X75, B.head - 20, { font: F.jp(700, 13), color: C.accent, align: 'right', alpha: la });
+  }
+  return { boxes, end, limitBox, all: { x: B.x, y: B.head - 20, w: B.w, h: B.legend + 2 * B.step + 6 - (B.head - 20) } };
+}
+
+// The file of rules a person keeps outside the document (under the record's strip, in CARD7): an example of its
+// content, and its names (CLAUDE.md for Claude Code; AGENTS.md, a format made public in 2025-08 — the date is not
+// CLAUDE.md's). o: { slot (0–1: a dashed place for it), a (the card), rules ([a, a]), note, names ([a, a]) }.
+export const RULES_CARD75 = { x: CARD7.x, y: CARD7.y + STRIP75_H + 12, w: CARD7.w, h: 210 };
+export const RULE_NAMES75 = [['CLAUDE.md', 'Claude Code が読む'], ['AGENTS.md', '公開の形式　2025 年 8 月']];
+export function rulesCard75(ctx, o = {}) {
+  const B = RULES_CARD75;
+  const sl = (o.slot ?? 0) * (1 - clamp(o.a ?? 0));
+  if (sl > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= clamp(sl);
+    rr(ctx, B.x, B.y, B.w, B.h, 14);
+    ctx.strokeStyle = C.muted;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  const a = o.a ?? 0;
+  if (a <= 0.001) return { box: B, rows: [], names: [] };
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, B.x, B.y, B.w, B.h, 14);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.ink2;
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  ctx.restore();
+  fileIcon(ctx, B.x + 30, B.y + 30, C.ink2, a);
+  text(ctx, '決まりのファイル', B.x + 48, B.y + 36, { font: F.jp(700, 16), color: C.ink, alpha: a });
+  tag(ctx, B.x + B.w - 14, B.y + 16, '例', { font: F.jp(700, 12), h: 24, padX: 8, stroke: C.muted, color: C.muted, align: 'right', alpha: a });
+  const rows = RULES75.map((s, i) => {
+    const ra = a * (o.rules?.[i] ?? 0);
+    const y = B.y + 72 + i * 28;
+    text(ctx, '・', B.x + 16, y, { font: F.jp(500, 15), color: C.ink2, alpha: ra });
+    const w = text(ctx, s, B.x + 34, y, { font: F.jp(500, 15), color: C.ink, alpha: ra });
+    return { x: B.x + 34, y: y - 16, w, h: 21 };
+  });
+  text(ctx, 'LLM に読ませる指示（操作を許すかの決まりは 7-7）', B.x + 18, B.y + 124, { font: F.jp(400, 11), color: C.muted, alpha: a * (o.note ?? 0) });
+  const na = Math.max(0, ...(o.names ?? [0]));
+  if (na > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= a * na;
+    ctx.fillStyle = C.rule;
+    ctx.fillRect(B.x + 16, B.y + 138, B.w - 32, 1.5);
+    ctx.restore();
+  }
+  const names = RULE_NAMES75.map(([name, note], i) => {
+    const ra = a * (o.names?.[i] ?? 0);
+    const y = B.y + 150 + i * 28;
+    const w = tag(ctx, B.x + 18, y, name, { font: F.mono(600, 14), h: 24, padX: 9, r: 6, fill: C.ink, color: C.paper, alpha: ra });
+    text(ctx, note, B.x + 18 + 112, y + 17, { font: F.jp(500, 13), color: C.ink2, alpha: ra });
+    return { x: B.x + 18, y, w, h: 24 };
+  });
+  return { box: B, rows, names };
+}
+export const RULES_SOURCE75 = '出典：Claude Code の文書、OpenAI の発表（AGENTS.md）';
+// the card's source, under it
+export function rulesSource75(ctx, a) {
+  text(ctx, RULES_SOURCE75, CARD7.x + 2, RULES_CARD75.y + RULES_CARD75.h + 16, { font: F.jp(400, 11), color: C.muted, alpha: a });
+}
+
+// Inside the frame, top left: the name of what the harness does to keep the document short, and when it puts the
+// rules back in. o: { name (コンパクション), a (the card), rows ([a, a]) }
+export const NAME75 = { x: G7.app.x + 18, y: G7.app.y + 14 };
+export const WHEN75 = { x: G7.app.x + 18, y: G7.app.y + 52, w: 140, h: 70 };
+export function compactionName75(ctx, a, lift = 1) {
+  if (a <= 0.001) return null;
+  const font = F.jp(700, 15);
+  const w = measure(ctx, font, 'コンパクション') + 22;
+  ctx.save();
+  ctx.translate(NAME75.x, NAME75.y + 15);
+  ctx.scale(lift, lift);
+  tag(ctx, 0, -15, 'コンパクション', { font, h: 30, padX: 11, fill: C.ink, color: C.paper, alpha: a });
+  ctx.restore();
+  return { x: NAME75.x, y: NAME75.y, w, h: 30 };
+}
+export function whenCard75(ctx, o = {}) {
+  const a = o.a ?? 0;
+  const B = WHEN75;
+  if (a <= 0.001) return { box: B, rows: [] };
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, B.x, B.y, B.w, B.h, 10);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.purple;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  text(ctx, '決まりを入れ直す', B.x + 12, B.y + 20, { font: F.jp(700, 13), color: C.purple, alpha: a });
+  const rows = ['セッションの始め', '要約したあと'].map((s, i) => {
+    const ra = a * (o.rows?.[i] ?? 0);
+    const y = B.y + 41 + i * 19;
+    text(ctx, '・', B.x + 10, y, { font: F.jp(500, 13), color: C.ink2, alpha: ra });
+    const w = text(ctx, s, B.x + 24, y, { font: F.jp(500, 13), color: C.ink, alpha: ra });
+    return { x: B.x + 24, y: y - 14, w, h: 18 };
+  });
+  return { box: B, rows };
+}
+
+// The files the shell works on, in the tool's place right of the MCP server (they stay where they are when a
+// result is taken out of the document). o: { a, lit (0–1: src/db.py) }
+export const FILES75 = { x: SERVER7.x + SERVER7.w + 16, y: SERVER7.y - 2 };
+export const FILE_NAMES75 = ['logs/*.log', 'src/db.py', 'src/pool.py'];
+export function filesList75(ctx, o = {}) {
+  const a = o.a ?? 0;
+  if (a <= 0.001) return [];
+  const F0 = FILES75;
+  text(ctx, '作業フォルダ', F0.x, F0.y + 10, { font: F.jp(700, 11), color: C.muted, alpha: a });
+  return FILE_NAMES75.map((s, i) => {
+    const y = F0.y + 30 + i * 20;
+    const lit = i === 1 ? o.lit ?? 0 : 0;
+    const col = lit > 0.5 ? C.accent : C.ink2;
+    ctx.save();
+    ctx.globalAlpha *= clamp(a);
+    ctx.translate(F0.x + 6, y - 5);
+    ctx.scale(0.5, 0.5);
+    fileIcon(ctx, 0, 0, col, 1);
+    ctx.restore();
+    const w = text(ctx, s, F0.x + 16, y, { font: F.mono(500, 12), color: col, alpha: a });
+    return { x: F0.x, y: y - 12, w: w + 16, h: 16 };
+  });
+}
+
+// Under the bar (once its legend is two rows): a long document, as an image — it fits the window, but is not
+// used as well everywhere (8 章). o: { a, well (0–1: the use thins out in the middle), q (the question mark) }
+export const LONG75 = { x: BAR74.x, label: 716, y: 728, h: 18, w: LIMIT_X75 - BAR74.x };
+export function longDoc75(ctx, o = {}) {
+  const a = o.a ?? 0;
+  if (a <= 0.001) return null;
+  const B = LONG75;
+  const lw = text(ctx, '長い文書', B.x, B.label, { font: F.jp(700, 13), color: C.ink2, alpha: a });
+  tag(ctx, B.x + lw + 8, B.label - 15, 'イメージ', { font: F.jp(700, 11), h: 20, padX: 7, stroke: C.muted, color: C.muted, alpha: a });
+  const wl = clamp(o.well ?? 0);
+  const n = 28;
+  const cw = B.w / n;
+  ctx.save();
+  const base = ctx.globalAlpha * clamp(a);
+  ctx.fillStyle = C.ink2;
+  for (let i = 0; i < n; i++) {
+    const u = (i + 0.5) / n;
+    const dip = Math.pow(Math.sin(Math.PI * u), 2); // 0 at the ends, 1 in the middle
+    ctx.globalAlpha = base * lerp(0.8, lerp(0.85, 0.08, dip), wl);
+    ctx.fillRect(B.x + i * cw + 0.5, B.y, cw - 1, B.h);
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, B.x - 3, B.y - 3, B.w + 6, B.h + 6, 5);
+  ctx.strokeStyle = C.rule;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+  const qa = a * (o.q ?? wl);
+  tag(ctx, B.x + B.w / 2, B.y + B.h + 6, '？', { font: F.jp(700, 14), h: 24, padX: 8, fill: C.paper, stroke: C.accent, color: C.accent, align: 'center', r: 12, alpha: qa });
+  return { x: B.x - 3, y: B.label - 16, w: B.w + 6, h: B.y + B.h + 30 - (B.label - 16) };
+}
+export function ch8Tag75(ctx, a) {
+  tag(ctx, LIMIT_X75, 800, '8 章　知識を育てる', { font: F.jp(700, 15), h: 30, padX: 11, fill: C.ink, color: C.paper, align: 'right', alpha: a });
+}
+
+// The short document at full size (the head, the rules, the summary, the assistant's mark). o: { a, rules (0–1:
+// typed), ruleMark (its mark's alpha), shift (0–1: the summary moving down for the rules), sum (alpha), asst (alpha
+// of the assistant's mark under it) }
+export function shortDoc75(ctx, s, o = {}) {
+  const a = o.a ?? 1;
+  if (a <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  roleMark(ctx, SYS.x, SYS.y + 1, ROLE.system, { edge: WRITER.system });
+  s.defs.forEach((d, k) => drawDef(ctx, d, defY(k), 1));
+  const dy = s.RULE_DY * inOutCubic(clamp(o.shift ?? 0));
+  if ((o.ruleMark ?? 0) > 0.001) roleMark(ctx, s.RE.x, s.RE.y + 1, RULE_MARK, { edge: BY.app, alpha: o.ruleMark });
+  if ((o.rules ?? 0) > 0.001) docEntry(ctx, s.RE, 1, { chars: o.rules });
+  const SE = shiftE(s.SE, dy);
+  const sa = o.sum ?? 1;
+  roleMark(ctx, SE.x, SE.y + 1, SUM_MARK, { edge: BY.app, alpha: sa });
+  docEntry(ctx, SE, sa);
+  roleMark(ctx, DOC7.x + 18, s.asstY + dy + 1, ROLE.assistant, { edge: WRITER.assistant, alpha: o.asst ?? 0 });
+  ctx.restore();
+}
+
+// 7-5's last picture (7-6's first), drawn with alpha a.
+export function final75(ctx, t, s, a = 1) {
+  if (a <= 0.001) return;
+  const { s73 } = s;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  chatScreen(ctx, T7.SCREEN, 1);
+  chatBubble(ctx, s73.Br, { alpha: 1 });
+  chatBubble(ctx, s73.Bu, { alpha: 1 });
+  screenLinks(ctx, T7, { talk: 1, back: 1, talkHot: false, backHot: false });
+  appFrame(ctx, L7, 1, { name: '' });
+  llmBlock(ctx, L7, 1, { glow: 0 });
+  channel(ctx, L7.read, 1, { hot: false });
+  channel(ctx, L7.write, 1, { hot: false });
+  channel(ctx, L7.call, 1, { labelAlpha: 1, hot: false });
+  channel(ctx, L7.back, 1, { labelAlpha: 1, hot: false });
+  shortDoc75(ctx, s, { rules: 1, ruleMark: 1, shift: 1, asst: 1 });
+  harnessBox(ctx, ACT7, 1, { glow: 0, names: [['アプリ', 0, 26], [NAME, 1, 0]] });
+  const LP = T7.LOOP;
+  loopIcon(ctx, LP.x, LP.y, LP.r, 1, { p: 1 });
+  text(ctx, 'くり返す', LP.x - LP.r - 14, LP.y + 6, { font: F.jp(700, 16), color: C.purple, align: 'right', alpha: 1 });
+  compactionName75(ctx, 1);
+  whenCard75(ctx, { a: 1, rows: [1, 1] });
+  toolPlace(ctx, L7, 1, {
+    draw: (cx) => {
+      shell(cx, t, 1, terminalLines75(() => -100), { trim: true });
+      mcpServer(cx, SERVER7, 1);
+      filesList75(cx, { a: 1 });
+    },
+  });
+  githubBoard(ctx, NET7, 1, { narrow: 0, scroll: 1, found: 0 });
+  serverWire(ctx, SERVER7, API7.x, 1, 1);
+  recordCard75(ctx, { a: 1, rows: RECORD_ALL75.length, strip: 1 });
+  rulesCard75(ctx, { a: 1, rules: [1, 1], note: 1, names: [1, 1] });
+  rulesSource75(ctx, 1);
+  docBar75(ctx, { a: 1, vals: VALS75.end, rows: [1, 0, 0, 1], slots: [0, 1, 2, 1], track: 1, limit: 1 });
+  longDoc75(ctx, { a: 1, well: 1 });
+  ch8Tag75(ctx, 1);
+  exampleNote(ctx, L7, NOTE75, 1, 1);
+  ctx.restore();
 }
