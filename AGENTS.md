@@ -10,6 +10,7 @@ docs/narration.md       語りの書き方（VOICEVOX に自然に読ませる�
 docs/environment.md     道具と環境の記録（語りの合成、立ち絵、codex、決まりの経緯）
 docs/publishing.md      公開のしかた（基盤、反映の手順、イメージとサーバ、GitHub）
 docs/next-deck.md       次のデッキ（高校数学）の構想
+docs/improvements.md    基盤の改善の提案（道具、作業の流れ、共通化、保持型のステージ。2026-10-16）
 src/explorer/           engine。spec の実装（index.js が createExplorer、pace.js が歩調の既定値）
 src/kit/                canvas で描くクリップのための道具（緩急、種付き乱数、文字、図形、強調、図の文字の置き場所、TeX の式）
 decks/<id>/             一つのデッキ。deck.js, clips/, lib/, voice/, README.md
