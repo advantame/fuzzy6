@@ -45,7 +45,9 @@ import {
 } from './rig.js';
 import {
   terminal, person, T as T64, DEFS, defRows, defY, drawDef, callLayout, drawCall, DX, SYS, MFONT, llmTag, NOTE_X, NOTE_Y,
+  check,
 } from './terminal.js';
+import { hash } from '../../../src/kit/random.js';
 import { text, measure, wrap, rr, path, circle, arrowHead } from '../../../src/kit/draw.js';
 import { lerp, clamp, seg, inOutCubic } from '../../../src/kit/ease.js';
 import { ringBox } from '../../../src/kit/cue.js';
@@ -1990,3 +1992,621 @@ export function final75(ctx, t, s, a = 1) {
   exampleNote(ctx, L7, NOTE75, 1, 1);
   ctx.restore();
 }
+
+
+// ——— 7-6: the harness hands three investigations to three small agents ————————————————————————————————
+// 7-6 (clips/subagent.js) starts on final75(). The summary's three leads (CANDS76) become a card above the LLM
+// (candCard76). The harness gets a tool that calls another agent: its definition goes in at the head of the document
+// (DEF76, under add_issue_comment's; what stands under the head moves down DEF_DY), and the tool's place grows down
+// over GitHub's room (G76; the GitHub MCP server, the files and GitHub itself step aside — 7-7 brings them back) to
+// hold the agents (agentHead76 and three columns, colBox76(k)). The LLM writes three calls (CALLS76, one for each
+// lead), and the harness sets up three small agents — each a small LLM, the loop the harness runs for it, and a small
+// document that starts with the harness's instructions and the request, not empty (subAgent76) — which run at once
+// and use the shell (terminalLines76). Each sends back a short report (REPORTS76), which the harness writes into the
+// document as a tool's result. The bar under the LLM grows by the calls and the reports only; each small document's
+// amount stands in its own column, on the same scale, and is never added up (research/harness-jobs-facts 7-6: what
+// one document holds at a time is not what all the calls cost). Under the bar, when each ran (timeline76: the same
+// start, different ends — not "a third of the time"). Above the LLM, Anthropic's two figures as two cards that
+// compare different things and are not joined (factCards76). The LLM reads the reports and writes that the change
+// of 10-06 is the likely cause, to be checked in a test environment (CONCL76; 7-7 does it). Everything in it is an
+// example but the two figures. 7-6 ends on final76().
+//   prepare: const s = prepare76(ctx);   draw: final76(ctx, t, s, a);
+// The document: doc76(ctx, s, o) draws it from shortDoc75's strokes (the same picture while nothing has moved);
+// s.calls, s.reps, s.CE are laid out with the definition already in (DEF_DY), and s.SY_END is how far it scrolls.
+
+// the tool's place, grown down over GitHub's room. The channels stay where G7 has them: draw it as
+// toolPlace(ctx, { ...L7, tool: box }, …), not with harnessLayout(G76), whose channels would follow its middle.
+export const G76 = { llm: G7.llm, app: G7.app, tool: { ...G7.tool, h: NET7.y + NET7.h - G7.tool.y } };
+export const TOOL76 = G76.tool;
+// under the shell, the agents' room: a heading, then three columns
+export const SUB76 = { x: TERM7.x, y: TERM7.y + TERM7.h + 14, w: TERM7.w, h: TOOL76.y + TOOL76.h - 14 - (TERM7.y + TERM7.h + 14) };
+const COL76 = { top: SUB76.y + 30, gap: 12 };
+export function colBox76(k) {
+  const w = (SUB76.w - 2 * COL76.gap) / 3;
+  return { x: SUB76.x + k * (w + COL76.gap), y: COL76.top, w, h: SUB76.y + SUB76.h - COL76.top };
+}
+
+// the three leads as the summary (7-5) words them: [text, its row in the summary, what stands before it there]
+export const CANDS76 = [['接続の設定', 4, '次に調べる：'], ['10/6 の変更', 5, ''], ['その日のアクセスの数', 5, '10/6 の変更、']];
+// each small agent's task (its column's heading), and the request the LLM writes for it
+export const TASKS76 = ['接続の設定', '10/6 の変更', 'アクセスの数'];
+// the agent tool's definition (the name is an example: Claude Code's is Agent, Task before it)
+export const DEF76 = [
+  [['agent', F.jp(700, 17)], ['：別のエージェントを呼んで任せる', F.jp(500, 17)]],
+  [['入力：prompt（依頼の文）', F.jp(500, 17)]],
+];
+// the three calls, row by row, as o200k_base cuts them (22, 23 and 23 tokens; none splits a character)
+// (rows 28 apart: the end mark stands under the request's row, and must clear its descenders)
+export const CALL76_LH = 28;
+const ROW_AGENT = ['{"', 'name', '":', ' "', 'agent', '",', ' "', 'input', '":'];
+export const CALLS76 = [
+  [ROW_AGENT, [' {"', 'prompt', '":', ' "', '接', '続', 'の', '設定', 'を', '調', 'べ', 'て'], ['"}}']],
+  [ROW_AGENT, [' {"', 'prompt', '":', ' "', '10', '/', '6', ' の', '変更', 'を', '調', 'べ', 'て'], ['"}}']],
+  [ROW_AGENT, [' {"', 'prompt', '":', ' "', 'その', '日の', 'アクセス', 'の', '数', 'を', '調', 'べ', 'て'], ['"}}']],
+];
+// what each small agent sends back (README「決めたことの直し」), written in as the tool's results
+export const REPORTS76 = ['アプリの接続プールの上限は 5', '10 月 6 日に、上限を 20 から 5 に\n下げる変更が入った', 'アクセスの数は、ふだんと同じくらい'];
+export const REPORT_TOK76 = [13, 24, 13]; // o200k_base
+const RFONT76 = F.jp(500, 17);
+// what the LLM writes once it has read them: the likely cause, not yet checked (7-7 checks it)
+export const CONCL76 = '10 月 6 日に、上限を 5 に下げた変更が\n原因らしい。試験用の環境で確かめる。';
+export const CONCL_TOKENS76 = [
+  '10', ' 月', ' ', '6', ' 日', 'に', '、', '上', '限', 'を', ' ', '5', ' に', '下', 'げ', 'た', '変更', 'が',
+  '原因', 'ら', 'しい', '。', '試', '験', '用', 'の', '環', '境', 'で', '確', 'か', 'め', 'る', '。',
+];
+export const NOTE76 = '候補、依頼、報告、コマンドと出力、トークン数、動いた時間は説明のための例';
+
+// The document 7-6 builds, laid out (for prepare): 7-5's short one, the agent tool's definition, the three calls
+// under the assistant's mark 7-5 left, the three reports, the LLM's conclusion; where the leads are in the summary.
+export function prepare76(ctx) {
+  const s = prepare75(ctx);
+  const opts = { ...T64.DOC, font: TFONT7, lh: 28 };
+  const one = (e, yy) => docLayout(ctx, L7, [e], { ...opts, top: yy - DOC7.y })[0];
+  const defs76 = defRows(ctx, DEF76);
+  defs76.forEach((d, k) => { if (d.right > DOC7.x + DOC7.w - 14) throw new Error(`harness: 7-6's definition row ${k} is too wide`); });
+  const DEF_DY = defY(DEF76.length) - defY(0);
+  const asstY = s.asstY + s.RULE_DY + DEF_DY;
+  let y = asstY;
+  const calls = CALLS76.map((rows, k) => {
+    const c = callLayout(ctx, { x: DX, y, w: s.U.w, h: rows.length * CALL76_LH + 16 }, rows, CALL76_LH, { hang: true });
+    if (c.end.x + c.end.w > c.band.x + c.band.w - 6) throw new Error(`harness: 7-6's call ${k + 1}: the end mark does not fit`);
+    c.toks.forEach((tk) => { if (tk.x + tk.w > c.band.x + c.band.w - 6) throw new Error(`harness: 7-6's call ${k + 1} is too wide`); });
+    y = c.band.y + c.band.h + 6;
+    return c;
+  });
+  y += 4;
+  const reps = REPORTS76.map((text, k) => {
+    const R = one({ role: 'result', kind: 'data', text, font: RFONT76, lh: 24 }, y);
+    if (R.rows.length !== text.split('\n').length) throw new Error(`harness: 7-6's report ${k + 1} wraps`);
+    y = R.y + R.h + 8;
+    return R;
+  });
+  const CE = one({ role: 'assistant', text: CONCL76 }, y + 2);
+  if (CE.rows.length !== 2) throw new Error('harness: the conclusion wraps');
+  if (CONCL_TOKENS76.join('') !== CONCL76.replace(/\n/g, '')) throw new Error('harness: the conclusion\'s tokens do not spell it');
+  const ctoks = tokenPlaces(ctx, CE, CONCL_TOKENS76);
+  // how far the document scrolls by the end: its last line just above the paper's foot
+  const SY_END = CE.y + CE.h - (DOC7.y + DOC7.h - 12);
+  // the leads in the summary (as 7-5 leaves it, before anything moves): their boxes
+  const SE = shiftE(s.SE, s.RULE_DY);
+  const cands = CANDS76.map(([w, row, before]) => {
+    const at = rowAt(SE, row);
+    return { x: at.x + measure(ctx, SE.font, before), y: at.y - 17, w: measure(ctx, SE.font, w), h: 22 };
+  });
+  const candRows = [4, 5].map((row) => { const at = rowAt(SE, row); return { x: at.x, y: at.y - 17, w: measure(ctx, SE.font, SE.rows[row]), h: 22 }; });
+  // in report 2, the change (for n)
+  const r2 = reps[1];
+  const r2at = rowAt(r2, 0);
+  const pre = '10 月 6 日に、';
+  const change = { x: r2at.x + measure(ctx, RFONT76, pre), y: r2at.y - 16, w: measure(ctx, RFONT76, '上限を 20 から 5 に'), h: 21 };
+  const cat = rowAt(CE, 1);
+  const likely = { x: cat.x, y: cat.y - 17, w: measure(ctx, CE.font, '原因らしい'), h: 22 };
+  return { ...s, defs76, DEF_DY, asstY76: asstY, calls, reps, CE, ctoks, SY_END, cands, candRows, change, likely };
+}
+
+// The document through 7-6, from shortDoc75's strokes (the same picture while nothing has moved): the agent tool's
+// definition typed in at the head (def: [p, p]); what stands under the head moved down for it (shift); scrolled up by
+// sy as the calls, the reports and the conclusion come in. o: { def, shift, sy, calls ([{ bandA, open, n, end }]),
+// reps ([{ mark, chars }]), concl ({ mark, upto }) }
+export function doc76(ctx, s, o = {}) {
+  const sy = o.sy ?? 0;
+  const dy = s.DEF_DY * inOutCubic(clamp(o.shift ?? 0));
+  const clip = sy > 0.001 || dy > 0.001;
+  ctx.save();
+  if (clip) {
+    // (a clip smooths the edges differently: the document as 7-5 left it goes without)
+    ctx.beginPath();
+    ctx.rect(DOC7.x, DOC7.y + 2, DOC7.w, DOC7.h - 4);
+    ctx.clip();
+    ctx.translate(0, -sy);
+  }
+  roleMark(ctx, SYS.x, SYS.y + 1, ROLE.system, { edge: WRITER.system });
+  s.defs.forEach((d, k) => drawDef(ctx, d, defY(k), 1));
+  s.defs76.forEach((d, k) => drawDef(ctx, d, defY(s.defs.length + k), o.def?.[k] ?? 0));
+  const RE = shiftE(s.RE, dy);
+  roleMark(ctx, RE.x, RE.y + 1, RULE_MARK, { edge: BY.app, alpha: 1 });
+  docEntry(ctx, RE, 1, { chars: 1 });
+  const SE = shiftE(s.SE, s.RULE_DY + dy);
+  roleMark(ctx, SE.x, SE.y + 1, SUM_MARK, { edge: BY.app, alpha: 1 });
+  docEntry(ctx, SE, 1);
+  roleMark(ctx, DOC7.x + 18, s.asstY + s.RULE_DY + dy + 1, ROLE.assistant, { edge: WRITER.assistant, alpha: 1 });
+  (o.calls ?? []).forEach((c, k) => { if (c) drawCall(ctx, s.calls[k], c); });
+  (o.reps ?? []).forEach((r, k) => {
+    if (!r) return;
+    const R = s.reps[k];
+    if (r.mark) roleMark(ctx, R.x, R.y + 1, ROLE.result, { edge: WRITER.result });
+    if ((r.chars ?? 0) > 0) docEntry(ctx, R, 1, { tagAlpha: 0, chars: r.chars });
+  });
+  if (o.concl) {
+    if (o.concl.mark) roleMark(ctx, s.CE.x, s.CE.y + 1, ROLE.assistant, { edge: WRITER.assistant });
+    if ((o.concl.upto ?? 0) > 0) docEntry(ctx, s.CE, 1, { tagAlpha: 0, chars: o.concl.upto });
+  }
+  ctx.restore();
+  if (sy > 0.001) paperTop(ctx, DOC7, sy, 1);
+}
+// a box of the document (full-size coordinates) where it is now, scrolled by sy
+export const docBox76 = (b, sy) => ({ ...b, y: b.y - sy });
+
+// A small numbered disc (the leads, the agents, their times).
+export function numBadge76(ctx, x, y, r, n, a, fill = C.ink) {
+  if (a <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  circle(ctx, x, y, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.restore();
+  text(ctx, String(n), x, y + 1, { font: F.sans(700, Math.round(r * 1.25)), color: '#fff', align: 'center', base: 'middle', alpha: a });
+}
+
+// Above the LLM: the leads (CARD7's top). o: { a (the card), slots ([a, a, a]: a numbered place for each), texts
+// ([a, a, a]: the lead in it), hot ([0–1, …]: its number in vermilion) }. Returns the card's box and the texts' boxes.
+export const CAND76 = { x: CARD7.x, y: CARD7.y, w: CARD7.w, h: 190 };
+export const candRow76 = (k) => ({ x: CAND76.x + 16, y: CAND76.y + 52 + k * 44, w: CAND76.w - 32, h: 34 });
+export const CAND_FONT76 = F.jp(700, 17);
+export function candCard76(ctx, o = {}) {
+  const a = o.a ?? 0;
+  const B = CAND76;
+  if (a <= 0.001) return { box: B, rows: [] };
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  rr(ctx, B.x, B.y, B.w, B.h, 14);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.ink2;
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  ctx.restore();
+  text(ctx, '原因の候補', B.x + 18, B.y + 32, { font: F.jp(700, 16), color: C.ink, alpha: a });
+  const rows = CANDS76.map(([s], k) => {
+    const R = candRow76(k);
+    const sa = a * (o.slots?.[k] ?? 0);
+    const ta = a * (o.texts?.[k] ?? 0);
+    const tb = { x: R.x + 42, y: R.y + 6, w: measure(ctx, CAND_FONT76, s), h: 22 };
+    if (sa > 0.001) {
+      const hot = o.hot?.[k] ?? 0;
+      numBadge76(ctx, R.x + 14, R.y + R.h / 2, 12, k + 1, sa, hot > 0.5 ? C.accent : C.ink);
+      // the place waits, dashed, until the lead lands in it
+      const da = sa * (1 - ta);
+      if (da > 0.001) {
+        ctx.save();
+        ctx.globalAlpha *= da;
+        rr(ctx, R.x + 34, R.y, R.w - 34, R.h, 8);
+        ctx.strokeStyle = C.muted;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+    text(ctx, s, tb.x, R.y + 24, { font: CAND_FONT76, color: C.ink, alpha: ta });
+    return tb;
+  });
+  return { box: B, rows };
+}
+
+// Under the shell: the agent tool's name (an example) and, once it is named, what runs there. o: { a, slot (0–1: the
+// room, dashed, waiting), name (0–1: サブエージェント), lift }. Returns the name's box.
+export function agentHead76(ctx, o = {}) {
+  const a = o.a ?? 0;
+  if (a <= 0.001) return null;
+  const B = SUB76;
+  const y = B.y + 17;
+  const w0 = text(ctx, 'agent', B.x, y, { font: F.mono(600, 16), color: C.ink, alpha: a });
+  const w1 = tag(ctx, B.x + w0 + 8, y - 16, '例', { font: F.jp(700, 11), h: 20, padX: 6, stroke: C.muted, color: C.muted, alpha: a });
+  text(ctx, 'Claude Code では Agent（前は Task）', B.x + w0 + 8 + w1 + 8, y - 1, { font: F.jp(400, 11), color: C.muted, alpha: a });
+  const sl = a * (o.slot ?? 0);
+  if (sl > 0.001) {
+    const top = COL76.top - 6;
+    ctx.save();
+    ctx.globalAlpha *= clamp(sl);
+    rr(ctx, B.x - 4, top, B.w + 8, B.y + B.h + 6 - top, 12);
+    ctx.strokeStyle = C.muted;
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([8, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  const na = a * (o.name ?? 0);
+  const font = F.jp(700, 13);
+  const nw = measure(ctx, font, 'サブエージェント') + 20;
+  const nb = { x: B.x + B.w - nw, y: B.y, w: nw, h: 24 };
+  if (na > 0.001) {
+    const sc = o.lift ?? 1;
+    ctx.save();
+    ctx.translate(nb.x + nw / 2, nb.y + 12);
+    ctx.scale(sc, sc);
+    tag(ctx, 0, -12, 'サブエージェント', { font, h: 24, padX: 10, fill: C.ink, color: C.paper, align: 'center', alpha: na });
+    ctx.restore();
+  }
+  return nb;
+}
+
+// One small agent, column k: its task, a small LLM, the loop the harness runs for it (the harness's purple), and its
+// own document — the harness's instructions (指示) and the request (依頼) first, then its rounds (calls and long
+// results), then its report — and how much that document holds, on the bar's scale under the LLM (never added to
+// it). o: { a (the column), doc (0–1: set up, with the instructions), ask (0–1: the request in), llm, loop (alphas),
+// spin (the loop's turn, radians), glow (its LLM at work), rounds (written so far: a round is a call and its
+// result, fractional), report (0–1: written), lit (0–1: the report goes back), tokens, tokA, done (0–1: the check),
+// dim }. Returns its boxes: { col, head, llm, loop, doc, report, amount }.
+export const RUNS76 = [3, 4, 3];
+export const TOK76 = [16000, 21000, 13000]; // each small document when its report is written (an example)
+export const TOK76_0 = 4000; // …once set up (the instructions, the tools' definitions, the request)
+const MINI = { markW: 28, markH: 14, font: F.jp(700, 9) };
+function miniItems(k) {
+  const items = [{ t: 'sys', y: 6, h: 14 }, { t: 'ask', y: 24, h: 14 }];
+  let y = 42;
+  for (let j = 0; j < RUNS76[k]; j++) {
+    items.push({ t: 'call', j, y, h: 9 });
+    y += 13;
+    const h = 12 + Math.round(16 * hash(k * 31 + j * 7 + 3));
+    items.push({ t: 'result', j, y, h });
+    y += h + 5;
+  }
+  items.push({ t: 'report', y, h: 14 });
+  return items;
+}
+const MINI_ITEMS = [0, 1, 2].map(miniItems);
+const fmt76 = (v) => (Math.round(v / 500) * 500).toLocaleString('en-US');
+export function subAgent76(ctx, k, o = {}) {
+  const a = (o.a ?? 0) * (o.dim ?? 1);
+  const B = colBox76(k);
+  const LB = { x: B.x, y: B.y + 28, w: 38, h: 38 };
+  const LP = { x: B.x + 19, y: B.y + 100, r: 12 };
+  const D = { x: B.x + 46, y: B.y + 26, w: B.w - 46, h: 136 };
+  const AM = { x: B.x, y: B.y + 168, w: B.w, h: 30 };
+  const boxes = { col: B, head: { x: B.x, y: B.y, w: B.w, h: 20 }, llm: LB, loop: { x: LP.x - LP.r, y: LP.y - LP.r, w: LP.r * 2, h: LP.r * 2 }, doc: D, amount: AM, report: null };
+  if (a <= 0.001) return boxes;
+  // the heading
+  numBadge76(ctx, B.x + 10, B.y + 10, 9, k + 1, a);
+  text(ctx, TASKS76[k], B.x + 25, B.y + 15, { font: F.jp(700, 13), color: C.ink, alpha: a });
+  if ((o.done ?? 0) > 0.001) check(ctx, B.x + B.w - 10, B.y + 10, 9, a * o.done);
+  // the small LLM
+  const la = a * (o.llm ?? 0);
+  if (la > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= clamp(la);
+    rr(ctx, LB.x, LB.y, LB.w, LB.h, 8);
+    ctx.fillStyle = C.ink;
+    ctx.fill();
+    const g = o.glow ?? 0;
+    if (g > 0.001) {
+      ctx.globalAlpha *= clamp(g);
+      rr(ctx, LB.x - 4, LB.y - 4, LB.w + 8, LB.h + 8, 11);
+      ctx.strokeStyle = C.accent;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+    ctx.restore();
+    text(ctx, 'LLM', LB.x + LB.w / 2, LB.y + LB.h / 2 + 1, { font: F.sans(700, 12), color: C.paper, align: 'center', base: 'middle', alpha: la });
+  }
+  // the loop the harness runs for it
+  const lo = a * (o.loop ?? 0);
+  if (lo > 0.001) {
+    ctx.save();
+    ctx.translate(LP.x, LP.y);
+    ctx.rotate(o.spin ?? 0);
+    loopIcon(ctx, 0, 0, LP.r, lo, { p: 1, lw: 3 });
+    ctx.restore();
+  }
+  // its document
+  const da = a * (o.doc ?? 0);
+  if (da > 0.001) {
+    ctx.save();
+    ctx.globalAlpha *= clamp(da);
+    rr(ctx, D.x, D.y, D.w, D.h, 6);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = C.rule;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    const items = MINI_ITEMS[k];
+    const r = o.rounds ?? 0;
+    const shown = (it) => (it.t === 'sys' ? 1 : it.t === 'ask' ? clamp(o.ask ?? 0) : it.t === 'call' ? clamp((r - it.j) * 4) : it.t === 'result' ? clamp((r - it.j - 0.5) * 4) : clamp(o.report ?? 0));
+    // it scrolls once what is written passes its foot
+    const bottom = items.reduce((m, it) => Math.max(m, (it.y + it.h) * Math.min(1, shown(it) * 3)), 0);
+    const sc = Math.max(0, bottom - (D.h - 8));
+    const x0 = D.x + 6;
+    const iw = D.w - 12;
+    ctx.save();
+    rr(ctx, D.x + 1, D.y + 1, D.w - 2, D.h - 2, 5);
+    ctx.clip();
+    items.forEach((it) => {
+      const ia = da * shown(it);
+      if (ia <= 0.001) return;
+      const y = D.y + it.y - sc;
+      ctx.save();
+      ctx.globalAlpha *= clamp(ia);
+      if (it.t === 'sys' || it.t === 'ask' || it.t === 'report') {
+        const m = it.t === 'sys' ? ['指示', C.panel, C.ink2] : it.t === 'ask' ? ['依頼', C.blueSoft, C.blue] : ['報告', C.ink, C.paper];
+        rr(ctx, x0, y, MINI.markW, MINI.markH, 4);
+        ctx.fillStyle = m[1];
+        ctx.fill();
+        ctx.strokeStyle = BY.app;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        text(ctx, m[0], x0 + MINI.markW / 2, y + MINI.markH / 2 + 1, { font: MINI.font, color: m[2], align: 'center', base: 'middle' });
+        const bx = x0 + MINI.markW + 5;
+        const bw = iw - MINI.markW - 5;
+        ctx.fillStyle = it.t === 'ask' ? 'rgba(47,91,234,0.35)' : SUM_BAR;
+        if (it.t === 'sys') {
+          ctx.fillRect(bx, y + 2, bw * 0.9, 3);
+          ctx.fillRect(bx, y + 9, bw * 0.6, 3);
+        } else ctx.fillRect(bx, y + 5.5, bw * (it.t === 'ask' ? 0.8 : 0.7), 3);
+        if (it.t === 'report' && (o.lit ?? 0) > 0.001) {
+          ctx.globalAlpha *= clamp(o.lit);
+          rr(ctx, x0 - 3, y - 3, iw + 6, MINI.markH + 6, 5);
+          ctx.strokeStyle = C.green;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      } else {
+        const call = it.t === 'call';
+        rr(ctx, x0, y, iw, it.h, 3);
+        ctx.fillStyle = call ? C.accentSoft : '#eef6f0';
+        ctx.fill();
+        ctx.fillStyle = call ? C.accent : C.green;
+        ctx.fillRect(x0, y + 1, 2, it.h - 2);
+        // a result's lines (long output)
+        if (!call) {
+          ctx.fillStyle = 'rgba(23,143,83,0.35)';
+          for (let ly = y + 4; ly < y + it.h - 3; ly += 5) ctx.fillRect(x0 + 6, ly, (iw - 12) * (0.55 + 0.4 * hash(k * 97 + it.j * 13 + ly)), 2);
+        }
+      }
+      ctx.restore();
+    });
+    ctx.restore();
+    // what scrolled out of sight fades under the top edge
+    if (sc > 0.5) {
+      const gr = ctx.createLinearGradient(0, D.y, 0, D.y + 14);
+      gr.addColorStop(0, 'rgba(255,255,255,1)');
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.save();
+      ctx.globalAlpha = clamp(sc / 14) * da;
+      ctx.fillStyle = gr;
+      ctx.fillRect(D.x + 2, D.y + 2, D.w - 4, 14);
+      ctx.restore();
+    }
+    const rep = items[items.length - 1];
+    boxes.report = { x: x0 - 3, y: D.y + rep.y - sc - 3, w: iw + 6, h: MINI.markH + 6 };
+  }
+  // how much its document holds (the bar's scale under the LLM)
+  const ta = a * (o.tokA ?? 0);
+  if (ta > 0.001) {
+    const v = o.tokens ?? TOK76_0;
+    text(ctx, `約 ${fmt76(v)} トークン`, AM.x, AM.y + 12, { font: F.jp(500, 12), color: C.ink2, alpha: ta });
+    ctx.save();
+    ctx.globalAlpha *= clamp(ta);
+    ctx.fillStyle = C.muted;
+    ctx.fillRect(AM.x, AM.y + 18, TOK76_0 * BAR74.scale, 9);
+    ctx.fillStyle = C.green;
+    ctx.fillRect(AM.x + TOK76_0 * BAR74.scale, AM.y + 18, Math.max(0, v - TOK76_0) * BAR74.scale, 9);
+    ctx.restore();
+  }
+  return boxes;
+}
+
+// The shell's lines through 7-6: 7-5's (all shown), then what the small agents run (an example). when(j): when
+// line j of TERM76 shows.
+export const TERM76 = [
+  ['grep -n POOL config/settings.py', 'cmd'], ['12:DB_POOL_MAX = 5', ''],
+  ['git show 8c1e2a7', 'cmd'], ['-DB_POOL_MAX = 20', 'err'], ['+DB_POOL_MAX = 5', 'ok'],
+  ['wc -l logs/access-2026-10-0[67].log', 'cmd'], [' 51234 logs/access-2026-10-06.log', ''], [' 50871 logs/access-2026-10-07.log', ''],
+];
+export function terminalLines76(when) {
+  return [
+    ...terminalLines75(() => -100),
+    ...TERM76.map(([s, kind], j) => ({ s, cmd: kind === 'cmd', err: kind === 'err', ok: kind === 'ok', show: when(j), type: when(j) + 0.02 })),
+  ];
+}
+
+// The amount one-by-one would have added (c): dashed green parts after the bar's end, one per lead, and their row
+// in the legend. o: { a, p ([0–1, …]: each part drawn), from (tokens where the bar ends), vals ([tokens, …]) }.
+// Returns the parts' boxes and the whole ghost's.
+export const GHOST76 = [13000, 16000, 12000];
+export function ghost76(ctx, o = {}) {
+  const a = o.a ?? 0;
+  if (a <= 0.001) return null;
+  const B = BAR74;
+  let x = B.x + (o.from ?? 12080) * B.scale;
+  const x0 = x;
+  const boxes = GHOST76.map((v, i) => {
+    const p = clamp(o.p?.[i] ?? 0);
+    const w = v * B.scale * outCubic(p);
+    const b = { x, y: B.y, w, h: B.h };
+    if (w > 0.5) {
+      ctx.save();
+      ctx.globalAlpha *= a;
+      rr(ctx, x + 1, B.y + 1, w - 2, B.h - 2, 4);
+      ctx.fillStyle = 'rgba(23,143,83,0.14)';
+      ctx.fill();
+      ctx.strokeStyle = C.green;
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      if (w > 20) numBadge76(ctx, x + w / 2, B.y + B.h / 2, 8, i + 1, a * seg(p, 0.5, 1), C.green);
+    }
+    x += w;
+    return b;
+  });
+  const total = GHOST76.reduce((n, v, i) => n + v * outCubic(clamp(o.p?.[i] ?? 0)), 0);
+  // its row in the legend (where 会話と呼び出し's goes later)
+  const ra = a * clamp((o.p?.[0] ?? 0) * 3);
+  if (ra > 0.001) {
+    const y = B.legend + 2 * B.step;
+    ctx.save();
+    ctx.globalAlpha *= ra;
+    ctx.strokeStyle = C.green;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 2]);
+    ctx.strokeRect(B.x + 0.5, y - 9.5, 10, 10);
+    ctx.setLineDash([]);
+    ctx.restore();
+    text(ctx, '一つずつ調べたら', B.x + 18, y, { font: F.jp(500, 14), color: C.green, alpha: ra });
+    text(ctx, `約 ${fmt76(Math.max(500, total))} トークン`, B.x + 140, y, { font: F.jp(500, 14), color: C.green, alpha: ra });
+  }
+  return { boxes, all: { x: x0, y: B.y, w: x - x0, h: B.h } };
+}
+
+// Under the bar: when each small agent ran — the same start, different ends (an example; it does not say that three
+// at once take a third of the time). o: { a, p (0–1: the bars drawn from the start), runs ([[start, end], …] s) }.
+// Returns the card's box and the bars'.
+export const TIME76 = { x: UNDER7.x, head: 736, rows: [756, 776, 796], x0: UNDER7.x + 26, w: 250, h: 12 };
+export function timeline76(ctx, o = {}) {
+  const a = o.a ?? 0;
+  if (a <= 0.001) return null;
+  const T = TIME76;
+  text(ctx, 'サブエージェントが動いた時間', T.x, T.head, { font: F.jp(700, 14), color: C.ink2, alpha: a });
+  const runs = o.runs ?? [[0, 1], [0, 1], [0, 1]];
+  const s0 = Math.min(...runs.map((r) => r[0]));
+  const len = Math.max(...runs.map((r) => r[1])) - s0;
+  const sc = T.w / Math.max(0.1, len);
+  const p = clamp(o.p ?? 1);
+  const bars = runs.map(([st, en], i) => {
+    const y = T.rows[i];
+    numBadge76(ctx, T.x + 9, y, 8, i + 1, a);
+    const x = T.x0 + (st - s0) * sc;
+    const w = (en - st) * sc * outCubic(p);
+    ctx.save();
+    ctx.globalAlpha *= a;
+    rr(ctx, x, y - T.h / 2, Math.max(1, w), T.h, 4);
+    ctx.fillStyle = C.purple;
+    ctx.fill();
+    ctx.restore();
+    if (p >= 0.999) check(ctx, x + w + 9, y, 7, a);
+    return { x, y: y - T.h / 2, w: (en - st) * sc, h: T.h };
+  });
+  // the start they share
+  ctx.save();
+  ctx.globalAlpha *= a;
+  ctx.strokeStyle = C.ink2;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  line(ctx, T.x0, T.head + 8, T.x0, T.rows[2] + 10);
+  ctx.setLineDash([]);
+  ctx.restore();
+  return { box: { x: T.x, y: T.head - 16, w: T.x0 - T.x + T.w + 20, h: T.rows[2] + 12 - (T.head - 16) }, bars };
+}
+
+// Above the LLM (where the leads were): Anthropic's two figures, as two cards — one compares results, the other
+// amounts of tokens, each against a different thing; nothing joins them (research/harness-jobs-facts 7-6).
+// o: { a1, rows1 ([a, a, a, a]: the evaluation, the set-up, what it is compared with, 90.2%), a2, rows2 ([a, a, a]:
+// the set-up, what it is compared with, about 15 times) }. Returns the cards' and their rows' boxes.
+export const FACT1_76 = { x: CARD7.x, y: CARD7.y, w: CARD7.w, h: 148 };
+export const FACT2_76 = { x: CARD7.x, y: CARD7.y + 148 + 12, w: CARD7.w, h: 136 };
+export function factCards76(ctx, o = {}) {
+  const card = (B, a, head) => {
+    ctx.save();
+    ctx.globalAlpha *= clamp(a);
+    rr(ctx, B.x, B.y, B.w, B.h, 14);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = C.ink2;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.restore();
+    text(ctx, head, B.x + 18, B.y + 25, { font: F.jp(700, 13), color: C.muted, alpha: a });
+  };
+  const out = { c1: FACT1_76, c2: FACT2_76, rows1: [], rows2: [] };
+  const a1 = o.a1 ?? 0;
+  if (a1 > 0.001) {
+    const B = FACT1_76;
+    card(B, a1, '2025-06-13　Anthropic の記事');
+    const r = (i) => a1 * (o.rows1?.[i] ?? 0);
+    const x = B.x + 18;
+    const w0 = text(ctx, '社内の調べものの評価', x, B.y + 49, { font: F.jp(700, 16), color: C.ink, alpha: r(0) });
+    out.rows1[0] = { x, y: B.y + 33, w: w0, h: 22 };
+    const w1 = text(ctx, '主担当 Opus 4、サブエージェント Sonnet 4', x, B.y + 73, { font: F.jp(500, 14), color: C.ink, alpha: r(1) });
+    out.rows1[1] = { x, y: B.y + 58, w: w1, h: 20 };
+    const w2 = text(ctx, '比べた相手：Opus 4 だけのエージェント', x, B.y + 95, { font: F.jp(500, 14), color: C.ink2, alpha: r(2) });
+    out.rows1[2] = { x, y: B.y + 80, w: w2, h: 20 };
+    const w3 = text(ctx, '90.2%', x, B.y + 134, { font: F.cond(700, 38), color: C.accent, alpha: r(3) });
+    const w4 = text(ctx, '高い成績', x + w3 + 8, B.y + 132, { font: F.jp(700, 16), color: C.ink, alpha: r(3) });
+    out.rows1[3] = { x, y: B.y + 104, w: w3 + 8 + w4, h: 34 };
+  }
+  const a2 = o.a2 ?? 0;
+  if (a2 > 0.001) {
+    const B = FACT2_76;
+    card(B, a2, '同じ記事の説明');
+    const r = (i) => a2 * (o.rows2?.[i] ?? 0);
+    const x = B.x + 18;
+    const w0 = text(ctx, '複数のエージェントを使う仕組み', x, B.y + 49, { font: F.jp(700, 16), color: C.ink, alpha: r(0) });
+    out.rows2[0] = { x, y: B.y + 33, w: w0, h: 22 };
+    const w1 = text(ctx, '比べた相手：ふつうのチャット', x, B.y + 71, { font: F.jp(500, 14), color: C.ink2, alpha: r(1) });
+    out.rows2[1] = { x, y: B.y + 56, w: w1, h: 20 };
+    const w2 = text(ctx, '約 15 倍', x, B.y + 104, { font: F.cond(700, 30), color: C.ink, alpha: r(2) });
+    const w3 = text(ctx, 'のトークン', x + w2 + 6, B.y + 102, { font: F.jp(700, 15), color: C.ink, alpha: r(2) });
+    const w4 = text(ctx, '一つのエージェントは、約 4 倍', x, B.y + 124, { font: F.jp(500, 12), color: C.muted, alpha: r(2) });
+    out.rows2[2] = { x, y: B.y + 80, w: Math.max(w2 + 6 + w3, w4), h: 50 };
+  }
+  return out;
+}
+
+// 7-6's last picture (7-7's first), drawn with alpha a. runs: when each small agent ran ([[start, end], …], the
+// clip's times; only their lengths show).
+export function final76(ctx, t, s, a = 1, runs = RUNS_END76) {
+  if (a <= 0.001) return;
+  const { s73 } = s;
+  ctx.save();
+  ctx.globalAlpha *= clamp(a);
+  chatScreen(ctx, T7.SCREEN, 1);
+  chatBubble(ctx, s73.Br, { alpha: 1 });
+  chatBubble(ctx, s73.Bu, { alpha: 1 });
+  screenLinks(ctx, T7, { talk: 1, back: 1, talkHot: false, backHot: false });
+  appFrame(ctx, L7, 1, { name: '' });
+  llmBlock(ctx, L7, 1, { glow: 0 });
+  channel(ctx, L7.read, 1, { hot: false });
+  channel(ctx, L7.write, 1, { hot: false });
+  channel(ctx, L7.call, 1, { labelAlpha: 1, hot: false });
+  channel(ctx, L7.back, 1, { labelAlpha: 1, hot: false });
+  doc76(ctx, s, {
+    def: [1, 1], shift: 1, sy: s.SY_END,
+    calls: s.calls.map((c) => ({ bandA: 1, open: true, n: c.toks.length, end: true })),
+    reps: s.reps.map(() => ({ mark: true, chars: 1 })),
+    concl: { mark: true, upto: 1 },
+  });
+  harnessBox(ctx, ACT7, 1, { glow: 0, names: [['アプリ', 0, 26], [NAME, 1, 0]] });
+  const LP = T7.LOOP;
+  loopIcon(ctx, LP.x, LP.y, LP.r, 1, { p: 1 });
+  text(ctx, 'くり返す', LP.x - LP.r - 14, LP.y + 6, { font: F.jp(700, 16), color: C.purple, align: 'right', alpha: 1 });
+  toolPlace(ctx, { ...L7, tool: TOOL76 }, 1, {
+    draw: (cx) => {
+      shell(cx, t, 1, terminalLines76(() => -100), { trim: true });
+      agentHead76(cx, { a: 1, name: 1 });
+      [0, 1, 2].forEach((k) => subAgent76(cx, k, { a: 1, doc: 1, ask: 1, llm: 1, loop: 1, rounds: RUNS76[k], report: 1, tokens: TOK76[k], tokA: 1, done: 1 }));
+    },
+  });
+  factCards76(ctx, { a1: 1, rows1: [1, 1, 1, 1], a2: 1, rows2: [1, 1, 1] });
+  docBar75(ctx, { a: 1, vals: [12000, CALL_TOK76 + CONCL_TOKENS76.length, REPORT_TOK76.reduce((n, v) => n + v, 0), 80], rows: [1, 1, 1, 1], slots: [0, 2, 3, 1], track: 1, limit: 1 });
+  timeline76(ctx, { a: 1, p: 1, runs });
+  exampleNote(ctx, L7, NOTE76, 1, 1);
+  ctx.restore();
+}
+export const CALL_TOK76 = CALLS76.reduce((n, rows) => n + rows.flat().length, 0);
+// when the three small agents ran, in 7-6 (seconds from their shared start; clips/subagent.js times them so)
+export const RUNS_END76 = [[0, 3.6], [0, 4.4], [0, 5.3]];
