@@ -20,4 +20,8 @@ export default [
   // 2026-10-16, Claude from the reading of 7-2: the engine split 12本 into two phrases (ジュウ'/ニ'ホン, and
   // ジュ'ウニ/ホ'ン when the reading was written out). One word, down after ニ. Not yet heard by the Boss.
   { word: '12本', kana: 'ジュウニホン', accent: 3, type: 'common', priority: 8 },
+  // 2026-10-16, Claude from the reading of 7-7: the engine split サンドボックス into two phrases
+  // (サ'ンド/ボ'ックス), which sounds like two words where the term is being named. One word, down
+  // after ボ. Not yet heard by the Boss.
+  { word: 'サンドボックス', kana: 'サンドボックス', accent: 4, type: 'common', priority: 8 },
 ];
