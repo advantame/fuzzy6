@@ -9,13 +9,14 @@
  *   -> test-output/<deck>/<clipId>_sheet.png (480px tiles, up to 60 frames)
  * npm run capture -- <deck> <clipId> --stops [--clean] [--size WxH]
  *   -> test-output/<deck>/<clipId>_stops/ (head onward; stops and line.start + pace.ground)
+ * A retained clip (docs/stage.md) gets a .json beside each .png: its nodes and where they are.
  * --answers q1:0,q2:2 supplies zero-based choices through URL &a=.
  * --timeout seconds bounds the entire run (default 240). A separate supervisor
  * terminates the worker and its browser process group if graceful cleanup stalls.
  * Viewports are limited to 8 million pixels; sheet image data to 64 MiB.
  */
 import { spawn } from 'node:child_process';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
@@ -117,7 +118,16 @@ async function capture() {
         await step(page.evaluate(({ id, t }) => window.__go(id, t), { id, t }));
       } else await step(page.evaluate(t => window.__setTime(t), t));
     };
-    const screenshot = async path => { await page.screenshot({ path, timeout: 15000 }); console.log(path); };
+    // A retained clip (docs/stage.md) also tells where its nodes are: written beside the picture as JSON.
+    const screenshot = async path => {
+      await page.screenshot({ path, timeout: 15000 });
+      console.log(path);
+      const nodes = await step(page.evaluate(() => {
+        const layer = document.querySelector('.mx-layer[data-role="current"]') ?? document.querySelector('.mx-layer');
+        return layer?.mxInspect ? layer.mxInspect().slice(0, 5000) : null;
+      }));
+      if (nodes) await writeFile(path.replace(/\.png$/, '.json'), JSON.stringify(nodes));
+    };
     if (posters) {
       const entries = await step(page.evaluate(async ({ deck, answers }) => {
         const { default: data } = await import(`/decks/${deck}/deck.js`);

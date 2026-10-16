@@ -247,7 +247,8 @@ export function slot(ctx, p, a) {
 
 // docBar()'s options but a
 export function bar(ctx, p, a) {
-  return docBar(ctx, { ...p, a });
+  const r = docBar(ctx, { ...p, a });
+  return r && { ...r, box: r.all };
 }
 
 // recordCard()'s options but a, lit as a list per row
