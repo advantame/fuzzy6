@@ -33,6 +33,10 @@ npm run dev            # http://127.0.0.1:5175/（デッキの一覧）
 npm run build          # dist/
 npm test               # unit（vitest）
 npm run test:e2e       # e2e（playwright、port 8082 で自前のサーバを立てる）
+npm run check -- <deck> [clipId …]   # 長さ、字幕、文末、読みを確認。--overlap で重なりを調べる
+npm run tok -- '文字列' …            # o200k_base のトークン数と切れ目
+npm run pngdiff -- a.png b.png      # 違う画素の数と範囲
+npm run stops -- [deck] [clipId …]  # 止まりの絵を基準と比べる。--update で基準を更新
 npm run capture -- …   # 使い方は tools/capture.mjs の先頭（dev サーバが起動している前提）
 npm run narrate -- <deck> [clipId …]   # 語りの原稿と記録を比べる。--generate で合成、--prune で使っていない録りの片づけ（spec §7.1）
 npm run script -- [deck …]             # 台本（decks/<id>/script.md）を作り直す。dev サーバの起動中は、クリップや録りの記録を直すたびに書き直される
