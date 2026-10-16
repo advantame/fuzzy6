@@ -29,7 +29,7 @@ export function stage(def) {
       const run = runner(clip, ctx, st, { at: st.at, duration: () => st.duration });
       let last = null;
       // tools read where everything is from the layer's element (docs/stage.md「調べる」)
-      st.el.mxInspect = () => (last ? inspect(last.w, last.done) : []);
+      if (st.el) st.el.mxInspect = () => (last ? inspect(last.w, last.done) : []);
       return {
         render(t) {
           background?.(ctx);
