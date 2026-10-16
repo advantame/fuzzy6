@@ -40,6 +40,8 @@ export class World {
 
   // where a node goes: the end of the top or of a group, or beside a sibling
   #place(o) {
+    if (['in', 'before', 'after'].filter((k) => o[k] !== undefined).length > 1)
+      throw new Error('stage: choose one placement: in, before or after');
     const near = o.before ?? o.after;
     if (near !== undefined) {
       const n = this.#need(near);
@@ -98,13 +100,18 @@ export class World {
   }
 
   // Put a node somewhere else (o as add's).
-  move(id, o) {
+  move(id, o = {}) {
     const n = this.#need(id);
-    const from = this.#list(n.parent);
-    from.splice(from.indexOf(id), 1);
+    // Validate before detaching: failed moves must leave the world intact.
     const { list, parent, index } = this.#place(o);
+    for (let p = parent; p !== null; p = this.#need(p).parent)
+      if (p === id) throw new Error(`stage: moving ${id} there would create a cycle`);
+    if (o.before === id || o.after === id) return this;
+    const from = this.#list(n.parent);
+    const oldIndex = from.indexOf(id);
+    from.splice(oldIndex, 1);
     n.parent = parent;
-    list.splice(index, 0, id);
+    list.splice(index - (from === list && oldIndex < index ? 1 : 0), 0, id);
     return this;
   }
 

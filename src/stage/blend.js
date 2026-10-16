@@ -45,6 +45,18 @@ export function mix(x, y, e) {
   return SWAP;
 }
 
+// For 'now' and vars, a discrete value must not prevent neighboring numbers
+// inside an object (or a same-length array) from moving.
+function mixNow(x, y, e) {
+  const m = mix(x, y, e);
+  if (m !== SWAP) return m;
+  if (Array.isArray(x) && Array.isArray(y) && x.length === y.length)
+    return y.map((v, i) => mixNow(x[i], v, e));
+  if (plain(x) && plain(y))
+    return Object.fromEntries(Object.keys(y).map((k) => [k, k in x ? mixNow(x[k], y[k], e) : y[k]]));
+  return y;
+}
+
 // props mixed key by key: what cannot move takes the new value, and says so
 function mixProps(fp, np, e) {
   const p = {};
@@ -52,7 +64,7 @@ function mixProps(fp, np, e) {
   for (const k of new Set([...Object.keys(fp), ...Object.keys(np)])) {
     const m = k in fp && k in np ? mix(fp[k], np[k], e) : SWAP;
     if (m === SWAP) swap = true;
-    if (k in np) p[k] = m === SWAP ? np[k] : m;
+    if (k in np) p[k] = m === SWAP ? mixNow(fp[k], np[k], e) : m;
   }
   return { p, swap };
 }
@@ -68,34 +80,56 @@ export function blend(from, to, e) {
   const out = to.clone();
   for (const k of Object.keys(out.vars)) {
     if (!(k in from.vars)) continue;
-    const m = mix(from.vars[k], to.vars[k], e);
-    if (m !== SWAP) out.vars[k] = m;
+    out.vars[k] = mixNow(from.vars[k], to.vars[k], e);
   }
 
-  // in both
-  for (const [id, n] of [...out.nodes]) {
+  // A swapped group takes its whole subtree with it. Do not blend or fade its
+  // children a second time, or restore an old child into a replacement leaf.
+  const oldTaken = new Set();
+  const newTaken = new Set();
+  const take = (world, id, set) => {
+    set.add(id);
+    for (const child of world.nodes.get(id).kids ?? []) take(world, child, set);
+  };
+
+  // in both, parents before children (insertion order need not be tree order)
+  for (const { node } of to.walk()) {
+    const id = node.id;
+    if (newTaken.has(id) || oldTaken.has(id)) continue;
+    const n = out.nodes.get(id);
     const f = from.nodes.get(id);
     if (!f) continue;
-    const group = n.kind === GROUP;
-    if (group !== (f.kind === GROUP)) continue; // a group and a leaf: the new one stands
     const { p, swap } = mixProps(f.p, n.p, e);
-    const kindSwap = !group && f.kind !== n.kind;
-    if (group || n.bridge === 'now' || (!swap && !kindSwap)) {
-      if (!kindSwap) n.p = p;
+    const kindSwap = f.kind !== n.kind;
+    const structureSwap = (n.kind === GROUP) !== (f.kind === GROUP);
+    // Existing scenes add clipping/translation to inherited groups as they
+    // start moving (session's doc). Preserve that implicit immediate policy;
+    // an explicit group policy can request a subtree swap instead.
+    const immediate = n.bridge === 'now' || (n.kind === GROUP && n.bridge === undefined);
+    if (!structureSwap && (immediate || (!swap && !kindSwap))) {
+      n.p = p;
+      n.a = lerp(f.a, n.a, e);
+      continue;
+    }
+    take(from, id, oldTaken);
+    take(to, id, newTaken);
+    if (n.bridge === 'now') {
+      n.p = p;
       n.a = lerp(f.a, n.a, e);
       continue;
     }
     const [wo, wi] = weights(n.bridge, e);
     n.a *= wi;
-    const ghost = { ...f, id: `${id}~`, a: f.a * wo, parent: n.parent };
-    out.nodes.set(ghost.id, ghost);
+    const ghost = copyGhost(from, out, id, n.parent);
+    ghost.a *= wo;
     const list = n.parent === null ? out.top : out.nodes.get(n.parent).kids;
     list.splice(list.indexOf(id), 0, ghost.id);
   }
 
   // only in the new world: the topmost of each such part fades in
   for (const [id, n] of out.nodes) {
-    if (from.nodes.has(id) || id.endsWith('~')) continue; // (an id never ends with ~: world.js)
+    if (newTaken.has(id) || id.endsWith('~')) continue;
+    if (from.nodes.has(id) && !oldTaken.has(id)) continue;
     if (n.parent !== null && !from.nodes.has(n.parent)) continue;
     if (n.bridge === 'now') continue;
     n.a *= n.bridge === 'cut' ? (e < 1 ? 0 : 1) : e;
@@ -105,10 +139,14 @@ export function blend(from, to, e) {
   const lists = [[null, from.top]];
   for (const [id, f] of from.nodes) if (f.kids) lists.push([id, f.kids]);
   for (const [parent, kids] of lists) {
-    if (parent !== null && !out.nodes.has(parent)) continue; // it comes with its group
+    if (parent !== null && (oldTaken.has(parent) || !out.nodes.get(parent)?.kids)) continue;
     const list = parent === null ? out.top : out.nodes.get(parent).kids;
     let after = null;
     for (const id of kids) {
+      if (oldTaken.has(id)) {
+        if (out.nodes.get(id)?.parent === parent) after = id;
+        continue;
+      }
       if (out.nodes.has(id)) {
         if (out.nodes.get(id).parent === parent) after = id;
         continue;
@@ -121,6 +159,16 @@ export function blend(from, to, e) {
     }
   }
   return out;
+}
+
+// The old appearance of a replaced group owns separate ids all the way down.
+function copyGhost(from, out, id, parent) {
+  const f = from.nodes.get(id);
+  const n = { ...f, id: `${id}~`, p: { ...f.p }, parent };
+  if (f.kids) n.kids = f.kids.map((k) => `${k}~`);
+  out.nodes.set(n.id, n);
+  for (const k of f.kids ?? []) copyGhost(from, out, k, n.id);
+  return n;
 }
 
 // a node of the old world, with what it holds that the new world does not have elsewhere

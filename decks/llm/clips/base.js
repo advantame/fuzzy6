@@ -15,16 +15,17 @@
 // The model's outputs, the chances, the parameters' values and the practice texts are an
 // example. The tokens are o200k_base's.
 
-import { clip } from '../lib/clip.js';
+import { stage } from '../lib/stage.js';
+import * as K from '../lib/kinds.js';
+import { withAlpha } from '../../../src/stage/alpha.js';
 import { C, F, M, W } from '../lib/theme.js';
-import { tag, chip, chipWidth, example, source, SOURCE_RIGHT } from '../lib/parts.js';
-import { oddsRow, slot } from '../lib/odds.js';
+import { chipWidth, example, source, SOURCE_RIGHT } from '../lib/parts.js';
 import { trainingStrip } from '../lib/training.js';
 import { ROLE } from '../lib/rig.js';
 import { PARAMS_W, PARAMS_H, paramGrid, paramValue, flicker } from '../lib/params.js';
 import { text, measure, rr, arrow } from '../../../src/kit/draw.js';
 import { tw, seg, lerp, inCubic, outCubic, inOutCubic } from '../../../src/kit/ease.js';
-import { enter, focus, ring } from '../../../src/kit/cue.js';
+
 
 const ASK = '日本の首都はどこですか？';
 
@@ -152,7 +153,7 @@ const TT = { x: 720, y: 184, step: 60 };
 const TCHIP = { font: F.jp(500, 24), h: 44, padX: 9, gap: 5 };
 const CAP_Y = PG.y + PARAMS_H + 64;
 
-export default clip({
+export default stage({
   id: 'base',
   title: '続きを書くだけ',
   kicker: '事前学習だけのモデル',
@@ -188,18 +189,18 @@ export default clip({
     return { texts, runs: [run1, run2], lines };
   },
 
-  draw(ctx, t, s, k) {
-    const { at, pace } = k;
+  scene(w, f) {
+    const { at, pace } = f;
     const P = plan(at, pace);
-    trainingStrip(ctx, { alpha: enter(t, at('a'), pace), lit: [0] });
-    recall(ctx, t, s.texts, P, k);
-    doc(ctx, t, s, P, k);
-    shaped(ctx, t, s, P, k);
-    machine(ctx, t, s, P, k);
-    book(ctx, t, P, k);
-    notes(ctx, t, P, k);
-    example(ctx, M.l, 836, enter(t, P.land - 0.35, pace), '確率と、モデルが書いた続きは説明のための例。切り方は GPT-4o のもの');
-    source(ctx, 'Brown ほか（2020）', tw(t, at('few') - pace.cue.lead, pace.enter), SOURCE_RIGHT);
+    w.add('training.strip', trainingKind, { a: f.enter('a'), lit: [0] });
+    recall(w, f, P);
+    doc(w, f, P);
+    shaped(w, f, P);
+    machine(w, f, P);
+    book(w, f, P);
+    notes(w, f, P);
+    w.add('note.example', exampleKind, { a: f.enter(P.land - 0.35) });
+    w.add('note.source', sourceKind, { a: f.pop('few') });
   },
 });
 
@@ -300,69 +301,54 @@ function lights(t, run) {
 
 // ——— the LLM ——————————————————————————————————————————————————————
 
-function machine(ctx, t, { runs }, P, { at, pace }) {
+function machine(w, f, P) {
+  const { t, at, pace, s: { runs } } = f;
+  const parent = 'llm';
   const cue = pace.cue;
-  const la = enter(t, P.land - 0.35, pace);
+  const la = f.enter(P.land - 0.35);
   // sentence i: it leaves to the left
-  const ex = inOutCubic(seg(t, P.exit, P.exit + 0.5));
+  const ex = inOutCubic(f.seg(P.exit, P.exit + 0.5));
   if (la <= 0 || ex >= 1) return;
-  ctx.save();
-  ctx.globalAlpha *= la * (1 - ex);
-  ctx.translate(-80 * ex, 0);
+  w.group(parent, { a: la * (1 - ex), dx: -80 * ex });
 
-  const open = inOutCubic(seg(t, P.open[0], P.open[1]));
+  const open = inOutCubic(f.seg(P.open[0], P.open[1]));
   const r = {
     x: lerp(BOX.x, FRAME.x, open),
     y: lerp(BOX.y, FRAME.y, open),
     w: lerp(BOX.w, FRAME.w, open),
     h: lerp(BOX.h, FRAME.h, open),
   };
-  ctx.save();
-  rr(ctx, r.x, r.y, r.w, r.h, 22);
-  const base = ctx.globalAlpha;
-  if (open < 1) {
-    ctx.globalAlpha = base * (1 - open);
-    ctx.fillStyle = C.ink;
-    ctx.fill();
-  }
-  if (open > 0) {
-    ctx.globalAlpha = base * open;
-    ctx.strokeStyle = C.ink;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-  }
-  ctx.restore();
-  text(ctx, 'LLM', r.x + r.w / 2, r.y + r.h / 2 + 4, { font: F.sans(700, 64), color: C.paper, align: 'center', base: 'middle', alpha: 1 - seg(open, 0, 0.4) });
+  w.add('llm.frame', frameKind, { r, open }, { in: parent });
+  w.add('llm.title.closed', K.text, { s: 'LLM', x: r.x + r.w / 2, y: r.y + r.h / 2 + 4, a: 1 - seg(open, 0, 0.4), o: { font: F.sans(700, 64), color: C.paper, align: 'center', base: 'middle' } }, { in: parent });
   const inside = seg(open, 0.6, 1);
-  text(ctx, 'LLM', FRAME.x + 26, FRAME.y + 46, { font: F.sans(700, 28), color: C.ink, alpha: inside });
+  w.add('llm.title.open', K.text, { s: 'LLM', x: FRAME.x + 26, y: FRAME.y + 46, a: inside, o: { font: F.sans(700, 28), color: C.ink } }, { in: parent });
 
   // ——— what is lit: the most of either run
   const lit = runs.map((_, i) => lights(t, P.runs[i])).reduce((a, b) => ({
     in: Math.max(a.in, b.in), out: Math.max(a.out, b.out), box: Math.max(a.box, b.box), arw: Math.max(a.arw, b.arw),
   }));
   // the two arrows to the page: the context goes in, the chosen token comes out
-  const ar = tw(t, P.open[1] - 0.1, 0.4, outCubic);
-  pipe(ctx, ARW.x1, ARW.back, ARW.x0, ARW.back, ar, lit.in);
-  pipe(ctx, ARW.x0, ARW.out, ARW.x1, ARW.out, ar, lit.out);
+  const ar = f.tw(P.open[1] - 0.1, 0.4, outCubic);
+  w.add('llm.arrow.input', pipeKind, { x0: ARW.x1, y0: ARW.back, x1: ARW.x0, y1: ARW.back, p: ar, lit: lit.in }, { in: parent });
+  w.add('llm.arrow.output', pipeKind, { x0: ARW.x0, y0: ARW.out, x1: ARW.x1, y1: ARW.out, p: ar, lit: lit.out }, { in: parent });
   // the trained parameters, which the black box held, and the arrow from them to the chances
-  params(ctx, inside, lit.box);
-  pipe(ctx, PARW.x0, PARW.y, PARW.x1, PARW.y, tw(t, P.open[1], 0.4, outCubic), lit.arw);
+  w.add('llm.parameters', paramsKind, { a: inside, lit: lit.box }, { in: parent });
+  w.add('llm.arrow.probability', pipeKind, { x0: PARW.x0, y0: PARW.y, x1: PARW.x1, y1: PARW.y, p: f.tw(P.open[1], 0.4, outCubic), lit: lit.arw }, { in: parent });
 
   // ——— the frame's ground: where the context and the chances go
   const lead = cue.lead;
-  text(ctx, 'コンテクスト', CTX.x, FRAME.y + 82, { font: F.jp(700, 18), color: C.accent, alpha: tw(t, at('give') - lead, pace.enter) });
-  text(ctx, 'トークンに切って読む', CTX.x + 124, FRAME.y + 82, { font: F.jp(500, 16), color: C.muted, alpha: tw(t, P.runs[0].split[0], pace.enter) });
-  text(ctx, '次に来るトークンと、その確率', PROB.x, PROB.label, { font: F.jp(700, 18), color: C.ink2, alpha: tw(t, P.runs[0].steps[0].s, pace.enter) });
+  w.add('context.title', K.text, { s: 'コンテクスト', x: CTX.x, y: FRAME.y + 82, a: f.tw(at('give') - lead, pace.enter), o: { font: F.jp(700, 18), color: C.accent } }, { in: parent });
+  w.add('context.hint', K.text, { s: 'トークンに切って読む', x: CTX.x + 124, y: FRAME.y + 82, a: f.tw(P.runs[0].split[0], pace.enter), o: { font: F.jp(500, 16), color: C.muted } }, { in: parent });
+  w.add('probability.title', K.text, { s: '次に来るトークンと、その確率', x: PROB.x, y: PROB.label, a: f.tw(P.runs[0].steps[0].s, pace.enter), o: { font: F.jp(700, 18), color: C.ink2 } }, { in: parent });
 
   // ——— the question alone, then the shaped text
-  run(ctx, t, runs[0], P.runs[0], { given: GIVEN, steps: STEPS, next: NEXT, L: L1, copy: copy1 }, 1 - seg(t, P.out, P.out + 0.4));
-  run(ctx, t, runs[1], P.runs[1], { given: GIVEN2, steps: STEPS2, next: null, L: L2, copy: copy2 }, 1);
+  run(w, f, 'run.question', runs[0], P.runs[0], { given: GIVEN, steps: STEPS, next: NEXT, L: L1, copy: copy1 }, 1 - f.seg(P.out, P.out + 0.4));
+  run(w, f, 'run.shaped', runs[1], P.runs[1], { given: GIVEN2, steps: STEPS2, next: null, L: L2, copy: copy2 }, 1);
 
   // ——— sentence e: what pre-training taught — what comes next (the chances) after a text (the context)
-  const e = focus(t, [at('why'), at('what')], at('e.end') - cue.fall, cue).level;
-  ring(ctx, CTX.x - 4, CTX.y - 4, runs[0].width + 8, 3 * L1.step + L1.h + 8, e[0], C.accent, 10);
-  ring(ctx, PROB.x - 4, PROB.y - 4, ODDS.chipW + 18 + ODDS.barW + 8, 2 * PROB.step + ODDS.h + 8, e[1], C.accent, 10);
-  ctx.restore();
+  const e = f.lit(['why', 'what'], 'e.end');
+  w.add('context.ring', K.ring, { x: CTX.x - 4, y: CTX.y - 4, w: runs[0].width + 8, h: 3 * L1.step + L1.h + 8, level: e[0], color: C.accent, r: 10 }, { in: parent });
+  w.add('probability.ring', K.ring, { x: PROB.x - 4, y: PROB.y - 4, w: ODDS.chipW + 18 + ODDS.barW + 8, h: 2 * PROB.step + ODDS.h + 8, level: e[1], color: C.accent, r: 10 }, { in: parent });
 }
 
 // Where the given text leaves the page from, line by line, in the page's font.
@@ -371,24 +357,22 @@ const copy2 = SHAPED.map(([who, s], i) => ({ s: `${who}：${s}`, x: SHP.x + 34, 
 
 // One run of the LLM: the given text comes in and is cut into tokens, then the steps.
 // R: its layout (prepare); S: its times (plan); D: its data.
-function run(ctx, t, R, S, D, alpha) {
+function run(w, f, id, R, S, D, alpha) {
+  const { t } = f;
+  let parent = id;
   if (alpha <= 0 || t < S.move[0]) return;
-  ctx.save();
-  ctx.globalAlpha *= alpha;
+  w.group(id, { a: alpha }, { in: 'llm' });
   const { L } = D;
-  const m = seg(t, S.move[0], S.move[1]);
+  const m = f.seg(S.move[0], S.move[1]);
   if (m < 1) {
     // in vermilion while it passes, as the arrow it goes along
     const e = inOutCubic(m);
     for (const c of D.copy) {
-      ctx.save();
-      ctx.translate(lerp(c.x, CTX.x + L.padX, e), lerp(c.y, CTX.y + c.row * L.step + L.h / 2 + 2, e));
+      parent = `${id}.copy.${c.row}`;
       const k = lerp(1, L.px / c.px, e);
-      ctx.scale(k, k);
-      text(ctx, c.s, 0, 0, { font: c.font, color: C.accent, base: 'middle' });
-      ctx.restore();
+      w.group(parent, { dx: lerp(c.x, CTX.x + L.padX, e), dy: lerp(c.y, CTX.y + c.row * L.step + L.h / 2 + 2, e), scale: k, origin: [0, 0] }, { in: id });
+      w.add(`${id}.copy.text.${c.row}`, K.text, { s: c.s, x: 0, y: 0, o: { font: c.font, color: C.accent, base: 'middle' } }, { in: parent });
     }
-    ctx.restore();
     return;
   }
 
@@ -405,7 +389,7 @@ function run(ctx, t, R, S, D, alpha) {
     }
     return g;
   };
-  const sp = inOutCubic(seg(t, S.split[0], S.split[1]));
+  const sp = inOutCubic(f.seg(S.split[0], S.split[1]));
   R.chips.forEach((c, i) => {
     if (i >= visible) return;
     let x = c.x;
@@ -418,18 +402,18 @@ function run(ctx, t, R, S, D, alpha) {
       o.ink = sp;
     } else {
       const st = S.steps[i - G];
-      const f = 1 - seg(t - st.land, st.slow ? 0.1 : 0.05, st.slow ? 0.6 : 0.35);
-      if (f > 0.5) o = { fill: C.accent, color: '#fff' };
-      else if (f > 0) o.fill = C.accentSoft;
+      const flash = 1 - seg(t - st.land, st.slow ? 0.1 : 0.05, st.slow ? 0.6 : 0.35);
+      if (flash > 0.5) o = { fill: C.accent, color: '#fff' };
+      else if (flash > 0) o.fill = C.accentSoft;
     }
     o.lit = glowAt(i);
-    token(ctx, x, c.y, c.w, c.s, L, o);
+    w.add(`${id}.context.${i}`, tokenKind, { x, y: c.y, w: c.w, s: c.s, L, o }, { in: parent });
   });
   // the slot for the next token, while there is one to come
   const going = S.pending ? t < S.fast[1] : n < S.steps.length;
   if (S.pending || going) {
     const nx = R.chips[visible] ?? R.end;
-    slot(ctx, nx.x, nx.y, Math.round(L.h), L.h, { alpha: tw(t, S.split[1], 0.5), lit: going ? 1 : 0, blink: going && Math.floor(t * 2.5) % 2 === 0 });
+    w.add(`${id}.next`, K.tokenSlot, { x: nx.x, y: nx.y, w: Math.round(L.h), h: L.h, a: f.tw(S.split[1], 0.5), o: { lit: going ? 1 : 0, blink: going && Math.floor(t * 2.5) % 2 === 0 } }, { in: parent });
   }
 
   // ——— the steps
@@ -451,30 +435,31 @@ function run(ctx, t, R, S, D, alpha) {
     let gone = false;
     if (pending) {
       prev = D.steps[last];
-      mix = outCubic(seg(t, S.fast[1] + 0.1, S.fast[1] + 0.4));
+      mix = outCubic(f.seg(S.fast[1] + 0.1, S.fast[1] + 0.4));
       hot = 0;
     } else if (st.slow) {
-      a = tw(t, st.s + 0.5 * st.d, 0.12) * (final ? 1 : 1 - seg(t, st.s + 0.93 * st.d, st.s + st.d));
-      grow = outCubic(seg(t, st.s + 0.52 * st.d, st.s + 0.7 * st.d));
-      hot = seg(t, st.pick - 0.05, st.pick + 0.05) * (final ? 1 - seg(t, st.land, st.land + 0.4) : 1);
-      // the chosen chip has left its row (the last one comes back once it has landed)
+      a = f.tw(st.s + 0.5 * st.d, 0.12) * (final ? 1 : 1 - f.seg(st.s + 0.93 * st.d, st.s + st.d));
+      grow = outCubic(f.seg(st.s + 0.52 * st.d, st.s + 0.7 * st.d));
+      hot = f.seg(st.pick - 0.05, st.pick + 0.05) * (final ? 1 - f.seg(st.land, st.land + 0.4) : 1);
+      parent = id;
+    // the chosen chip has left its row (the last one comes back once it has landed)
       gone = t >= st.fly[0] && !(final && t >= st.land);
     } else {
       // the quick steps: the bars move from the last step's lengths
       prev = k > SLOW ? D.steps[k - 1] : null;
-      mix = outCubic(seg(t, st.s, st.s + 0.5 * st.d));
+      mix = outCubic(f.seg(st.s, st.s + 0.5 * st.d));
       if (!prev) grow = mix;
     }
-    cands.forEach(([w, p], i) => {
+    cands.forEach(([word, p], i) => {
       const y = PROB.y + i * PROB.step;
-      const empty = (i === 0 && gone) || isNL(w);
-      oddsRow(ctx, PROB.x, y, empty ? '' : w, { ...ODDS, p: prev ? lerp(prev[i][1], p, mix) : p, grow, hot: i === 0 ? hot : 0, alpha: a });
-      if (isNL(w) && !(i === 0 && gone)) {
+      const empty = (i === 0 && gone) || isNL(word);
+      w.add(`${id}.probability.${i}`, K.oddsRow, { x: PROB.x, y, s: empty ? '' : word, a, o: { ...ODDS, p: prev ? lerp(prev[i][1], p, mix) : p, grow, hot: i === 0 ? hot : 0 } }, { in: parent });
+      if (isNL(word) && !(i === 0 && gone)) {
         const white = i === 0 && hot > 0.5;
-        const lw = measure(ctx, ODDS.font, shown(w));
+        const lw = f.measure(ODDS.font, shown(word));
         const x = PROB.x + (ODDS.chipW - lw - 14) / 2;
-        text(ctx, shown(w), x, y + ODDS.h / 2 + 2, { font: ODDS.font, color: white ? '#fff' : C.ink, base: 'middle', alpha: a });
-        nlMark(ctx, x + lw + 1, y + ODDS.h / 2, white ? '#fff' : C.muted, a, 14);
+        w.add(`${id}.probability.label.${i}`, K.text, { s: shown(word), x, y: y + ODDS.h / 2 + 2, a, o: { font: ODDS.font, color: white ? '#fff' : C.ink, base: 'middle' } }, { in: parent });
+        w.add(`${id}.probability.newline.${i}`, nlMarkKind, { x: x + lw + 1, cy: y + ODDS.h / 2, color: white ? '#fff' : C.muted, a, size: 14 }, { in: parent });
       }
     });
 
@@ -486,32 +471,29 @@ function run(ctx, t, R, S, D, alpha) {
       for (let i = 0; i < G0; i++) {
         const c = R.chips[i];
         const a0 = st.s + 0.15 * st.d + 0.1 * st.d * (i / G0);
-        const p = seg(t, a0, a0 + 0.23 * st.d);
+        const p = f.seg(a0, a0 + 0.23 * st.d);
         if (p <= 0 || p >= 1) continue;
         const e = inCubic(p);
         const sc = lerp(1, 0.2, e);
-        ctx.save();
-        ctx.translate(lerp(c.x + c.w / 2, cx, e), lerp(c.y + L.h / 2, cy, e));
-        ctx.scale(sc, sc);
-        ctx.globalAlpha *= 1 - seg(p, 0.75, 1);
-        token(ctx, -c.w / 2, -L.h / 2, c.w, c.s, L, { fill: C.accentSoft, color: C.accent });
-        ctx.restore();
+        parent = `${id}.drawn.${i}`;
+        w.group(parent, { dx: lerp(c.x + c.w / 2, cx, e), dy: lerp(c.y + L.h / 2, cy, e), scale: sc, origin: [0, 0], a: 1 - seg(p, 0.75, 1) }, { in: id });
+        w.add(`${id}.drawn.token.${i}`, tokenKind, { x: -c.w / 2, y: -L.h / 2, w: c.w, s: c.s, L: L, o: { fill: C.accentSoft, color: C.accent } }, { in: parent });
       }
     }
 
+    parent = id;
     // the chosen chip on its way to the end of the context
     if (st.slow && !pending) {
-      const f = seg(t, st.fly[0], st.fly[1]);
-      if (f > 0 && f < 1) {
+      const fly = f.seg(st.fly[0], st.fly[1]);
+      if (fly > 0 && fly < 1) {
         const to = R.chips[G + k];
-        const e = inOutCubic(f);
+        const e = inOutCubic(fly);
         const x = lerp(PROB.x + (ODDS.chipW - to.w) / 2, to.x, e);
         const y = lerp(PROB.y + (ODDS.h - L.h) / 2, to.y, e) - Math.sin(Math.PI * e) * 30;
-        token(ctx, x, y, to.w, to.s, L, { fill: C.accent, color: '#fff' });
+        w.add(`${id}.chosen`, tokenKind, { x, y, w: to.w, s: to.s, L: L, o: { fill: C.accent, color: '#fff' } }, { in: parent });
       }
     }
   }
-  ctx.restore();
 }
 
 // The trained parameters inside the LLM: the corner of sentence a's grid, as it settled. They do
@@ -628,30 +610,30 @@ function nlMark(ctx, x, cy, color, a = 1, size = 14) {
 
 // The page of the question alone. Beside the LLM until sentence g, when it leaves to the right;
 // back on the left in sentence i's lead, beside the shaped one.
-function doc(ctx, t, { lines }, P, { at, pace }) {
-  const cue = pace.cue;
-  const lead = cue.lead;
-  const pop = (name) => tw(t, at(name) - lead, pace.enter);
+function doc(w, f, P) {
+  const { t, at, pace, s: { lines } } = f;
+  const parent = 'doc';
+  const { lead, pop } = f;
+  w.group(parent);
   let r;
   let a;
   const back = t >= P.exit;
   if (!back) {
-    const out = inOutCubic(seg(t, P.out, P.out + 0.5));
+    const out = inOutCubic(f.seg(P.out, P.out + 0.5));
     r = { ...DOC, x: DOC.x + 80 * out };
-    a = enter(t, P.land - 0.35, pace) * (1 - out);
+    a = f.enter(P.land - 0.35) * (1 - out);
   } else {
-    const b = outCubic(seg(t, P.exit + 0.4, P.exit + 1.0));
+    const b = outCubic(f.seg(P.exit + 0.4, P.exit + 1.0));
     r = { ...CMP_L, x: CMP_L.x - 80 * (1 - b) };
     a = b;
     // over both pages: the same model
-    text(ctx, '事前学習だけのモデルに、続きを書かせる', M.l, 120, { font: F.jp(700, 21), color: C.ink, alpha: b });
+    w.add('comparison.title', K.text, { s: '事前学習だけのモデルに、続きを書かせる', x: M.l, y: 120, a: b, o: { font: F.jp(700, 21), color: C.ink } }, { in: parent });
   }
   if (a <= 0.001) return;
-  ctx.save();
-  ctx.globalAlpha *= a;
-  text(ctx, back ? '質問だけのコンテクスト' : '事前学習だけのモデルに、続きを書かせる', r.x, r.y - (back ? 14 : 18), { font: F.jp(700, back ? 18 : 20), color: C.ink2 });
-  card(ctx, r, 1);
-  text(ctx, ASK, r.x + 28, docY(r, 0), { font: BODY, color: C.ink, base: 'middle', alpha: pop('ask') });
+  w.group('doc.page', { a }, { in: parent });
+  w.add('doc.title', K.text, { s: back ? '質問だけのコンテクスト' : '事前学習だけのモデルに、続きを書かせる', x: r.x, y: r.y - (back ? 14 : 18), o: { font: F.jp(700, back ? 18 : 20), color: C.ink2 } }, { in: 'doc.page' });
+  w.add('doc.paper', cardKind, { b: r, a: 1 }, { in: 'doc.page' });
+  w.add('doc.question', K.text, { s: ASK, x: r.x + 28, y: docY(r, 0), a: pop('ask'), o: { font: BODY, color: C.ink, base: 'middle' } }, { in: 'doc.page' });
 
   // each token appears as it is chosen (the → lights up); no slide from the LLM
   const S = P.runs[0];
@@ -665,58 +647,55 @@ function doc(ctx, t, { lines }, P, { at, pace }) {
     end = isNL(tok) ? { line: l + 1, s: '' } : { line: l, s: rows[l - 1] };
   });
   rows.forEach((s, i) => {
-    if (s) text(ctx, s, r.x + 28, docY(r, i + 1), { font: BODY, color: C.blue, base: 'middle' });
+    if (s) w.add(`doc.continuation.${i}`, K.text, { s, x: r.x + 28, y: docY(r, i + 1), o: { font: BODY, color: C.blue, base: 'middle' } }, { in: 'doc.page' });
   });
-  const x = r.x + 28 + measure(ctx, BODY, end.s);
+  const x = r.x + 28 + f.measure(BODY, end.s);
   if (t >= S.steps[0].s && t < S.fast[1] && Math.floor(t * 2.5) % 2 === 0) {
-    ctx.fillStyle = C.accent;
-    ctx.fillRect(x + 3, docY(r, end.line) - 17, 3, 32);
+    w.add('doc.cursor', cursorKind, { x: x + 3, y: docY(r, end.line) - 17, h: 32 }, { in: 'doc.page' });
   }
   // it would go on
-  text(ctx, '……', x + 4, docY(r, end.line), { font: BODY, color: C.blue, base: 'middle', alpha: tw(t, S.fast[1] + 0.2, pace.enter) });
-  tag(ctx, r.x + 28, r.y + 222, '続き：別の質問が並んだ（例）', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue, alpha: tw(t, at('c.end') - 0.2, pace.enter) });
+  w.add('doc.ellipsis', K.text, { s: '……', x: x + 4, y: docY(r, end.line), a: f.tw(S.fast[1] + 0.2, pace.enter), o: { font: BODY, color: C.blue, base: 'middle' } }, { in: 'doc.page' });
+  w.add('doc.result', K.tag, { x: r.x + 28, y: r.y + 222, s: '続き：別の質問が並んだ（例）', a: f.tw(at('c.end') - 0.2, pace.enter), o: { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue } }, { in: 'doc.page' });
   const fig = pop('fig');
-  text(ctx, 'InstructGPT の論文（2022）にも、', r.x + 28, r.y + 286, { font: F.jp(500, 16), color: C.ink2, alpha: fig });
-  text(ctx, 'GPT-3 が質問に別の質問で続けた例がある', r.x + 28, r.y + 310, { font: F.jp(500, 16), color: C.ink2, alpha: fig });
+  w.add('doc.reference.title', K.text, { s: 'InstructGPT の論文（2022）にも、', x: r.x + 28, y: r.y + 286, a: fig, o: { font: F.jp(500, 16), color: C.ink2 } }, { in: 'doc.page' });
+  w.add('doc.reference.detail', K.text, { s: 'GPT-3 が質問に別の質問で続けた例がある', x: r.x + 28, y: r.y + 310, a: fig, o: { font: F.jp(500, 16), color: C.ink2 } }, { in: 'doc.page' });
   // ずんだもん expected an answer; the page is ringed while the question is asked
-  const qlit = focus(t, [at('q')], at('d.end') - cue.fall, cue).level[0];
-  ring(ctx, r.x, r.y, r.w, r.h, qlit, C.accent, 16);
-  if (!back) text(ctx, '質問に答える形になるとは限らない', r.x, r.y + r.h + 44, { font: F.jp(700, 20), color: C.ink, alpha: pop('not') });
-  ctx.restore();
+  const qlit = f.lit(['q'], 'd.end')[0];
+  w.add('doc.ring', K.ring, { x: r.x, y: r.y, w: r.w, h: r.h, level: qlit, color: C.accent, r: 16 }, { in: 'doc.page' });
+  if (!back) w.add('doc.note', K.text, { s: '質問に答える形になるとは限らない', x: r.x, y: r.y + r.h + 44, a: pop('not'), o: { font: F.jp(700, 20), color: C.ink } }, { in: 'doc.page' });
 }
 
 // The shaped text: in from the right in sentence g, beside the LLM; in sentence i's lead it
 // moves to the right half, beside the page of the question alone.
-function shaped(ctx, t, { runs }, P, { at, pace }) {
-  const cue = pace.cue;
-  const lead = cue.lead;
-  const pop = (name, dur = pace.enter) => tw(t, at(name) - lead, dur);
+function shaped(w, f, P) {
+  const { t, at, pace } = f;
+  const parent = 'shaped';
+  const { lead, pop } = f;
   const ra = pop('shape');
   if (ra <= 0.001) return;
-  const cmp = inOutCubic(seg(t, P.exit + 0.2, P.exit + 1.0));
+  const cmp = inOutCubic(f.seg(P.exit + 0.2, P.exit + 1.0));
   const r = {
     x: lerp(SHP.x, CMP_R.x, cmp) + 80 * (1 - ra),
     y: lerp(SHP.y, CMP_R.y, cmp),
     w: lerp(SHP.w, CMP_R.w, cmp),
     h: lerp(SHP.h, CMP_R.h, cmp),
   };
-  ctx.save();
-  ctx.globalAlpha *= ra;
-  text(ctx, '形を整えたコンテクスト', r.x, r.y - lerp(18, 14, cmp), { font: F.jp(700, lerp(20, 18, cmp)), color: C.ink2 });
-  card(ctx, r, 1);
-  const marks = tw(t, at('mark') - lead, 0.8);
+  w.group(parent, { a: ra });
+  w.add('shaped.title', K.text, { s: '形を整えたコンテクスト', x: r.x, y: r.y - lerp(18, 14, cmp), o: { font: F.jp(700, lerp(20, 18, cmp)), color: C.ink2 } }, { in: parent });
+  w.add('shaped.paper', cardKind, { b: r, a: 1 }, { in: parent });
+  const marks = f.tw(at('mark') - lead, 0.8);
   // the text column: wider once the role marks may come in
   const tx = r.x + 24 + lerp(80, 136, cmp) + 12;
   SHAPED.forEach(([who, s], i) => {
     // the examples with "質問と答えの組", the new question and "答え：" with "最後は"
-    const a = i < 4 ? tw(t, at('qa') - lead + i * pace.stagger * 2, pace.enter) : tw(t, at('last') - lead + (i - 4) * pace.stagger * 2, pace.enter);
+    const a = i < 4 ? f.tw(at('qa') - lead + i * pace.stagger * 2, pace.enter) : f.tw(at('last') - lead + (i - 4) * pace.stagger * 2, pace.enter);
     if (a <= 0) return;
     const cy = shpY(r, i);
     // the label: 質問／答え, turning into the role marks of 4-2
     const role = ROLE[who === '質問' ? 'user' : 'assistant'];
-    tag(ctx, r.x + 24, cy - 18, `${who}：`, { font: F.jp(700, 20), h: 36, padX: 10, fill: who === '質問' ? '#eef2ff' : C.panel, color: C.ink2, alpha: a * (1 - marks), r: 6 });
-    tag(ctx, r.x + 24, cy - 18, role.name, { font: F.jp(700, 17), h: 36, padX: 10, fill: role.fill, color: role.color, alpha: a * marks, r: 6 });
-    text(ctx, s, tx, cy + 1, { font: SBODY, color: C.ink, base: 'middle', alpha: a });
+    w.add(`shaped.label.${i}`, K.tag, { x: r.x + 24, y: cy - 18, s: `${who}：`, a: a * (1 - marks), o: { font: F.jp(700, 20), h: 36, padX: 10, fill: who === '質問' ? '#eef2ff' : C.panel, color: C.ink2, r: 6 } }, { in: parent });
+    w.add(`shaped.role.${i}`, K.tag, { x: r.x + 24, y: cy - 18, s: role.name, a: a * marks, o: { font: F.jp(700, 17), h: 36, padX: 10, fill: role.fill, color: role.color, r: 6 } }, { in: parent });
+    w.add(`shaped.line.${i}`, K.text, { s, x: tx, y: cy + 1, a, o: { font: SBODY, color: C.ink, base: 'middle' } }, { in: parent });
   });
   // the answer, token by token as it is chosen
   const S = P.runs[1];
@@ -725,71 +704,60 @@ function shaped(ctx, t, { runs }, P, { at, pace }) {
     if (t >= st.pick) ans += shown(STEPS2[i][0][0]);
   });
   const cy = shpY(r, 5);
-  if (ans) text(ctx, ans, tx, cy + 1, { font: F.jp(700, 25), color: C.blue, base: 'middle' });
+  if (ans) w.add('shaped.answer', K.text, { s: ans, x: tx, y: cy + 1, o: { font: F.jp(700, 25), color: C.blue, base: 'middle' } }, { in: parent });
   const writing = t >= S.steps[0].s && t < S.steps[S.steps.length - 1].pick;
   if (writing && Math.floor(t * 2.5) % 2 === 0) {
-    ctx.fillStyle = C.accent;
-    ctx.fillRect(tx + measure(ctx, F.jp(700, 25), ans) + 3, cy - 15, 3, 30);
+    w.add('shaped.cursor', cursorKind, { x: tx + f.measure(F.jp(700, 25), ans) + 3, y: cy - 15, h: 30 }, { in: parent });
   }
-  const lastLit = focus(t, [at('last')], at('h.end') - cue.fall, cue).level[0];
-  ring(ctx, r.x + 18, cy - 24, 92, 48, lastLit, C.accent, 10);
-  tag(ctx, r.x + 24, r.y + 320, '続きは、答えになった', { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue, alpha: tw(t, at('h2.end') - 0.2, pace.enter) });
+  const lastLit = f.lit(['last'], 'h.end')[0];
+  w.add('shaped.last.ring', K.ring, { x: r.x + 18, y: cy - 24, w: 92, h: 48, level: lastLit, color: C.accent, r: 10 }, { in: parent });
+  w.add('shaped.result', K.tag, { x: r.x + 24, y: r.y + 320, s: '続きは、答えになった', a: f.tw(at('h2.end') - 0.2, pace.enter), o: { font: F.jp(700, 18), h: 34, padX: 12, fill: C.blueSoft, color: C.blue } }, { in: parent });
   // sentence i2: the examples are only in the context
-  const inex = focus(t, [at('inex')], at('i2.end') - cue.fall, cue).level[0];
-  ring(ctx, r.x + 16, shpY(r, 0) - 24, r.w - 32, 3 * SLH + 48, inex, C.accent, 12);
-  ctx.restore();
+  const inex = f.lit(['inex'], 'i2.end')[0];
+  w.add('shaped.examples.ring', K.ring, { x: r.x + 16, y: shpY(r, 0) - 24, w: r.w - 32, h: 3 * SLH + 48, level: inex, color: C.accent, r: 12 }, { in: parent });
 }
 
 // Below the two pages: GPT-3's paper, the parameters, the marks.
-function notes(ctx, t, P, { at, pace }) {
-  const lead = pace.cue.lead;
-  const pop = (name) => tw(t, at(name) - lead, pace.enter);
+function notes(w, f, P) {
+  const { t, at, pace } = f;
+  const parent = 'notes';
+  const { pop } = f;
+  w.group(parent);
   const y = CMP_R.y + CMP_R.h;
-  text(ctx, 'GPT-3 の論文（2020）：質問と答えの例をコンテクストに入れる（few-shot）', CMP_R.x, y + 48, { font: F.jp(700, 18), color: C.ink2, alpha: pop('few') });
-  text(ctx, 'パラメータは変えない。例は、コンテクストの中にあるだけ', CMP_R.x, y + 80, { font: F.jp(500, 17), color: C.ink2, alpha: pop('nofix') });
+  w.add('notes.fewshot', K.text, { s: 'GPT-3 の論文（2020）：質問と答えの例をコンテクストに入れる（few-shot）', x: CMP_R.x, y: y + 48, a: pop('few'), o: { font: F.jp(700, 18), color: C.ink2 } }, { in: parent });
+  w.add('notes.parameters', K.text, { s: 'パラメータは変えない。例は、コンテクストの中にあるだけ', x: CMP_R.x, y: y + 80, a: pop('nofix'), o: { font: F.jp(500, 17), color: C.ink2 } }, { in: parent });
   const ma = pop('mark');
   if (ma > 0) {
-    ctx.save();
-    ctx.globalAlpha = ma;
-    ctx.strokeStyle = C.accent;
-    ctx.fillStyle = C.accent;
-    ctx.lineWidth = 2.5;
-    arrow(ctx, CMP_R.x - 10, y + 124, CMP_R.x + 60, y + 124, outCubic(ma), 10);
-    ctx.restore();
-    text(ctx, 'チャットボットでは、決まった印で区切る（4-2）', CMP_R.x + 76, y + 131, { font: F.jp(700, 19), color: C.accent, alpha: ma });
+    w.add('notes.arrow', arrowKind, { x0: CMP_R.x - 10, y0: y + 124, x1: CMP_R.x + 60, y1: y + 124, p: outCubic(ma), head: 10, width: 2.5, a: ma }, { in: parent });
+    w.add('notes.roles', K.text, { s: 'チャットボットでは、決まった印で区切る（4-2）', x: CMP_R.x + 76, y: y + 131, a: ma, o: { font: F.jp(700, 19), color: C.accent } }, { in: parent });
   }
 }
 
 // A page of questions: where a question is followed by more questions. It leaves with the page.
-function book(ctx, t, P, { at, pace }) {
+function book(w, f, P) {
+  const { t, at, pace } = f;
+  const parent = 'book';
   const lead = pace.cue.lead;
-  const ba = tw(t, at('book') - lead, pace.enter) * (1 - seg(t, P.out, P.out + 0.4));
+  const ba = f.tw(at('book') - lead, pace.enter) * (1 - f.seg(P.out, P.out + 0.4));
   if (ba <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = ba;
-  rr(ctx, BOOK.x, BOOK.y, BOOK.w, BOOK.h, 8);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  ctx.strokeStyle = C.rule;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.fillStyle = C.ink2;
-  ctx.fillRect(BOOK.x, BOOK.y, 8, BOOK.h);
-  text(ctx, '問題集', BOOK.x + 26, BOOK.y + 36, { font: F.jp(700, 22), color: C.ink });
+  w.group(parent, { a: ba });
+  w.add('book.cover', bookKind, {}, { in: parent });
+  w.add('book.title', K.text, { s: '問題集', x: BOOK.x + 26, y: BOOK.y + 36, o: { font: F.jp(700, 22), color: C.ink } }, { in: parent });
   ['問 1　……はどこですか？', '問 2　……はどこですか？', '問 3　……はどこですか？'].forEach((s, i) => {
-    text(ctx, s, BOOK.x + 26, BOOK.y + 74 + i * 32, { font: F.jp(500, 19), color: C.ink2, alpha: tw(t, at('book') - lead + 0.2 + i * pace.stagger, pace.enter) });
+    w.add(`book.question.${i}`, K.text, { s, x: BOOK.x + 26, y: BOOK.y + 74 + i * 32, a: f.tw(at('book') - lead + 0.2 + i * pace.stagger, pace.enter), o: { font: F.jp(500, 19), color: C.ink2 } }, { in: parent });
   });
-  const ca = tw(t, at('book') + 0.6, pace.enter);
-  text(ctx, 'こういう文章では、', BOOK.x + BOOK.w + 24, BOOK.y + BOOK.h / 2 - 8, { font: F.jp(700, 19), color: C.ink2, alpha: ca });
-  text(ctx, '質問のあとに、また質問が来る', BOOK.x + BOOK.w + 24, BOOK.y + BOOK.h / 2 + 22, { font: F.jp(700, 19), color: C.ink2, alpha: ca });
-  ctx.restore();
+  const ca = f.tw(at('book') + 0.6, pace.enter);
+  w.add('book.note.start', K.text, { s: 'こういう文章では、', x: BOOK.x + BOOK.w + 24, y: BOOK.y + BOOK.h / 2 - 8, a: ca, o: { font: F.jp(700, 19), color: C.ink2 } }, { in: parent });
+  w.add('book.note.end', K.text, { s: '質問のあとに、また質問が来る', x: BOOK.x + BOOK.w + 24, y: BOOK.y + BOOK.h / 2 + 22, a: ca, o: { font: F.jp(700, 19), color: C.ink2 } }, { in: parent });
 }
 
 // Sentence a: pre-training, looked back on. The first text is practised position by position
 // while the voice says "predicting what comes next"; at "a great deal" more texts come in and
 // many cells change at once; the grid settles before the voice ends. Then the scene clears, and
 // the trained grid moves onto the black box — "this model" of sentence b — and fades into it.
-function recall(ctx, t, texts, P, { at, pace }) {
+function recall(w, f, P) {
+  const { t, at, pace, s: { texts } } = f;
+  const parent = 'recall';
   const lead = pace.cue.lead;
   const a0 = at('a');
   // when each text is practised: the first one slowly, the rest quickly, one after another
@@ -801,69 +769,50 @@ function recall(ctx, t, texts, P, { at, pace }) {
   // the parameters: random at first, drifting as the practice goes on, still once it is done
   const go = at('a.done');
   const end = P.land;
-  const gone = 1 - seg(t, end - 0.35, end + 0.15);
+  const gone = 1 - f.seg(end - 0.35, end + 0.15);
   if (gone > 0) {
-    const k2 = seg(t, s0, settle);
-    const m = inOutCubic(seg(t, go, end));
-    ctx.save();
-    ctx.globalAlpha = gone;
-    // it lands just inside the box's rounded edge
+    const k2 = f.seg(s0, settle);
+    const m = inOutCubic(f.seg(go, end));
     const IN = 14;
-    ctx.translate(lerp(PG.x, BOX.x + IN, m), lerp(PG.y, BOX.y + IN, m));
-    ctx.scale(lerp(1, (BOX.w - 2 * IN) / PARAMS_W, m), lerp(1, (BOX.h - 2 * IN) / PARAMS_H, m));
-    paramGrid(ctx, 0, 0, (r, c, id) => {
-      const a = tw(t, a0 + (r + c) * 0.01, pace.enter);
-      if (a <= 0) return null;
-      // as in 3-6's sentence i: while the practice runs, a few cells light up at a time
-      const flash = t >= s0 && t < settle ? flicker(id, t - s0) : 0;
-      return { a, v: paramValue(id, 0, k2), flash };
-    });
-    ctx.restore();
+    w.group('pretraining.grid', { a: gone, dx: lerp(PG.x, BOX.x + IN, m), dy: lerp(PG.y, BOX.y + IN, m) });
+    w.add('pretraining.cells', gridKind, { sx: lerp(1, (BOX.w - 2 * IN) / PARAMS_W, m), sy: lerp(1, (BOX.h - 2 * IN) / PARAMS_H, m), t, a0, s0, settle, k2, enter: pace.enter }, { in: 'pretraining.grid' });
   }
 
-  const out = 1 - seg(t, go, at('b'));
+  const out = 1 - f.seg(go, at('b'));
   if (out <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = out;
+  w.group(parent, { a: out });
 
-  text(ctx, '事前学習：先を隠して、次のトークンを当てる練習（3-6）', PG.x, 124, { font: F.jp(700, 22), color: C.ink, alpha: enter(t, a0, pace) });
-  text(ctx, 'モデルのパラメータ（値は例）', PG.x, PG.y - 16, { font: F.jp(700, 18), color: C.ink2, alpha: enter(t, a0, pace, 1) });
-  text(ctx, '学習に使う文章（GPT-4o の切り方）', TT.x, TT.y - 16, { font: F.jp(700, 18), color: C.ink2, alpha: enter(t, a0, pace, 1) });
+  w.add('pretraining.title', K.text, { s: '事前学習：先を隠して、次のトークンを当てる練習（3-6）', x: PG.x, y: 124, a: f.enter(a0), o: { font: F.jp(700, 22), color: C.ink } }, { in: parent });
+  w.add('pretraining.parameters.title', K.text, { s: 'モデルのパラメータ（値は例）', x: PG.x, y: PG.y - 16, a: f.enter(a0, 1), o: { font: F.jp(700, 18), color: C.ink2 } }, { in: parent });
+  w.add('pretraining.texts.title', K.text, { s: '学習に使う文章（GPT-4o の切り方）', x: TT.x, y: TT.y - 16, a: f.enter(a0, 1), o: { font: F.jp(700, 18), color: C.ink2 } }, { in: parent });
 
   // what the guesses do to the parameters
-  const fix = tw(t, s0, pace.enter);
+  const fix = f.tw(s0, pace.enter);
   if (fix > 0) {
     const y = PG.y + PARAMS_H / 2;
-    ctx.save();
-    ctx.globalAlpha *= fix;
-    ctx.strokeStyle = C.accent;
-    ctx.fillStyle = C.accent;
-    ctx.lineWidth = 3;
-    arrow(ctx, TT.x - 18, y, PG.x + PARAMS_W + 18, y, outCubic(fix), 12);
-    ctx.restore();
+    w.add('pretraining.arrow', arrowKind, { x0: TT.x - 18, y0: y, x1: PG.x + PARAMS_W + 18, y1: y, p: outCubic(fix), head: 12, width: 3, a: fix }, { in: parent });
   }
-  text(ctx, '外れが小さくなるように、少しずつ直す', PG.x, CAP_Y, { font: F.jp(700, 18), color: C.accent, alpha: fix });
+  w.add('pretraining.correction', K.text, { s: '外れが小さくなるように、少しずつ直す', x: PG.x, y: CAP_Y, a: fix, o: { font: F.jp(700, 18), color: C.accent } }, { in: parent });
 
   // the texts
   texts.forEach((ws, i) => {
     const [r0, r1] = runs[i];
-    const a = i === 0 ? enter(t, a0, pace, 2) : tw(t, r0 - 0.25, pace.enter);
+    const a = i === 0 ? f.enter(a0, 2) : f.tw(r0 - 0.25, pace.enter);
     if (a <= 0) return;
-    const p = seg(t, r0, r1);
+    const p = f.seg(r0, r1);
     const cur = p > 0 && p < 1 ? 1 + Math.floor(p * (ws.length - 1)) : -1;
     let x = TT.x;
     const y = TT.y + i * TT.step;
-    ws.forEach((w, k) => {
-      if (k === cur) slot(ctx, x, y, w, TCHIP.h, { alpha: a, lit: 1 });
+    ws.forEach((width, k) => {
+      if (k === cur) w.add(`pretraining.hidden.${i}.${k}`, K.tokenSlot, { x, y, w: width, h: TCHIP.h, a, o: { lit: 1 } }, { in: parent });
       else {
         const hidden = cur >= 0 && k > cur;
-        chip(ctx, x, y, TEXTS[i][k], { ...TCHIP, fill: hidden ? C.panel : C.tints[k % C.tints.length], color: hidden ? C.panel : C.ink, alpha: a });
+        w.add(`pretraining.token.${i}.${k}`, K.textChip, { x, y, s: TEXTS[i][k], a, o: { ...TCHIP, fill: hidden ? C.panel : C.tints[k % C.tints.length], color: hidden ? C.panel : C.ink } }, { in: parent });
       }
-      x += w + TCHIP.gap;
+      x += width + TCHIP.gap;
     });
   });
-  text(ctx, 'たくさんの文章で、何度もくり返す', TT.x, CAP_Y, { font: F.jp(700, 18), color: C.ink2, alpha: tw(t, many, pace.enter) });
-  ctx.restore();
+  w.add('pretraining.repeat', K.text, { s: 'たくさんの文章で、何度もくり返す', x: TT.x, y: CAP_Y, a: f.tw(many, pace.enter), o: { font: F.jp(700, 18), color: C.ink2 } }, { in: parent });
 }
 
 function card(ctx, b, a) {
@@ -877,4 +826,67 @@ function card(ctx, b, a) {
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
+}
+
+// Drawing kinds for 4-1. The scene above contains only state and placement.
+function trainingKind(ctx, p, a) { trainingStrip(ctx, { alpha: a, lit: p.lit }); }
+function exampleKind(ctx, p, a) { example(ctx, M.l, 836, a, '確率と、モデルが書いた続きは説明のための例。切り方は GPT-4o のもの'); }
+function sourceKind(ctx, p, a) { source(ctx, 'Brown ほか（2020）', a, SOURCE_RIGHT); }
+function cardKind(ctx, p, a) { card(ctx, p.b, a); return p.b; }
+function tokenKind(ctx, p, a) { withAlpha(ctx, a, () => token(ctx, p.x, p.y, p.w, p.s, p.L, p.o)); return { x: p.x, y: p.y, w: p.w, h: p.L.h }; }
+function paramsKind(ctx, p, a) { params(ctx, a, p.lit); return PBOX; }
+function pipeKind(ctx, p, a) { withAlpha(ctx, a, () => pipe(ctx, p.x0, p.y0, p.x1, p.y1, p.p, p.lit)); }
+function nlMarkKind(ctx, p, a) { nlMark(ctx, p.x, p.cy, p.color, a, p.size); }
+function cursorKind(ctx, p) { ctx.fillStyle = C.accent; ctx.fillRect(p.x, p.y, 3, p.h); return { x: p.x, y: p.y, w: 3, h: p.h }; }
+function arrowKind(ctx, p, a) {
+  ctx.save(); ctx.globalAlpha *= a;
+  ctx.strokeStyle = C.accent; ctx.fillStyle = C.accent; ctx.lineWidth = p.width;
+  arrow(ctx, p.x0, p.y0, p.x1, p.y1, p.p, p.head);
+  ctx.restore();
+}
+function frameKind(ctx, { r, open }) {
+  ctx.save();
+  rr(ctx, r.x, r.y, r.w, r.h, 22);
+  const base = ctx.globalAlpha;
+  if (open < 1) {
+    ctx.globalAlpha = base * (1 - open);
+    ctx.fillStyle = C.ink;
+    ctx.fill();
+  }
+  if (open > 0) {
+    ctx.globalAlpha = base * open;
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  ctx.restore();
+  return r;
+}
+function bookKind(ctx) {
+  ctx.save();
+
+  rr(ctx, BOOK.x, BOOK.y, BOOK.w, BOOK.h, 8);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = C.rule;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = C.ink2;
+  ctx.fillRect(BOOK.x, BOOK.y, 8, BOOK.h);
+  ctx.restore();
+  return BOOK;
+}
+// The old grid shrinks independently along x and y. Groups currently offer uniform scale;
+// keep this deformation inside the grid kind, while its placement and opacity belong to a group.
+function gridKind(ctx, p) {
+  ctx.save();
+  ctx.scale(p.sx, p.sy);
+  paramGrid(ctx, 0, 0, (r, c, id) => {
+    const a = tw(p.t, p.a0 + (r + c) * 0.01, p.enter);
+    if (a <= 0) return null;
+    const flash = p.t >= p.s0 && p.t < p.settle ? flicker(id, p.t - p.s0) : 0;
+    return { a, v: paramValue(id, 0, p.k2), flash };
+  });
+  ctx.restore();
+  return { x: 0, y: 0, w: PARAMS_W * p.sx, h: PARAMS_H * p.sy };
 }
