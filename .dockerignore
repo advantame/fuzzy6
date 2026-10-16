@@ -13,8 +13,8 @@
 !public/**
 !server/
 !server/**
-# Also exclude local-only art and synthesis originals in a working-tree build.
-decks/*/figures/
+# Also exclude synthesis originals in a working-tree build. The standing figures stay in: git
+# ignores them, and ship-app.sh adds them to the context from .shipinclude.
 decks/*/voice/**/*.wav
 **/node_modules/
 **/.*/

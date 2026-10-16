@@ -1,0 +1,4 @@
+# Files git ignores that ship-app.sh (fuzzy2) still adds to the image, from the working tree of
+# ~/projects/fuzzy6. They never enter the repository; see docs/publishing.md.
+# The standing figures: the authors' terms are unconfirmed, so the art stays out of git (AGENTS.md).
+decks/*/figures/**

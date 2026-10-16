@@ -119,7 +119,7 @@ export default {
     manifest,
     url: (file) => audio[`./voice/${file}`],
   },
-  // The figures are akihiyo's standing-picture materials, used locally (AGENTS.md). The intro
+  // The figures are akihiyo's standing-picture materials, kept out of git (AGENTS.md). The intro
   // draws ChatGPT's mark (lib/chat.js), which belongs to OpenAI.
   credits: [...(hasFigures ? ['立ち絵:akihiyo'] : []), 'ChatGPT のロゴ:OpenAI'],
   chapters: [

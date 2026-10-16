@@ -1,6 +1,7 @@
 // Standing figures for the cast (spec §7.2). The art is kept out of the repository: the
-// images are exported into ../figures/ by tools/figures/export.py and ignored by git. Where
-// they are missing (a fresh clone, the public build) the speakers simply have no figure.
+// images are exported into ../figures/ by tools/figures/export.py and ignored by git; the
+// public build gets them through .shipinclude. Where they are missing (a fresh clone, CI) the
+// speakers simply have no figure.
 
 const images = import.meta.glob('../figures/*/*.png', { eager: true, query: '?url', import: 'default' });
 const sizes = import.meta.glob('../figures/*/figure.json', { eager: true, import: 'default' });

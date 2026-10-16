@@ -1,7 +1,7 @@
 // Standing figures for the cast (spec §7.2), and the same art drawn on the stage (the
-// opening's skit). The images are exported into ../figures/ and ignored by git (AGENTS.md);
-// where they are missing (a fresh clone, the public build) the speakers have no figure and
-// the stage draws a plain stand-in.
+// opening's skit). The images are exported into ../figures/ and ignored by git (AGENTS.md),
+// and the public build gets them through .shipinclude. Where they are missing (a fresh clone,
+// CI) the speakers have no figure and the stage draws a plain stand-in.
 
 const images = import.meta.glob('../figures/*/*.png', { eager: true, query: '?url', import: 'default' });
 const sizes = import.meta.glob('../figures/*/figure.json', { eager: true, import: 'default' });

@@ -113,7 +113,7 @@ npm run play -- <deck> [clipId …]      # 声つきで頭から最後まで実�
 - ツールとテストは、ブラウザの各操作に timeout を付け、全体にも上限の時間を設ける。子プロセスは終了時に必ず閉じる。
 - 語りの音声は、`tools/narrate.mjs` が VOICEVOX Engine 0.25.2（CPU 版）を一時起動して合成する。エンジンのデータは、プロジェクトの中の `.cache/voicevox/` に持つ。この機械のほかの VOICEVOX（`~/.local/share/voicevox-engine`）には触れない。
 - エンジンのスレッドの数（`tools/narrate/engine.mjs`）を変えると、同じ原稿を合成し直しても、聞いて決めた録りとは別のファイルになる。
-- リポジトリに入れるのは、配る音声（Ogg Opus）と語りの記録。合成した原本の WAV と、立ち絵の画像（`decks/*/figures/`）は入れない（`.gitignore` で除いてある）。デッキは、画像がなければ立ち絵なしで動く。
+- リポジトリに入れるのは、配る音声（Ogg Opus）と語りの記録。合成した原本の WAV と、立ち絵の画像（`decks/*/figures/`）は入れない（`.gitignore` で除いてある）。デッキは、画像がなければ立ち絵なしで動く。公開版には、反映の道具が `main` の作業ツリー（`~/projects/fuzzy6`）から立ち絵をイメージに足す（`.shipinclude`）。
 - 通常のモード（静止フレームでないモード）では、ブラウザが操作の前の音を止める。Playwright で確かめるときは、Chromium を `--autoplay-policy=no-user-gesture-required` で起動するか、`.mx-unlock` を押す。
 - 合成の速さの測定、エンジンを一時起動にしている理由、立ち絵の素材の根拠と書き出しの手順、`codexctl research run` が起動の直後に落ちるときの対処は [docs/environment.md](docs/environment.md) にある。
 
@@ -122,7 +122,7 @@ npm run play -- <deck> [clipId …]      # 声つきで頭から最後まで実�
 公開版は、ボスの限定公開アプリ基盤（リポジトリは `~/projects/fuzzy2`、アプリの id は `fuzzy6`）に載せ、URL を伝えた人にだけ見せている。GitHub のリポジトリ `advantame/fuzzy6` は非公開。経緯、イメージとサーバの作り、手元での確かめ方は [docs/publishing.md](docs/publishing.md) にある。
 
 
-- 公開版への反映は、次のコマンドで行うことができる。`SHIP_BWLIMIT_KBPS=2048 bash ~/projects/fuzzy2/platform/scripts/ship-app.sh fuzzy6`（サンドボックスの外で。送信の帯域の上限は 2 MiB/s）　届くのは、`~/projects/fuzzy6`（`main` の作業ツリー）の HEAD のコミットだけ。作りかけのクリップを `deck.js` に載せたまま反映しない。
+- 公開版への反映は、次のコマンドで行うことができる。`SHIP_BWLIMIT_KBPS=2048 bash ~/projects/fuzzy2/platform/scripts/ship-app.sh fuzzy6`（サンドボックスの外で。送信の帯域の上限は 2 MiB/s）　届くのは、`~/projects/fuzzy6`（`main` の作業ツリー）の HEAD のコミットと、`.shipinclude` に書いた Git 管理外のファイル（立ち絵）だけ。その作業ツリーに立ち絵が無いと、反映は本番に触る前に止まる。作りかけのクリップを `deck.js` に載せたまま反映しない。
 - `gh` と `git push` は、`GH_TOKEN=$(gh auth token --user advantame)` を付けて呼ぶ。リモートの `main` に push しても、公開版は変わらない（CI が unit テストとビルドを走らせるだけ）。
 - 自分で書く `href` や iframe の `src` は、`decks/llm/` のように相対パスにする。`/` で始めると、公開版で切れる。
 - `Dockerfile` の `chmod -R a+rX /app` を消さない。消すと、公開版のサーバが自分のファイルを読めず、起動しない。
