@@ -7,7 +7,7 @@
 手元で動かすときは、次のようにします。公開版は、URL を伝えた人にだけ見せています（2026-10-11 から。くわしくは [docs/publishing.md](docs/publishing.md)）。
 
 ```bash
-nvm use            # Node 24
+nvm use            # Node 26
 npm ci
 npm run dev        # http://127.0.0.1:5175/
 ```

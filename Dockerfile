@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 node:24-bookworm-slim AS build
+FROM --platform=linux/arm64 node:26-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -18,7 +18,7 @@ RUN set -eu; \
     find /media -exec touch -h -d @0 {} +
 
 # The server uses Node built-ins only, so the runtime stage can be the small image.
-FROM --platform=linux/arm64 node:24-alpine AS runtime
+FROM --platform=linux/arm64 node:26-alpine AS runtime
 WORKDIR /app
 RUN mkdir -p /data && chown 10001:10001 /data
 COPY --from=build /media/dist ./dist
