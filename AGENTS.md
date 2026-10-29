@@ -127,7 +127,7 @@ npm run play -- <deck> [clipId …]      # 声つきで頭から最後まで実�
 
 ## 公開
 
-公開版は、ボスの限定公開アプリ基盤（リポジトリは `~/projects/fuzzy2`、アプリの id は `fuzzy6`）に載せ、URL を伝えた人にだけ見せている。GitHub のリポジトリ `advantame/fuzzy6` は非公開。経緯、イメージとサーバの作り、手元での確かめ方は [docs/publishing.md](docs/publishing.md) にある。
+公開版は、ボスの限定公開アプリ基盤（リポジトリは `~/projects/fuzzy2`、アプリの id は `fuzzy6`）に載せ、URL を伝えた人にだけ見せている。GitHub のリポジトリ `advantame/fuzzy6` は、2026-10-30 から公開している。push したものは誰でも見られるので、公開版の URL、立ち絵、合成した原本の WAV をコミットに入れない。経緯、イメージとサーバの作り、手元での確かめ方は [docs/publishing.md](docs/publishing.md) にある。
 
 
 - 公開版への反映は、次のコマンドで行うことができる。`SHIP_BWLIMIT_KBPS=2048 bash ~/projects/fuzzy2/platform/scripts/ship-app.sh fuzzy6`（サンドボックスの外で。送信の帯域の上限は 2 MiB/s）　届くのは、`~/projects/fuzzy6`（`main` の作業ツリー）の HEAD のコミットと、`.shipinclude` に書いた Git 管理外のファイル（立ち絵）だけ。その作業ツリーに立ち絵が無いと、反映は本番に触る前に止まる。作りかけのクリップを `deck.js` に載せたまま反映しない。
